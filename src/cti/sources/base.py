@@ -92,9 +92,11 @@ class FetchContext:
                     raise ValueError(f"download exceeds {MAX_DOWNLOAD_BYTES} bytes")
                 fh.write(chunk)
 
-    def write(self, source: str, name: str, data: bytes, url: str, version: str | None = None):
+    def write(
+        self, source: str, name: str, data: bytes, url: str | None, version: str | None = None
+    ):
         return self.snapshot.write_raw(
-            source, name, data, url=self.redact(url), source_version=version
+            source, name, data, url=self.redact(url) if url else None, source_version=version
         )
 
 

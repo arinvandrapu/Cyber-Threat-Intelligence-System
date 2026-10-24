@@ -50,4 +50,21 @@ Without checks, a crafted reference URL (or a redirect) can point at
 Redirect to a private IP, DNS rebinding, IPv6 and IPv4-mapped addresses,
 decimal/octal IP encodings (`http://2130706433/`), `file://` and other schemes.
 
+## Scraper (`references/scraper.py`)
+
+- SSRF validation runs **before** the robots.txt check, so a blocked host is recorded as
+  `blocked`, not `robots`.
+- robots.txt per RFC 9309 via `protego` (stdlib `urllib.robotparser` ignores `*`/`$`
+  wildcards and uses first-match, so `Disallow: /*.php` read as *allowed*). 4xx means no
+  rules; 5xx or any fetch error means disallow all. Agent token `cti-pipeline`. A redirect
+  to another host is checked against that host's robots.txt.
+- `scrape_one` never raises. Malformed hostnames (label > 63 chars, `a..b`, bad IDNA)
+  raise `UnicodeError` from parsing or DNS; they're converted to `BlockedURLError`.
+  Before this fix, one bad reference URL aborted the whole scrape on every resume.
+- Bounded memory: targets go to the pool in batches of 4 x workers; shards flush at
+  250 records or 64 MB.
+- 8 workers, ≥ 2 s between requests to the same host, per-page failures recorded.
+- Verified live: Red Hat, Openwall, and GitHub pages fetched over IP-pinned TLS (cert
+  checked via SNI); `169.254.169.254` blocked.
+
 Part of the [[ingest-once-snapshot]] run. See [[aws-cost-and-security]] for the cloud side.

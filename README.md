@@ -88,6 +88,7 @@ cti ingest --date 2026-10-25 --resume                       # continue after a f
 cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
+cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
 
 ## Project layout
@@ -105,6 +106,8 @@ src/cti/
   sources/           one module per feed: fetch raw (network) + parse (offline)
   ingest.py, cli.py  one-time ingest orchestration and the `cti` command
   defang.py          make IOCs non-clickable (hxxp, [.])
+  references/        reference-link classifier, page selection, polite SSRF-safe scraper
+  gold.py            frozen, checksummed evaluation gold set
 tests/unit/          offline unit tests
 vault/               design notes
 tasks/todo.md        build plan and progress

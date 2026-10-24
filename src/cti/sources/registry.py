@@ -13,6 +13,7 @@ from cti.sources.kev import KEVSource
 from cti.sources.metasploit import MetasploitSource
 from cti.sources.nuclei import NucleiSource
 from cti.sources.nvd import NVDSource
+from cti.sources.references import ReferencesSource
 from cti.sources.vulnrichment import VulnrichmentSource
 
 SOURCE_CLASSES: tuple[type[Source], ...] = (
@@ -27,6 +28,7 @@ SOURCE_CLASSES: tuple[type[Source], ...] = (
     CWESource,
     ThreatFoxSource,
     URLhausSource,
+    ReferencesSource,  # last: chooses pages using NVD, KEV, and EPSS from the snapshot
 )
 
 

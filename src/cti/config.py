@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     cutoff_days: int = 180
     attack_version: str = "20.0"
     cwe_version: str = "4.20"
+    scrape_max_pages: int = 2000
+    scrape_per_cve: int = 3
+    scrape_workers: int = 8
+    scrape_host_interval: float = 2.0  # seconds between requests to the same host
 
     @field_validator(
         "s3_bucket", "aws_profile", "abusech_auth_key", "github_token", "contact", mode="before"

@@ -118,7 +118,7 @@ class SafeFetcher:
         """Return the parsed URL and the public IP to connect to, or raise."""
         try:
             parsed = httpx.URL(url)
-        except (httpx.InvalidURL, TypeError) as exc:
+        except (httpx.InvalidURL, TypeError, UnicodeError, ValueError) as exc:  # incl. IDNA
             raise BlockedURLError(f"invalid URL: {exc}") from exc
         if parsed.scheme not in ALLOWED_SCHEMES:
             raise BlockedURLError(f"scheme not allowed: {parsed.scheme!r}")
@@ -126,13 +126,16 @@ class SafeFetcher:
             raise BlockedURLError("credentials in URL not allowed")
         if not parsed.host:
             raise BlockedURLError("missing host")
-        host = parsed.raw_host.decode("ascii")  # IDNA-encoded, same form as the Host header
+        try:
+            host = parsed.raw_host.decode("ascii")  # IDNA-encoded, same form as Host header
+        except UnicodeError as exc:
+            raise BlockedURLError("invalid hostname") from exc
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         if port not in ALLOWED_PORTS:
             raise BlockedURLError(f"port not allowed: {port}")
         try:
             ips = self._resolver(host, port)
-        except OSError as exc:
+        except (OSError, UnicodeError, ValueError) as exc:  # bad labels raise UnicodeError
             raise BlockedURLError(f"cannot resolve {host!r}") from exc
         if not ips:
             raise BlockedURLError(f"no addresses for {host!r}")

@@ -24,6 +24,10 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
   snapshot, `cti upload` (Phase 3) copies it to the private S3 bucket.
 - `cti probe` does a cheap reachability/key check first, so there is no separate smoke
   download.
+- `references` runs last: it chooses pages from NVD/KEV/EPSS already in the snapshot
+  and stores the target list (`targets.json.gz`) next to the page shards. A crash
+  mid-scrape means `--resume` re-scrapes everything under a new attempt (~10–15 min);
+  the partial shards stay as orphaned, logged entries.
 - Per-source completion is recorded in the manifest. `--resume` skips completed sources
   and re-fetches a partially written one under a new logged attempt.
 - No AWS compute. S3 cost at this size is cents per month.

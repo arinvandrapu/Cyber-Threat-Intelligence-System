@@ -15,6 +15,7 @@ dependencies = [
     "boto3>=1.36,<2",  # S3 conditional writes (IfNoneMatch)
     "ijson>=3.3,<4",  # streaming JSON: NVD yearly feeds are ~300 MB uncompressed
     "defusedxml>=0.7,<1",  # safe XML parsing (no XXE / entity expansion)
+    "protego>=0.3,<1",  # RFC 9309 robots.txt (wildcards, longest match)
 ]
 
 [project.scripts]
