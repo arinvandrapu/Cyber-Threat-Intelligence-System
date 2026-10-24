@@ -19,9 +19,13 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
 
 ## Where it runs
 
-- From the owner's laptop: `cti ingest` downloads directly from each source.
-- Writes go through `MirroredStorage`: local `data/` first, then the private S3 bucket
-  under `snapshots/<YYYY-MM-DD>/`. Later stages read local and fall back to S3.
+- From the owner's laptop: `cti ingest` downloads directly from each source into local
+  `data/snapshots/<date>/`. Nothing is downloaded twice: after `cti parse` validates the
+  snapshot, `cti upload` (Phase 3) copies it to the private S3 bucket.
+- `cti probe` does a cheap reachability/key check first, so there is no separate smoke
+  download.
+- Per-source completion is recorded in the manifest. `--resume` skips completed sources
+  and re-fetches a partially written one under a new logged attempt.
 - No AWS compute. S3 cost at this size is cents per month.
 
 ## Implementation (`src/cti/snapshot.py`)

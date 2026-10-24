@@ -21,3 +21,8 @@ Reviewed at the start of each session.
 - **Mistake:** Pushed three commits to a PR branch after the PR had already been merged, so they never reached `main`.
 - **Trigger:** Adding follow-up changes to an open PR, especially after time has passed.
 - **Rule:** Run `gh pr view <n> --json state` first. If it's merged, branch from the updated `main` and open a new PR.
+
+### Finish the audit before opening the PR
+- **Mistake:** Opened the Phase 1 PR while the code audit was still running. The owner merged it, so the fixes needed a second PR.
+- **Trigger:** Any non-trivial PR. The owner reviews and merges quickly.
+- **Rule:** Run the implementation audit and apply its fixes first, then open the PR.

@@ -14,6 +14,10 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 | `http/client.py` | `get_with_retry`: retries transport errors, 429, and 5xx only; honors `Retry-After`; keys go in headers |
 | `http/ratelimit.py` | Sliding-window limiter (ported from the prototype; injectable clock) |
 | `http/safe_fetch.py` | SSRF-safe fetcher, see [[ssrf-safe-fetching]] |
+| `sources/` | One module per feed. `fetch(ctx)` writes raw to the snapshot (network); `parse(snapshot)` yields `Document`s or `CveSignal`s (offline). `registry.py` lists them in ingest order |
+| `ingest.py` | One-time ingest: per-source isolation, completion markers, resume, logged refetch, secret redaction |
+| `cli.py` | `cti probe / ingest / status / parse` |
+| `defang.py` | `hxxp://evil[.]com`, `203.0.113[.]7` |
 | `storage/` | `LocalStorage`, `S3Storage`, `MirroredStorage`; no delete, no overwrite by default; see [[aws-cost-and-security]] |
 
 ## Conventions

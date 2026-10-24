@@ -79,6 +79,17 @@ pytest                 # offline: no network or AWS access needed
 ruff check .
 ```
 
+## Usage
+
+```bash
+cti probe                       # cheap check that every source is reachable / keys work
+cti ingest --date 2026-10-25    # the one-time fetch into data/snapshots/<date>/
+cti ingest --date 2026-10-25 --resume                       # continue after a failure
+cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
+cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
+cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
+```
+
 ## Project layout
 
 ```
@@ -91,6 +102,9 @@ src/cti/
     ratelimit.py     sliding-window rate limiter
     safe_fetch.py    SSRF-safe fetcher for untrusted URLs
   storage/           local, S3, and mirrored backends (no delete operation)
+  sources/           one module per feed: fetch raw (network) + parse (offline)
+  ingest.py, cli.py  one-time ingest orchestration and the `cti` command
+  defang.py          make IOCs non-clickable (hxxp, [.])
 tests/unit/          offline unit tests
 vault/               design notes
 tasks/todo.md        build plan and progress

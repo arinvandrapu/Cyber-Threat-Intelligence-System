@@ -13,7 +13,12 @@ dependencies = [
     "pydantic>=2.9,<3",
     "pydantic-settings>=2.6,<3",
     "boto3>=1.36,<2",  # S3 conditional writes (IfNoneMatch)
+    "ijson>=3.3,<4",  # streaming JSON: NVD yearly feeds are ~300 MB uncompressed
+    "defusedxml>=0.7,<1",  # safe XML parsing (no XXE / entity expansion)
 ]
+
+[project.scripts]
+cti = "cti.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -40,4 +45,4 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 ignore = ["S101"]  # assert is fine in tests
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S104", "S105", "S106", "S108"]
+"tests/**" = ["S104", "S105", "S106", "S108", "S603", "S607"]

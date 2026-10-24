@@ -8,14 +8,14 @@ Verified 2026-10-24. Captured once per [[ingest-once-snapshot]].
 
 | Source | Access | Key | Notes |
 |---|---|---|---|
-| NVD CVE 2.0 | Yearly `nvdcve-2.0-{year}.json.gz` feeds | none | Legacy 1.1 feeds removed 2025-08-20. API capped at 120-day date ranges; feeds avoid paging. |
+| NVD CVE 2.0 | Yearly `nvdcve-2.0-{year}.json.gz` feeds | none | Grouped by CVE-ID year, so window start − 1 is fetched and filtered by `published`. Verified against `.meta` SHA-256. ~37% of 2026 CVEs are "Deferred" (no NVD analysis); CNA CVSS still present. |
 | CISA KEV | JSON feed | none | CC0. Use `dateAdded` for point-in-time evaluation. |
-| FIRST EPSS | Bulk CSV from `epss.empiricalsecurity.com` | none | EPSS v5 since 2026-06-15; record model version. API is for lookups, not bulk. |
+| FIRST EPSS | Dated bulk CSV `epss_scores-YYYY-MM-DD.csv.gz` | none | Model changed between cutoff (`v2025.03.14`) and snapshot (`v2026.06.15`); model version kept per signal. |
 | ExploitDB | `files_exploits.csv` (GitLab) | none | GPL-2.0; `codes` column maps to CVEs. Don't redistribute. |
 | MITRE ATT&CK | attack-stix-data, pinned v20.0 | none | STIX 2.1. |
 | MITRE CWE | `cwec_latest.xml.zip`, pinned 4.20 | none | |
-| ThreatFox | abuse.ch export (6 months) | free Auth-Key | Key required since 2025-06-30. No redistribution without consent: publish aggregates only. |
-| URLhaus | abuse.ch dump | same key | Same terms as ThreatFox. |
+| ThreatFox | `threatfox-api.abuse.ch/v2/files/exports/<KEY>/full.csv.zip` | free Auth-Key | Old keyless URLs return 410 (since ~2026-10-22). **Key goes in the URL path**, so recorded URLs and errors are redacted. Publish aggregates only. |
+| URLhaus | `urlhaus-api.abuse.ch/v2/files/exports/<KEY>/recent.csv` (30 days) | same key | Same terms. CSV header is the last `#` line *before* the data (footers also use `#`). Split on `\n` only: `splitlines()` breaks on `\x85` inside malicious URLs. Redact the key in plain and percent-encoded form (httpx errors use the latter). |
 
 ## Prioritization signals (added 2026-10-24)
 
