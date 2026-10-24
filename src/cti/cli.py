@@ -8,7 +8,9 @@ import logging
 import sys
 from collections import Counter
 from datetime import date
+from pathlib import Path
 
+from cti import gold
 from cti.config import ConfigError, Settings
 from cti.http.client import make_client
 from cti.ingest import IngestResult, ingest, refetch
@@ -128,6 +130,23 @@ def cmd_parse(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_gold_import(args, settings: Settings) -> int:
+    records, report = gold.import_legacy(Path(args.gold), Path(args.entities), Path(args.corpus))
+    out = Path(args.out) if args.out else settings.data_dir / "gold" / "gold.jsonl.gz"
+    if out.exists():
+        raise ConfigError(f"{out} already exists; the gold set is frozen")
+    sha = gold.write_fixture(records, out)
+    print(f"records        {report.records}")
+    print(f"duplicates     {len(report.duplicate_ids)} dropped {report.duplicate_ids}")
+    print(f"missing text   {len(report.missing_text)} {report.missing_text}")
+    print(f"entities       {report.entities_kept} kept, {report.entities_dropped} dropped")
+    print(f"labels         {dict(report.labels.most_common())}")
+    print(f"sources        {dict(report.sources.most_common())}")
+    print(f"derivations    {dict(report.derivations.most_common())}")
+    print(f"wrote {out}\nsha256 {sha}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cti", description=__doc__)
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -161,6 +180,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", required=True)
     only(p)
     p.set_defaults(func=cmd_parse)
+    p = sub.add_parser("gold-import", help="freeze the gold set from the prototype's files")
+    p.add_argument("--gold", required=True, help="labels JSONL")
+    p.add_argument("--entities", required=True, help="entity spans JSONL")
+    p.add_argument("--corpus", required=True, help="corpus JSONL with full text")
+    p.add_argument("--out", help="default: <data_dir>/gold/gold.jsonl.gz")
+    p.set_defaults(func=cmd_gold_import)
     return parser
 
 

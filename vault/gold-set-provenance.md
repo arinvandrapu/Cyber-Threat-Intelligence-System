@@ -18,8 +18,16 @@ is reused from an earlier prototype **as-is**, by owner decision.
 
 ## How it is used
 
-- Frozen as a private fixture (full text + labels), deduplicated, IOCs defanged,
-  SHA-256 recorded. Not committed to the public repo.
+- Frozen once with `cti gold-import` (2026-10-24): **299 docs** (1 duplicate dropped),
+  1,958 entity spans kept, 5 dropped (span text didn't match the document).
+- Fixture `data/gold/gold.jsonl.gz` (gitignored; uploaded to S3 in Phase 3). Its SHA-256
+  is committed in `cti/gold.py`; every load verifies it.
+- Text is stored **unmodified**, because entity offsets index into it. It contains live
+  phishing URLs and victim names, so it stays private and is defanged at display time.
+- Each record keeps the labeling-rule `label_signals` (e.g. `source_threatfox`), which
+  documents the circularity.
+- Sources: nvd_ref 50, mitre_attack 50, threatfox 50, phishtank 49, ransomwatch 46,
+  exploitdb 45, cisa_kev 9. 27% of entity spans came from record metadata, not text.
 - Labeling rules may **not** read the source feed.
 - Results are reported as a **sanity check** next to the source-only and majority
   baselines, with this limitation stated in the README. They are never presented as

@@ -17,6 +17,8 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 | `sources/` | One module per feed. `fetch(ctx)` writes raw to the snapshot (network); `parse(snapshot)` yields `Document`s or `CveSignal`s (offline). `registry.py` lists them in ingest order |
 | `ingest.py` | One-time ingest: per-source isolation, completion markers, resume, logged refetch, secret redaction |
 | `cli.py` | `cti probe / ingest / status / parse` |
+| `references/` | `classifier.py` (ported rule-based URL typing), `selection.py` (KEV-first, then EPSS; capped), `scraper.py` (robots + throttle + SafeFetcher), `text.py` (stdlib HTML→text) |
+| `gold.py` | `cti gold-import` → frozen fixture; `load_gold` verifies the committed SHA-256 |
 | `defang.py` | `hxxp://evil[.]com`, `203.0.113[.]7` |
 | `storage/` | `LocalStorage`, `S3Storage`, `MirroredStorage`; no delete, no overwrite by default; see [[aws-cost-and-security]] |
 

@@ -27,30 +27,31 @@ owner before the next phase starts. Nothing is pushed to `main` directly.
 - **Security posture.** SSRF-safe fetching, a single honest User-Agent, robots.txt
   respected, API keys in headers (never URLs), live IOCs defanged at rest and in display.
 
-## Data contract
+## Data contract (signed off in Phase 2b)
 
-What the one ingest must capture (finalized in Phase 2 before the real run):
+What the one ingest captures. Dates: **snapshot** = ingest day; **cutoff** = snapshot − 180 days.
+"Both" = two copies, pinned to the source's state at the cutoff and at the snapshot.
 
-| Source | What | How | Key |
-|---|---|---|---|
-| NVD | CVE records + reference URLs, bounded publish window (proposed: 2024-01-01 → snapshot) | Yearly CVE 2.0 JSON feeds (`.json.gz`) | none |
-| CISA KEV | Full catalog incl. `dateAdded` | JSON feed | none |
-| EPSS | Scores at snapshot date **and** at cutoff date (snapshot − 180 days), model version recorded | Bulk CSV | none |
-| ExploitDB | Exploit index with CVE codes | `files_exploits.csv` | none |
-| MITRE ATT&CK | Enterprise STIX 2.1 bundle, pinned version (v20.0) | attack-stix-data | none |
-| MITRE CWE | Catalog, pinned version (4.20) | XML zip | none |
-| CISA Vulnrichment | SSVC (exploitation, automatable, technical impact) at **cutoff** and snapshot | Archive of the last `develop` commit before each date (pinned SHA; extract SSVC fields only, drop the ADP KEV block) | none |
-| Metasploit | `db/modules_metadata_base.json` at cutoff and snapshot (CVE refs, `disclosure_date`; ignore `mod_time`) | File at pinned commit | none |
-| Nuclei templates | `cves.json` (JSONL) at cutoff and snapshot; drop `kev`/`epss` tags | File at pinned commit | none |
-| ThreatFox | IOC export (last 6 months), `full.csv.zip` | abuse.ch v2 export (key in URL path) | free abuse.ch Auth-Key |
-| URLhaus | Malicious URLs (last 30 days), `recent.csv` | abuse.ch v2 export (key in URL path) | same key |
-| Reference pages | Scraped text for a bounded CVE subset (proposed: KEV CVEs + top EPSS, capped ~2,000 pages) | SSRF-safe fetcher | none |
+| Source | Captured | Pinned by | Key | Est. size (gz) |
+|---|---|---|---|---|
+| NVD | Yearly CVE 2.0 feeds, 2023 → snapshot year; parse keeps CVEs published ≥ 2024-01-01 | `.meta` SHA-256 + `lastModifiedDate` | none | ~120 MB |
+| CISA KEV | Full catalog incl. `dateAdded` | `catalogVersion` | none | <1 MB |
+| EPSS | Daily scores, both dates | file date + model version | none | ~6 MB |
+| ExploitDB | `files_exploits.csv`, both | GitLab first-parent commit | none | ~4 MB |
+| Metasploit | `modules_metadata_base.json`, both | git first-parent commit | none | ~3 MB |
+| Nuclei | `cves.json`, both | git first-parent commit | none | ~1 MB |
+| CISA Vulnrichment | SSVC extract, both | git first-parent commit | none | ~2 MB |
+| MITRE ATT&CK | Enterprise v20.0 STIX bundle | release version | none | ~5 MB |
+| MITRE CWE | v4.20 XML | release version | none | ~2 MB |
+| ThreatFox | IOCs, last 6 months (`full.csv.zip`) | fetch time | abuse.ch | ~10 MB |
+| URLhaus | URLs, last 30 days (`recent.csv`) | fetch time | abuse.ch | ~5 MB |
+| Reference pages | ≤ 2,000 pages (KEV CVEs first, then top EPSS; ≤ 3 per CVE, 1 per host) | fetch time + target list | none | ~70 MB |
+| Gold set | 299 docs (frozen once, separate from the snapshot) | SHA-256 in `cti/gold.py` | n/a | <1 MB |
 
-Git-hosted sources are pinned by commit SHA in the manifest, so the exact state can
-always be re-derived. Only the extracted fields are stored, which keeps the bucket small.
+Total ≈ 250 MB → S3 Standard ≈ $0.01/month. Raw feed data never enters the repo.
 
-Before the real run: smoke-test each source with small limits, confirm keys work, and
-get owner approval.
+Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV, EPSS) →
+`cti status` → `cti parse` → upload (Phase 3).
 
 ## Phases
 
@@ -60,10 +61,11 @@ get owner approval.
       HTTP client (retry on 429/5xx only, rate limiter), SSRF-safe fetcher with tests
       (redirects, private/link-local/IPv6/decimal/octal IPs, non-http schemes),
       `Document` model, storage backends (local + S3), snapshot manifest.
-- [ ] **2a. Sources** — fetch + offline parse for all 11 sources, `cti` CLI
-      (probe/ingest/status/parse), resume and logged refetch, defanging. *(in review)*
-- [ ] **2b. Scraper + gold set + contract sign-off** — reference scraper, gold fixture,
-      final data contract.
+- [x] **2a. Sources** — fetch + offline parse for all 11 sources, `cti` CLI
+      (probe/ingest/status/parse), resume and logged refetch, defanging.
+- [ ] **2b. Scraper + gold set + contract sign-off** — reference classifier (ported),
+      target selection, SSRF-safe + robots-respecting scraper, `cti gold-import`
+      (frozen, checksummed), data contract above. *(in review)*
 - [ ] ~~**2. Sources + data contract**~~ (split into 2a/2b above) — one module per source fetching raw data and an
       offline parser to `Document`s; recorded-fixture tests; IOC defanging; reference
       scraper (robots.txt, honest UA); finalize the data contract; gold-set fixture
