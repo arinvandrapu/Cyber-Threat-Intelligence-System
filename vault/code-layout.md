@@ -8,7 +8,7 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 
 | Module | Role |
 |---|---|
-| `config.py` | `Settings` from `CTI_*` env vars / `.env`; `require()` fails fast listing every missing name; secrets are `SecretStr` |
+| `config.py` | `Settings` from `CTI_*` env vars / `.env`; `require()` fails fast listing every missing name; secrets are `SecretStr`. Blank values (`CTI_X=`) count as unset: a blank key once became `SecretStr("")` and passed the check |
 | `models.py` | `Document`, an immutable normalized record; id = `<source>:<source_id>` |
 | `snapshot.py` | Raw snapshot + manifest, see [[ingest-once-snapshot]] |
 | `http/client.py` | `get_with_retry`: retries transport errors, 429, and 5xx only; honors `Retry-After`; keys go in headers |
