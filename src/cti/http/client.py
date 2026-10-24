@@ -53,7 +53,13 @@ def get_with_retry(
     max_delay: float = 60.0,
     sleep: Callable[[float], None] = time.sleep,
 ) -> httpx.Response:
-    """GET ``url``. Returns the successful response or raises ``httpx.HTTPError``."""
+    """GET ``url``. Returns the successful response or raises ``httpx.HTTPError``.
+
+    A ``Retry-After`` longer than ``max_delay`` is not waited out: the error is raised so
+    the caller can decide, instead of burning attempts by retrying early.
+    """
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be >= 1")
     for attempt in range(1, max_attempts + 1):
         if limiter:
             limiter.acquire()
@@ -69,8 +75,10 @@ def get_with_retry(
                 response.raise_for_status()
                 return response
             delay = _retry_after(response)
+            if delay is not None and delay > max_delay:
+                response.raise_for_status()
             if delay is None:
                 delay = min(max_delay, base_delay * 2 ** (attempt - 1))
             log.warning("HTTP %d on attempt %d", response.status_code, attempt)
-        sleep(min(max_delay, delay) + random.uniform(0, base_delay / 2))  # noqa: S311
+        sleep(delay + random.uniform(0, base_delay / 2))  # noqa: S311
     raise AssertionError("unreachable")

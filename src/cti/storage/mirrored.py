@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from cti.storage.base import Storage
+from cti.storage.base import Storage, put_once
 
 
 class MirroredStorage:
@@ -11,8 +11,16 @@ class MirroredStorage:
         self.replica = replica
 
     def put_bytes(self, key: str, data: bytes, *, overwrite: bool = False) -> None:
-        self.primary.put_bytes(key, data, overwrite=overwrite)
-        self.replica.put_bytes(key, data, overwrite=overwrite)
+        if overwrite:
+            self.primary.put_bytes(key, data, overwrite=True)
+            self.replica.put_bytes(key, data, overwrite=True)
+            return
+        # If a previous attempt reached the primary but not the replica, a retry with the
+        # same bytes completes the replica instead of failing on the primary.
+        wrote_primary = put_once(self.primary, key, data)
+        wrote_replica = put_once(self.replica, key, data)
+        if not (wrote_primary or wrote_replica):
+            raise FileExistsError(key)
 
     def get_bytes(self, key: str) -> bytes:
         if self.primary.exists(key):

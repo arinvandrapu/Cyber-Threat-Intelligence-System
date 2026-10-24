@@ -30,7 +30,20 @@ Without checks, a crafted reference URL (or a redirect) can point at
 - Requests go to the validated IP; `Host` header + `sni_hostname` extension carry
   the real hostname, so TLS certs are still checked against it.
 - Rejects the host if **any** resolved address is non-public, and unwraps IPv4-mapped,
-  6to4, and Teredo addresses before checking.
+  6to4, and Teredo addresses before checking. Extra blocklist for ranges some Python
+  versions misclassify (`fec0::/10`, `3fff::/20`, docs/benchmark nets). Needs Python ≥ 3.12.4.
+- Hostnames go to the resolver and SNI in IDNA (ASCII) form, the same form as the Host header.
+
+## Gotchas found in review
+
+- **Connection reuse skips cert checks.** httpcore pools connections by IP:port, so a
+  pooled TLS connection to host A could serve host B on the same IP without B's cert
+  being verified. Fixed with `max_keepalive_connections=0`.
+- **Proxy env vars** would route traffic via a proxy with the IP as SNI. `trust_env=False`.
+- **Slow-drip responses**: an overall deadline (30 s) on top of per-read timeouts;
+  `Accept-Encoding: identity` so the size cap counts real bytes (no gzip bombs).
+- An unparseable `Location` raises `httpx.RemoteProtocolError` inside `send()`, even with
+  redirects off; it's converted to `BlockedURLError`.
 
 ## Tests
 

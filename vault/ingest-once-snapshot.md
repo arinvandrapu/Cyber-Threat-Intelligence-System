@@ -29,6 +29,11 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
 - `Snapshot.create` fails with `SnapshotExistsError` if any key exists for that date.
 - Raw keys: `<id>/raw/<source>/<attempt>/<name>`, written with no-overwrite
   (S3 `IfNoneMatch: *`). Only `manifest.json` is rewritten.
+- Retries are safe: `put_once` accepts identical bytes already stored and rejects
+  different bytes. `MirroredStorage` uses it so a write that reached local disk but not
+  S3 completes S3 on retry. `create` writes the manifest with no-overwrite, so two
+  racing ingests can't both succeed. Snapshot ids must be real dates (`fullmatch`; a
+  trailing `\n` once slipped through `re.match` + `$`).
 - `begin_refetch(source, reason)` logs the reason and bumps the attempt number;
   old attempts are kept. Reads verify SHA-256.
 - Storage has no delete operation at all.

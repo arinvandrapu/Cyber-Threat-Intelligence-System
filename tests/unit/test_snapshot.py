@@ -56,22 +56,45 @@ def test_refetch_unknown_source_rejected(storage):
         snap.begin_refetch("nvd", "why not")
 
 
-def test_checksum_verified_on_read(storage):
+def test_checksum_verified_on_read(storage, tmp_path):
     snap = Snapshot.create(storage, SID)
     entry = snap.write_raw("kev", "kev.json", b"good")
-    storage.put_bytes(entry.key, b"tampered", overwrite=True)
+    (tmp_path / entry.key).write_bytes(b"tampered")  # simulate on-disk corruption
     with pytest.raises(ValueError, match="checksum"):
         snap.read_raw(entry)
 
 
-@pytest.mark.parametrize("bad", ["2026-1-1", "latest", "../x"])
+@pytest.mark.parametrize("bad", ["2026-1-1", "latest", "../x", "2026-10-25\n", "2026-99-99"])
 def test_bad_snapshot_id(storage, bad):
     with pytest.raises(ValueError):
         Snapshot.create(storage, bad)
 
 
-@pytest.mark.parametrize("name", ["../evil", "a/b", ""])
+@pytest.mark.parametrize("name", ["../evil", "a/b", "", "kev.json\n"])
 def test_bad_names(storage, name):
     snap = Snapshot.create(storage, SID)
     with pytest.raises(ValueError):
         snap.write_raw("kev", name, b"x")
+
+
+def test_newline_id_cannot_duplicate_existing_snapshot(storage):
+    Snapshot.create(storage, SID)
+    with pytest.raises(ValueError):
+        Snapshot.create(storage, SID + "\n")
+
+
+def test_write_raw_retry_after_manifest_failure_is_safe(storage, monkeypatch):
+    snap = Snapshot.create(storage, SID)
+
+    def boom(**_):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(snap, "save", boom)
+    with pytest.raises(OSError):
+        snap.write_raw("kev", "kev.json", b"data")
+    monkeypatch.undo()
+    entry = snap.write_raw("kev", "kev.json", b"data")  # same bytes: retry succeeds
+    assert len(snap.entries("kev")) == 1
+    assert Snapshot.open(storage, SID).entries("kev") == [entry]
+    with pytest.raises(FileExistsError):
+        snap.write_raw("kev", "kev.json", b"different")

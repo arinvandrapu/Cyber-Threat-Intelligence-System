@@ -44,6 +44,19 @@ def test_honors_retry_after(client):
 
 
 @respx.mock
+def test_retry_after_longer_than_max_delay_raises(client):
+    route = respx.get(URL).mock(return_value=httpx.Response(429, headers={"Retry-After": "3600"}))
+    with pytest.raises(httpx.HTTPStatusError):
+        get_with_retry(client, URL, max_delay=60, sleep=lambda _: pytest.fail("should not wait"))
+    assert route.call_count == 1
+
+
+def test_rejects_zero_attempts(client):
+    with pytest.raises(ValueError):
+        get_with_retry(client, URL, max_attempts=0)
+
+
+@respx.mock
 def test_gives_up_after_max_attempts(client):
     route = respx.get(URL).mock(return_value=httpx.Response(500))
     with pytest.raises(httpx.HTTPStatusError):

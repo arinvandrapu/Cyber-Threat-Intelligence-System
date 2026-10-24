@@ -57,6 +57,8 @@ def fetcher():
         "fd00::1",
         "::ffff:10.0.0.1",
         "2002:7f00:1::",
+        "fec0::1",
+        "2001:db8::1",
         "not-an-ip",
     ],
 )
@@ -87,6 +89,8 @@ def test_public_ips_allowed(ip):
         "http://0177.0.0.1/",  # octal 127.0.0.1
         "http://[::1]/",
         "http://169.254.169.254/",
+        "http://[::1",
+        "http:///nohost",
     ],
 )
 def test_blocked_urls(fetcher, url):
@@ -104,6 +108,7 @@ def test_connects_to_pinned_ip_with_host_header_and_sni(fetcher):
     assert request.headers["Host"] == "example.com"
     assert request.extensions["sni_hostname"] == "example.com"
     assert request.headers["User-Agent"] == "test-agent"
+    assert request.headers["Accept-Encoding"] == "identity"
     assert result.content == b"hi"
     assert result.url == "https://example.com/advisory"
     assert not result.truncated
@@ -161,3 +166,28 @@ def test_body_exactly_at_cap_not_truncated(fetcher):
     result = fetcher.fetch("http://example.com/exact")
     assert not result.truncated
     assert result.content == b"y" * 10
+
+
+@respx.mock
+def test_malformed_redirect_is_blocked(fetcher):
+    respx.get(f"http://{PUBLIC}/r").mock(
+        return_value=httpx.Response(302, headers={"location": "http://[::1"})
+    )
+    with pytest.raises(BlockedURLError):
+        fetcher.fetch("http://example.com/r")
+
+
+def test_idna_host_resolved_in_ascii_form():
+    seen = []
+
+    def resolver(host, port):
+        seen.append(host)
+        return [PUBLIC]
+
+    with SafeFetcher("ua", resolver=resolver) as f:
+        f.validate("https://faß.de/")
+    assert seen == ["xn--fa-hia.de"]
+
+
+def test_client_ignores_env_proxies_and_keepalive(fetcher):
+    assert fetcher._client._trust_env is False

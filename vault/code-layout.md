@@ -4,7 +4,7 @@ tags: [architecture, code]
 
 # Code Layout
 
-Package `cti` under `src/`. Python 3.12+, installed with `pip install -c requirements.lock -e '.[dev]'`.
+Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with `pip install -c requirements.lock -e '.[dev]'`.
 
 | Module | Role |
 |---|---|
@@ -19,5 +19,6 @@ Package `cti` under `src/`. Python 3.12+, installed with `pip install -c require
 ## Conventions
 
 - Tests are offline: `respx` mocks HTTP, `moto` mocks S3. `testpaths = ["tests"]`.
-- CI: ruff lint + format, pytest on 3.12 and 3.14, pip-audit, gitleaks.
+- CI: ruff lint + format, pytest on 3.12 and 3.14, pip-audit, gitleaks. Actions pinned
+  by commit SHA.
 - Dependencies: ranges in `pyproject.toml`, exact pins in `requirements.lock`.
