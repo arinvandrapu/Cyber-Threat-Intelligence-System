@@ -16,3 +16,8 @@ Reviewed at the start of each session.
 - **Mistake:** Pushed directly to `main` while setting up a repo.
 - **Trigger:** Seeding a repo, replacing a starter commit, any push targeting `main`.
 - **Rule:** Feature branch → push branch → open PR → stop. The owner merges manually.
+
+### Check PR state before pushing more commits to its branch
+- **Mistake:** Pushed three commits to a PR branch after the PR had already been merged, so they never reached `main`.
+- **Trigger:** Adding follow-up changes to an open PR, especially after time has passed.
+- **Rule:** Run `gh pr view <n> --json state` first. If it's merged, branch from the updated `main` and open a new PR.
