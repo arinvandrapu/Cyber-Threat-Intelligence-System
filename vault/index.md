@@ -5,6 +5,7 @@ tags: [index]
 # Vault Index
 
 Map of notes. Every topic note is linked from here.
+Current status and next steps: `tasks/session-handoff.md`.
 
 ## Design decisions
 
