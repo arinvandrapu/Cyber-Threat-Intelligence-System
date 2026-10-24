@@ -14,6 +14,10 @@ Map of notes. Every topic note is linked from here.
 - [[gold-set-provenance]] — the classification gold set is rule-generated; how results are reported
 - [[nlp-design]] — where NLP applies; SecureBERT 2.0 vs scikit-learn roles; evaluation
 
+## Code
+
+- [[code-layout]] — package modules, test and CI conventions
+
 ## Security & cloud
 
 - [[aws-cost-and-security]] — S3-only footprint, bucket hardening, `cti` profile, budget

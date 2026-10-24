@@ -17,6 +17,22 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
   `--refetch <source>`, which is recorded in the manifest with a reason.
 - Tests use recorded fixtures; CI has no network access to feeds.
 
+## Where it runs
+
+- From the owner's laptop: `cti ingest` downloads directly from each source.
+- Writes go through `MirroredStorage`: local `data/` first, then the private S3 bucket
+  under `snapshots/<YYYY-MM-DD>/`. Later stages read local and fall back to S3.
+- No AWS compute. S3 cost at this size is cents per month.
+
+## Implementation (`src/cti/snapshot.py`)
+
+- `Snapshot.create` fails with `SnapshotExistsError` if any key exists for that date.
+- Raw keys: `<id>/raw/<source>/<attempt>/<name>`, written with no-overwrite
+  (S3 `IfNoneMatch: *`). Only `manifest.json` is rewritten.
+- `begin_refetch(source, reason)` logs the reason and bumps the attempt number;
+  old attempts are kept. Reads verify SHA-256.
+- Storage has no delete operation at all.
+
 ## Why
 
 - Keeps API usage and cost minimal and the dataset reproducible.

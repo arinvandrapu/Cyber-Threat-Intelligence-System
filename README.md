@@ -68,8 +68,33 @@ flowchart LR
 
 ## Setup
 
-*Coming in Phase 1.* Requirements: Python 3.12+, Node.js 20+, an AWS account (S3 only),
-and a free abuse.ch Auth-Key.
+Requirements: Python 3.12+. Later phases add Node.js 20+ (dashboard), an AWS account
+(S3 only), and a free abuse.ch Auth-Key.
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -c requirements.lock -e '.[dev]'
+cp .env.example .env   # fill in values; .env is gitignored
+pytest                 # offline: no network or AWS access needed
+ruff check .
+```
+
+## Project layout
+
+```
+src/cti/
+  config.py          typed settings from CTI_* env vars; fail fast on missing values
+  models.py          Document: the normalized record every source produces
+  snapshot.py        immutable raw snapshot + manifest (ingest runs once)
+  http/
+    client.py        retrying HTTP client (429/5xx only, Retry-After aware)
+    ratelimit.py     sliding-window rate limiter
+    safe_fetch.py    SSRF-safe fetcher for untrusted URLs
+  storage/           local, S3, and mirrored backends (no delete operation)
+tests/unit/          offline unit tests
+vault/               design notes
+tasks/todo.md        build plan and progress
+```
 
 ## What this project demonstrates
 

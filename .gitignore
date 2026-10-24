@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Data: raw feed data is never committed (licensing); snapshots live in S3
+/data/
+
+# Node (dashboard)
+node_modules/
+.next/
+out/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+.obsidian/
