@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     cutoff_days: int = 180
     attack_version: str = "20.0"
     cwe_version: str = "4.20"
+
+    @field_validator(
+        "s3_bucket", "aws_profile", "abusech_auth_key", "github_token", "contact", mode="before"
+    )
+    @classmethod
+    def _blank_is_unset(cls, value):
+        """``CTI_X=`` (blank, as in .env.example) means "not set", not an empty value."""
+        return None if isinstance(value, str) and not value.strip() else value
 
     def require(self, *names: str) -> None:
         missing = [n for n in names if getattr(self, n) in (None, "")]
