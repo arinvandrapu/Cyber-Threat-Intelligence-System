@@ -12,7 +12,9 @@ thresholds that were never validated.
 
 ## Approach
 
-- **Inputs:** CVSS, EPSS, exploit availability (ExploitDB), recency, CWE class.
+- **Inputs:** CVSS, EPSS, CISA SSVC (Vulnrichment), exploit availability (ExploitDB,
+  Metasploit, Nuclei), recency, CWE class, SecureBERT text features ([[nlp-design]]).
+- **Model:** scikit-learn (logistic regression or gradient boosting); explainable per CVE.
 - **Evaluation is forward-looking:** score every CVE using only data as of a cutoff date
   (snapshot − 180 days: EPSS at cutoff, KEV entries with `dateAdded` < cutoff). The
   ground truth is whether the CVE was **added to KEV after the cutoff**.

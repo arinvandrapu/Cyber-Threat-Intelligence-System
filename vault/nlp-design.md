@@ -4,8 +4,8 @@ tags: [design, nlp, ml]
 
 # NLP Design
 
-Status: **proposed 2026-10-24, awaiting owner approval**. SecureBERT 2.0 moves from
-stretch goal to a core Phase 5 deliverable.
+Status: **in the build plan (2026-10-24)**. SecureBERT 2.0 is a core Phase 5
+deliverable, not a stretch goal.
 
 ## Where NLP applies
 

@@ -17,25 +17,22 @@ Verified 2026-10-24. Captured once per [[ingest-once-snapshot]].
 | ThreatFox | abuse.ch export (6 months) | free Auth-Key | Key required since 2025-06-30. No redistribution without consent: publish aggregates only. |
 | URLhaus | abuse.ch dump | same key | Same terms as ThreatFox. |
 
-## Candidates (proposed 2026-10-24, not yet verified or approved)
+## Prioritization signals (added 2026-10-24)
 
-| Source | Adds | Key |
-|---|---|---|
-| CISA Vulnrichment | SSVC: exploitation status, automatable, technical impact | none |
-| Metasploit module metadata | Weaponized exploit availability | none |
-| Nuclei templates | Mass-scannable CVEs | none |
-| GitHub Advisory DB / OSV.dev | Affected packages, fixed versions | none |
-| abuse.ch Feodo Tracker, SSLBL | Botnet C2 IPs, malicious TLS certs (CC0: publishable) | abuse.ch key |
-| Spamhaus DROP/EDROP | Criminal-controlled netblocks | none |
+| Source | Access | Key | Notes |
+|---|---|---|---|
+| CISA Vulnrichment | Archive of a pinned `develop` commit | none | CC0. SSVC under `containers.adp[]` (CISA-ADP). History starts 2024-04-24. Per-record timestamps are overwritten on rescoring, so point-in-time state comes **only** from git history. Drop the ADP KEV block (leakage). |
+| Metasploit | `db/modules_metadata_base.json` at a pinned commit | none | BSD-3. CVE refs as plain strings. `mod_time` is bulk-reset: never treat it as a creation date. |
+| Nuclei templates | `cves.json` (JSONL) at a pinned commit | none | MIT. History since 2023-01-18. Current templates carry `kev`/`epss` tags: leakage, drop them. |
 
-Leakage risk: Vulnrichment "exploitation: active" overlaps KEV. Every ranking signal
-must be captured **as of the cutoff date** (git history) for [[risk-scoring-design]].
+Every signal is captured **as of the cutoff date** for [[risk-scoring-design]].
 
 ## Not used
 
 - **PhishTank**: new registrations disabled.
 - **Ransomwatch**: archived 2026-03-03. Replacements publish victim names, which
   this project avoids for ethical reasons.
+- **Feodo Tracker**: CC0, but no update since 2026-03-04 and no CVE link. Dropped.
 - **AlienVault OTX**: active, but overlaps the abuse.ch feeds; cut for scope.
 
 ## Handling
