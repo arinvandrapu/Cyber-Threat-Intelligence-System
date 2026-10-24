@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,3 +27,21 @@ class Document(BaseModel):
     @classmethod
     def make_id(cls, source: str, source_id: str) -> str:
         return f"{source}:{source_id}"
+
+
+AsOf = Literal["cutoff", "snapshot"]
+
+
+class CveSignal(BaseModel):
+    """A per-CVE signal (EPSS score, SSVC decision, exploit module, ...) at a point in time.
+
+    ``as_of="cutoff"`` values are what was known at the evaluation cutoff date and are the
+    only ones allowed as features in the forward-looking risk evaluation.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    cve: str
+    source: str
+    as_of: AsOf
+    values: dict[str, Any] = Field(default_factory=dict)

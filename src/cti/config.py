@@ -7,6 +7,7 @@ fails fast with every missing name instead of silently running half-configured.
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 from pydantic import SecretStr
@@ -25,7 +26,14 @@ class Settings(BaseSettings):
     s3_prefix: str = "snapshots"
     aws_profile: str | None = None
     abusech_auth_key: SecretStr | None = None
+    github_token: SecretStr | None = None  # optional: raises GitHub API rate limits
     contact: str | None = None
+
+    # Data contract (see tasks/todo.md)
+    nvd_window_start: date = date(2024, 1, 1)
+    cutoff_days: int = 180
+    attack_version: str = "20.0"
+    cwe_version: str = "4.20"
 
     def require(self, *names: str) -> None:
         missing = [n for n in names if getattr(self, n) in (None, "")]

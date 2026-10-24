@@ -42,8 +42,8 @@ What the one ingest must capture (finalized in Phase 2 before the real run):
 | CISA Vulnrichment | SSVC (exploitation, automatable, technical impact) at **cutoff** and snapshot | Archive of the last `develop` commit before each date (pinned SHA; extract SSVC fields only, drop the ADP KEV block) | none |
 | Metasploit | `db/modules_metadata_base.json` at cutoff and snapshot (CVE refs, `disclosure_date`; ignore `mod_time`) | File at pinned commit | none |
 | Nuclei templates | `cves.json` (JSONL) at cutoff and snapshot; drop `kev`/`epss` tags | File at pinned commit | none |
-| ThreatFox | IOC export (last 6 months) | abuse.ch export | free abuse.ch Auth-Key |
-| URLhaus | Malicious URL dump | abuse.ch export | same key |
+| ThreatFox | IOC export (last 6 months), `full.csv.zip` | abuse.ch v2 export (key in URL path) | free abuse.ch Auth-Key |
+| URLhaus | Malicious URLs (last 30 days), `recent.csv` | abuse.ch v2 export (key in URL path) | same key |
 | Reference pages | Scraped text for a bounded CVE subset (proposed: KEV CVEs + top EPSS, capped ~2,000 pages) | SSRF-safe fetcher | none |
 
 Git-hosted sources are pinned by commit SHA in the manifest, so the exact state can
@@ -60,13 +60,18 @@ get owner approval.
       HTTP client (retry on 429/5xx only, rate limiter), SSRF-safe fetcher with tests
       (redirects, private/link-local/IPv6/decimal/octal IPs, non-http schemes),
       `Document` model, storage backends (local + S3), snapshot manifest.
-- [ ] **2. Sources + data contract** — one module per source fetching raw data and an
+- [ ] **2a. Sources** — fetch + offline parse for all 11 sources, `cti` CLI
+      (probe/ingest/status/parse), resume and logged refetch, defanging. *(in review)*
+- [ ] **2b. Scraper + gold set + contract sign-off** — reference scraper, gold fixture,
+      final data contract.
+- [ ] ~~**2. Sources + data contract**~~ (split into 2a/2b above) — one module per source fetching raw data and an
       offline parser to `Document`s; recorded-fixture tests; IOC defanging; reference
       scraper (robots.txt, honest UA); finalize the data contract; gold-set fixture
       (frozen text + labels, deduplicated, defanged, checksummed, kept private).
 - [ ] **3. AWS setup + the one ingest** — budget alert, bucket (Block Public Access,
       ACLs disabled, TLS-only policy, versioning + lifecycle), `cti` IAM policy in
-      `infra/`, smoke run, then the single real ingest (owner approves first).
+      `infra/`, `cti probe`, then the single real ingest to local disk (owner approves
+      first), `cti parse` to validate, then `cti upload` to S3.
 - [ ] **4. Enrichment** — reference-link classifier, content cleaner, CWE lookup,
       KEV/EPSS/ExploitDB joins onto CVEs.
 - [ ] **5. NLP extraction** — regex for structured IOCs (correct IPv4 boundaries, strict

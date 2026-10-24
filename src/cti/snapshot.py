@@ -58,6 +58,7 @@ class Manifest(BaseModel):
     created_at: datetime
     entries: list[ManifestEntry] = Field(default_factory=list)
     refetches: list[RefetchRecord] = Field(default_factory=list)
+    completed: dict[str, datetime] = Field(default_factory=dict)
 
 
 class Snapshot:
@@ -100,22 +101,51 @@ class Snapshot:
             overwrite=overwrite,
         )
 
+    def _attempts_in_storage(self, source: str) -> list[int]:
+        """Attempt numbers with data in storage, including writes the manifest missed
+        (e.g. a crash between writing the data and saving the manifest)."""
+        prefix = f"{self.id}/raw/{source}/"
+        attempts = []
+        for key in self.storage.list_keys(prefix):
+            part = key[len(prefix) :].split("/", 1)[0]
+            if part.isdigit():
+                attempts.append(int(part))
+        return attempts
+
     def current_attempt(self, source: str) -> int:
         attempts = [e.attempt for e in self.manifest.entries if e.source == source]
         attempts += [r.attempt for r in self.manifest.refetches if r.source == source]
+        attempts += self._attempts_in_storage(source)
         return max(attempts, default=1)
 
     def begin_refetch(self, source: str, reason: str) -> int:
         if not reason.strip():
             raise ValueError("a refetch needs a reason")
-        if not any(e.source == source for e in self.manifest.entries):
+        if not self.has_data(source):
             raise ValueError(f"source {source!r} has no data to refetch")
         attempt = self.current_attempt(source) + 1
         self.manifest.refetches.append(
             RefetchRecord(source=source, attempt=attempt, reason=reason, at=_now())
         )
+        self.manifest.completed.pop(source, None)
         self.save()
         return attempt
+
+    def mark_complete(self, source: str) -> None:
+        self.manifest.completed[source] = _now()
+        self.save()
+
+    def is_complete(self, source: str) -> bool:
+        return source in self.manifest.completed
+
+    def has_data(self, source: str) -> bool:
+        return any(e.source == source for e in self.manifest.entries) or bool(
+            self._attempts_in_storage(source)
+        )
+
+    @property
+    def date(self) -> date:
+        return date.fromisoformat(self.id)
 
     def write_raw(
         self,
