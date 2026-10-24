@@ -63,9 +63,9 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       `Document` model, storage backends (local + S3), snapshot manifest.
 - [x] **2a. Sources** — fetch + offline parse for all 11 sources, `cti` CLI
       (probe/ingest/status/parse), resume and logged refetch, defanging.
-- [ ] **2b. Scraper + gold set + contract sign-off** — reference classifier (ported),
+- [x] **2b. Scraper + gold set + contract sign-off** — reference classifier (ported),
       target selection, SSRF-safe + robots-respecting scraper, `cti gold-import`
-      (frozen, checksummed), data contract above. *(in review)*
+      (frozen, checksummed), data contract above.
 - [ ] ~~**2. Sources + data contract**~~ (split into 2a/2b above) — one module per source fetching raw data and an
       offline parser to `Document`s; recorded-fixture tests; IOC defanging; reference
       scraper (robots.txt, honest UA); finalize the data contract; gold-set fixture
