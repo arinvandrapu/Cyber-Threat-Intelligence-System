@@ -23,10 +23,14 @@ Without checks, a crafted reference URL (or a redirect) can point at
 - Strip auth headers on cross-origin redirects. Cap response size and time.
 - Honest single User-Agent with contact info; respect robots.txt.
 
-## Implementation options
+## Implementation (`src/cti/http/safe_fetch.py`)
 
-- `httpx-secure` (maintained, 0BSD) or a small custom httpx transport.
-- Not Advocate (archived 2023).
+- Custom, ~150 lines on httpx, chosen over `httpx-secure` so each control is visible
+  and tested. Advocate was rejected (archived 2023).
+- Requests go to the validated IP; `Host` header + `sni_hostname` extension carry
+  the real hostname, so TLS certs are still checked against it.
+- Rejects the host if **any** resolved address is non-public, and unwraps IPv4-mapped,
+  6to4, and Teredo addresses before checking.
 
 ## Tests
 
