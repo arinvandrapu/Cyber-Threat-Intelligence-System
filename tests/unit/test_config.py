@@ -28,3 +28,13 @@ def test_user_agent_requires_contact(monkeypatch):
         _ = Settings(_env_file=None).user_agent
     monkeypatch.setenv("CTI_CONTACT", "me@example.com")
     assert "mailto:me@example.com" in Settings(_env_file=None).user_agent
+
+
+def test_blank_values_count_as_missing(monkeypatch):
+    monkeypatch.setenv("CTI_ABUSECH_AUTH_KEY", "")
+    monkeypatch.setenv("CTI_S3_BUCKET", "  ")
+    settings = Settings(_env_file=None)
+    assert settings.abusech_auth_key is None
+    with pytest.raises(ConfigError) as exc:
+        settings.require("abusech_auth_key", "s3_bucket")
+    assert "CTI_ABUSECH_AUTH_KEY" in str(exc.value)

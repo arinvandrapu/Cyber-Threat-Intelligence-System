@@ -44,7 +44,9 @@ def cmd_probe(args, settings: Settings) -> int:
                 with client.stream("GET", url) as response:
                     status = str(response.status_code)
                     ok = response.is_success
-            except Exception as exc:
+            except ConfigError as exc:  # safe to show: names the missing setting only
+                status, ok = str(exc), False
+            except Exception as exc:  # type only: messages could contain URLs with keys
                 status, ok = type(exc).__name__, False
             failures += not ok
             print(f"{'OK ' if ok else 'ERR'}  {source.name:<13} {status}")
