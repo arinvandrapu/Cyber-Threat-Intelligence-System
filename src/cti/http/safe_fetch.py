@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -25,6 +26,12 @@ import httpx
 ALLOWED_SCHEMES = frozenset({"http", "https"})
 ALLOWED_PORTS = frozenset({80, 443})
 REDIRECT_STATUS = frozenset({301, 302, 303, 307, 308})
+
+# Ranges that some Python versions classify as global but must never be fetched.
+_EXTRA_BLOCKED = tuple(
+    ipaddress.ip_network(n)
+    for n in ("fec0::/10", "3fff::/20", "2001:db8::/32", "192.0.0.0/24", "198.18.0.0/15")
+)
 
 Resolver = Callable[[str, int], list[str]]
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
@@ -65,6 +72,8 @@ def is_public_ip(ip: str) -> bool:
         return False
     if isinstance(addr, ipaddress.IPv6Address) and (inner := _embedded_ipv4(addr)):
         addr = inner
+    if any(addr in net for net in _EXTRA_BLOCKED):
+        return False
     return addr.is_global and not (addr.is_multicast or addr.is_reserved)
 
 
@@ -77,16 +86,23 @@ class SafeFetcher:
         max_redirects: int = 3,
         max_bytes: int = 2_000_000,
         timeout: float = 15.0,
+        deadline: float = 30.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._resolver = resolver
         self._max_redirects = max_redirects
         self._max_bytes = max_bytes
+        self._deadline = deadline
         self._client = httpx.Client(
-            headers={"User-Agent": user_agent},
+            # identity encoding: the size cap applies to bytes on the wire, no gzip bombs
+            headers={"User-Agent": user_agent, "Accept-Encoding": "identity"},
             follow_redirects=False,
             timeout=timeout,
             transport=transport,
+            # Pooled connections are keyed by IP only; reusing one for a different hostname
+            # would skip that hostname's certificate check. Ignore proxy env vars.
+            limits=httpx.Limits(max_keepalive_connections=0),
+            trust_env=False,
         )
 
     def close(self) -> None:
@@ -110,36 +126,44 @@ class SafeFetcher:
             raise BlockedURLError("credentials in URL not allowed")
         if not parsed.host:
             raise BlockedURLError("missing host")
+        host = parsed.raw_host.decode("ascii")  # IDNA-encoded, same form as the Host header
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         if port not in ALLOWED_PORTS:
             raise BlockedURLError(f"port not allowed: {port}")
         try:
-            ips = self._resolver(parsed.host, port)
+            ips = self._resolver(host, port)
         except OSError as exc:
-            raise BlockedURLError(f"cannot resolve {parsed.host!r}") from exc
+            raise BlockedURLError(f"cannot resolve {host!r}") from exc
         if not ips:
-            raise BlockedURLError(f"no addresses for {parsed.host!r}")
+            raise BlockedURLError(f"no addresses for {host!r}")
         blocked = [ip for ip in ips if not is_public_ip(ip)]
         if blocked:
-            raise BlockedURLError(f"{parsed.host!r} resolves to non-public address {blocked[0]}")
+            raise BlockedURLError(f"{host!r} resolves to non-public address {blocked[0]}")
         return parsed, ips[0]
 
     def fetch(self, url: str) -> FetchResult:
-        current = httpx.URL(url)
+        current: str | httpx.URL = url
+        give_up_at = time.monotonic() + self._deadline
         for _ in range(self._max_redirects + 1):
             parsed, ip = self.validate(current)
             request = self._client.build_request(
                 "GET",
                 parsed.copy_with(host=ip),
                 headers={"Host": parsed.netloc.decode("ascii")},
-                extensions={"sni_hostname": parsed.host},
+                extensions={"sni_hostname": parsed.raw_host.decode("ascii")},
             )
-            response = self._client.send(request, stream=True)
+            try:
+                response = self._client.send(request, stream=True)
+            except httpx.RemoteProtocolError as exc:  # includes unparseable Location headers
+                raise BlockedURLError(f"protocol error: {exc}") from exc
             try:
                 if response.status_code in REDIRECT_STATUS and "location" in response.headers:
-                    current = parsed.join(response.headers["location"])
+                    try:
+                        current = parsed.join(response.headers["location"])
+                    except httpx.InvalidURL as exc:
+                        raise BlockedURLError(f"invalid redirect: {exc}") from exc
                     continue
-                content, truncated = self._read_capped(response)
+                content, truncated = self._read_capped(response, give_up_at)
                 return FetchResult(
                     url=str(parsed),
                     status_code=response.status_code,
@@ -151,10 +175,12 @@ class SafeFetcher:
                 response.close()
         raise BlockedURLError(f"more than {self._max_redirects} redirects")
 
-    def _read_capped(self, response: httpx.Response) -> tuple[bytes, bool]:
+    def _read_capped(self, response: httpx.Response, give_up_at: float) -> tuple[bytes, bool]:
         chunks: list[bytes] = []
         size = 0
         for chunk in response.iter_bytes():
+            if time.monotonic() > give_up_at:
+                raise BlockedURLError("fetch exceeded overall deadline")
             remaining = self._max_bytes - size
             if len(chunk) > remaining:
                 chunks.append(chunk[:remaining])

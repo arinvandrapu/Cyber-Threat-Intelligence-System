@@ -39,7 +39,7 @@ class RateLimiter:
         with self._lock:
             now = self._clock()
             self._evict(now)
-            if len(self._times) >= self.max_requests:
+            while len(self._times) >= self.max_requests:
                 self._sleep(self._times[0] + self.window_seconds - now)
                 now = self._clock()
                 self._evict(now)

@@ -7,12 +7,12 @@ name = "cti"
 version = "0.1.0"
 description = "Cyber threat intelligence pipeline: ingest, enrich, prioritize, and present."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12.4"  # 3.12.4 fixes ipaddress is_global/is_private (CVE-2024-4032)
 dependencies = [
     "httpx>=0.28,<1",
     "pydantic>=2.9,<3",
     "pydantic-settings>=2.6,<3",
-    "boto3>=1.35,<2",
+    "boto3>=1.36,<2",  # S3 conditional writes (IfNoneMatch)
 ]
 
 [project.optional-dependencies]

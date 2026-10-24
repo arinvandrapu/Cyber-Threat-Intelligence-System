@@ -38,7 +38,8 @@ class S3Storage:
                 **extra,
             )
         except ClientError as exc:
-            if exc.response.get("Error", {}).get("Code") == "PreconditionFailed":
+            code = exc.response.get("Error", {}).get("Code")
+            if code in {"PreconditionFailed", "ConditionalRequestConflict"}:
                 raise FileExistsError(key) from exc
             raise
 

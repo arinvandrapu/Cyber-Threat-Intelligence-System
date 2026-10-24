@@ -15,15 +15,15 @@ from __future__ import annotations
 
 import hashlib
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from pydantic import BaseModel, Field
 
-from cti.storage.base import Storage
+from cti.storage.base import Storage, put_once
 
 MANIFEST = "manifest.json"
-_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+_ID_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_NAME_RE = re.compile(r"[A-Za-z0-9._-]+")
 
 
 class SnapshotExistsError(RuntimeError):
@@ -75,14 +75,16 @@ class Snapshot:
 
     @classmethod
     def create(cls, storage: Storage, snapshot_id: str) -> Snapshot:
-        if not _ID_RE.match(snapshot_id):
+        if not _ID_RE.fullmatch(snapshot_id):
             raise ValueError(f"snapshot id must be YYYY-MM-DD, got {snapshot_id!r}")
+        date.fromisoformat(snapshot_id)  # rejects impossible dates like 2026-99-99
         if storage.list_keys(f"{snapshot_id}/"):
             raise SnapshotExistsError(
                 f"snapshot {snapshot_id} already exists; use a refetch to change a source"
             )
         snap = cls(storage, Manifest(snapshot_id=snapshot_id, created_at=_now()))
-        snap.save()
+        # overwrite=False: if another ingest raced us here, this fails instead of clobbering
+        snap.save(overwrite=False)
         return snap
 
     @classmethod
@@ -90,11 +92,12 @@ class Snapshot:
         data = storage.get_bytes(cls._manifest_key(snapshot_id))
         return cls(storage, Manifest.model_validate_json(data))
 
-    def save(self) -> None:
+    def save(self, *, overwrite: bool = True) -> None:
+        """Persist the manifest, the only object in a snapshot that is ever rewritten."""
         self.storage.put_bytes(
             self._manifest_key(self.id),
             self.manifest.model_dump_json(indent=2).encode(),
-            overwrite=True,
+            overwrite=overwrite,
         )
 
     def current_attempt(self, source: str) -> int:
@@ -124,11 +127,16 @@ class Snapshot:
         source_version: str | None = None,
     ) -> ManifestEntry:
         for label, value in (("source", source), ("name", name)):
-            if not _NAME_RE.match(value):
+            if not _NAME_RE.fullmatch(value):
                 raise ValueError(f"invalid {label}: {value!r}")
         attempt = self.current_attempt(source)
         key = f"{self.id}/raw/{source}/{attempt}/{name}"
-        self.storage.put_bytes(key, data)
+        # put_once makes a retry after a partial failure (e.g. the manifest save failed)
+        # safe: identical bytes are accepted, different bytes still raise FileExistsError.
+        put_once(self.storage, key, data)
+        if existing := next((e for e in self.manifest.entries if e.key == key), None):
+            self.save()  # a previous save may have failed after the entry was recorded
+            return existing
         entry = ManifestEntry(
             source=source,
             attempt=attempt,

@@ -19,6 +19,20 @@ def validate_key(key: str) -> str:
     return key
 
 
+def put_once(storage: Storage, key: str, data: bytes) -> bool:
+    """Write ``key`` if absent. Returns False if identical bytes are already stored.
+
+    Raises ``FileExistsError`` if different bytes are stored under ``key``.
+    """
+    try:
+        storage.put_bytes(key, data)
+    except FileExistsError:
+        if storage.get_bytes(key) != data:
+            raise
+        return False
+    return True
+
+
 class Storage(Protocol):
     def put_bytes(self, key: str, data: bytes, *, overwrite: bool = False) -> None:
         """Store ``data``. Raises ``FileExistsError`` if the key exists and not ``overwrite``."""

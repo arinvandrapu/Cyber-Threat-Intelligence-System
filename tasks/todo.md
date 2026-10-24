@@ -55,7 +55,7 @@ get owner approval.
 ## Phases
 
 - [x] **0. Docs** — README, this build plan, lessons file, `vault/` design notes.
-- [ ] **1. Foundation + core** — `pyproject.toml` (pinned deps, extras), `src/cti/`
+- [x] **1. Foundation + core** — `pyproject.toml` (pinned deps, extras), `src/cti/`
       layout, pytest/ruff/CI (tests, lint, pip-audit, secret scanning), typed config,
       HTTP client (retry on 429/5xx only, rate limiter), SSRF-safe fetcher with tests
       (redirects, private/link-local/IPv6/decimal/octal IPs, non-http schemes),
