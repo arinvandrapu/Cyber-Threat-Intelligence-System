@@ -17,6 +17,20 @@ Verified 2026-10-24. Captured once per [[ingest-once-snapshot]].
 | ThreatFox | abuse.ch export (6 months) | free Auth-Key | Key required since 2025-06-30. No redistribution without consent: publish aggregates only. |
 | URLhaus | abuse.ch dump | same key | Same terms as ThreatFox. |
 
+## Candidates (proposed 2026-10-24, not yet verified or approved)
+
+| Source | Adds | Key |
+|---|---|---|
+| CISA Vulnrichment | SSVC: exploitation status, automatable, technical impact | none |
+| Metasploit module metadata | Weaponized exploit availability | none |
+| Nuclei templates | Mass-scannable CVEs | none |
+| GitHub Advisory DB / OSV.dev | Affected packages, fixed versions | none |
+| abuse.ch Feodo Tracker, SSLBL | Botnet C2 IPs, malicious TLS certs (CC0: publishable) | abuse.ch key |
+| Spamhaus DROP/EDROP | Criminal-controlled netblocks | none |
+
+Leakage risk: Vulnrichment "exploitation: active" overlaps KEV. Every ranking signal
+must be captured **as of the cutoff date** (git history) for [[risk-scoring-design]].
+
 ## Not used
 
 - **PhishTank**: new registrations disabled.
