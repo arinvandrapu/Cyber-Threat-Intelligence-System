@@ -17,11 +17,22 @@ Verified 2026-10-24. Captured once per [[ingest-once-snapshot]].
 | ThreatFox | abuse.ch export (6 months) | free Auth-Key | Key required since 2025-06-30. No redistribution without consent: publish aggregates only. |
 | URLhaus | abuse.ch dump | same key | Same terms as ThreatFox. |
 
+## Prioritization signals (added 2026-10-24)
+
+| Source | Access | Key | Notes |
+|---|---|---|---|
+| CISA Vulnrichment | Archive of a pinned `develop` commit | none | CC0. SSVC under `containers.adp[]` (CISA-ADP). History starts 2024-04-24. Per-record timestamps are overwritten on rescoring, so point-in-time state comes **only** from git history. Drop the ADP KEV block (leakage). |
+| Metasploit | `db/modules_metadata_base.json` at a pinned commit | none | BSD-3. CVE refs as plain strings. `mod_time` is bulk-reset: never treat it as a creation date. |
+| Nuclei templates | `cves.json` (JSONL) at a pinned commit | none | MIT. History since 2023-01-18. Current templates carry `kev`/`epss` tags: leakage, drop them. |
+
+Every signal is captured **as of the cutoff date** for [[risk-scoring-design]].
+
 ## Not used
 
 - **PhishTank**: new registrations disabled.
 - **Ransomwatch**: archived 2026-03-03. Replacements publish victim names, which
   this project avoids for ethical reasons.
+- **Feodo Tracker**: CC0, but no update since 2026-03-04 and no CVE link. Dropped.
 - **AlienVault OTX**: active, but overlaps the abuse.ch feeds; cut for scope.
 
 ## Handling

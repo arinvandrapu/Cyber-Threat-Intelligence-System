@@ -39,9 +39,15 @@ What the one ingest must capture (finalized in Phase 2 before the real run):
 | ExploitDB | Exploit index with CVE codes | `files_exploits.csv` | none |
 | MITRE ATT&CK | Enterprise STIX 2.1 bundle, pinned version (v20.0) | attack-stix-data | none |
 | MITRE CWE | Catalog, pinned version (4.20) | XML zip | none |
+| CISA Vulnrichment | SSVC (exploitation, automatable, technical impact) at **cutoff** and snapshot | Archive of the last `develop` commit before each date (pinned SHA; extract SSVC fields only, drop the ADP KEV block) | none |
+| Metasploit | `db/modules_metadata_base.json` at cutoff and snapshot (CVE refs, `disclosure_date`; ignore `mod_time`) | File at pinned commit | none |
+| Nuclei templates | `cves.json` (JSONL) at cutoff and snapshot; drop `kev`/`epss` tags | File at pinned commit | none |
 | ThreatFox | IOC export (last 6 months) | abuse.ch export | free abuse.ch Auth-Key |
 | URLhaus | Malicious URL dump | abuse.ch export | same key |
 | Reference pages | Scraped text for a bounded CVE subset (proposed: KEV CVEs + top EPSS, capped ~2,000 pages) | SSRF-safe fetcher | none |
+
+Git-hosted sources are pinned by commit SHA in the manifest, so the exact state can
+always be re-derived. Only the extracted fields are stored, which keeps the bucket small.
 
 Before the real run: smoke-test each source with small limits, confirm keys work, and
 get owner approval.
@@ -63,13 +69,18 @@ get owner approval.
       `infra/`, smoke run, then the single real ingest (owner approves first).
 - [ ] **4. Enrichment** — reference-link classifier, content cleaner, CWE lookup,
       KEV/EPSS/ExploitDB joins onto CVEs.
-- [ ] **5. Extraction** — regex IOC/entity extractor (correct IPv4 boundaries, strict
-      CVSS patterns), alias normalizer, ATT&CK technique mapping. Tests for all.
-- [ ] **6. Classification + evaluation** — text-only labeling rules (never read the
-      source feed), baselines (majority, source-only, TF-IDF + logistic regression),
+- [ ] **5. NLP extraction** — regex for structured IOCs (correct IPv4 boundaries, strict
+      CVSS patterns); **SecureBERT 2.0 NER** (`cisco-ai/SecureBERT2.0-NER`, local CPU
+      batch) for malware, products, and organizations; alias normalizer; ATT&CK
+      technique mapping via SecureBERT embeddings, graded against MITRE CTID
+      CVE→ATT&CK mappings (verify availability). Tests for all.
+- [ ] **6. Classification + evaluation** — SecureBERT-embedding classifier vs
+      text-only rules vs baselines (majority, source-only, TF-IDF + logistic regression),
       evaluation script. Gold set is rule-generated, so its result is reported as a
       sanity check next to the source-only baseline, with that limitation disclosed.
-- [ ] **7. Risk scoring** — score from CVSS, EPSS, exploit availability, recency.
+- [ ] **7. Risk scoring** — scikit-learn model over CVSS, EPSS, SSVC, exploit
+      availability (ExploitDB, Metasploit, Nuclei), recency, and SecureBERT text features;
+      ablation with vs without the text features.
       Forward-looking evaluation: score with cutoff-date data only, measure which CVEs
       were added to KEV after the cutoff; precision@k and PR-AUC vs CVSS-only and
       EPSS-only baselines. Tier thresholds set from these results.
@@ -80,7 +91,7 @@ get owner approval.
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
       limitations section, final README.
 
-Stretch (only if time allows): SecureBERT 2.0 NER on CPU, relation extraction,
+Stretch (only if time allows): relation extraction,
 detection-rule generation, a small hand-labeled evaluation set.
 
 ## Review
