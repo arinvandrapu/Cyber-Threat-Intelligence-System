@@ -33,6 +33,9 @@ PUBLIC = "93.184.216.34"
         ("https://vendor.example/patch/1", RefType.PATCH),
         ("https://blog.example/post", RefType.ARTICLE),
         ("https://nvd.nist.gov/vuln/detail/CVE-2026-1", RefType.UNKNOWN),
+        ("https://www.exploit-db.com/exploits/52000", RefType.EXPLOIT),
+        ("https://packetstormsecurity.com/files/190000/x.html", RefType.EXPLOIT),
+        ("https://packetstorm.news/files/id/190000", RefType.EXPLOIT),
         (
             "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search=CVE-2026-1",
             RefType.UNKNOWN,

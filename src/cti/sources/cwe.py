@@ -5,6 +5,8 @@ from __future__ import annotations
 import io
 import zipfile
 from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import IO
 
 from defusedxml.ElementTree import iterparse
 
@@ -30,14 +32,20 @@ class CWESource(Source):
         url = self.url()
         ctx.write(self.name, "cwec.xml.zip", ctx.download(url), url, self.settings.cwe_version)
 
+    @contextmanager
+    def open_xml(self, snapshot: Snapshot) -> Iterator[IO[bytes]]:
+        """The catalog XML from the snapshot, size-checked. Parse it with defusedxml."""
+        [entry] = snapshot.entries(self.name)
+        with zipfile.ZipFile(io.BytesIO(snapshot.read_raw(entry))) as zf:
+            [info] = [i for i in zf.infolist() if i.filename.endswith(".xml")]
+            if info.file_size > MAX_XML_BYTES:
+                raise ValueError(f"{info.filename} is larger than expected")
+            with zf.open(info) as fh:
+                yield fh
+
     def parse(self, snapshot: Snapshot) -> Iterator[Document]:
-        for entry in snapshot.entries(self.name):
-            with zipfile.ZipFile(io.BytesIO(snapshot.read_raw(entry))) as zf:
-                [info] = [i for i in zf.infolist() if i.filename.endswith(".xml")]
-                if info.file_size > MAX_XML_BYTES:
-                    raise ValueError(f"{info.filename} is larger than expected")
-                with zf.open(info) as fh:
-                    yield from self._weaknesses(fh)
+        with self.open_xml(snapshot) as fh:
+            yield from self._weaknesses(fh)
 
     @staticmethod
     def _weaknesses(fh) -> Iterator[Document]:
