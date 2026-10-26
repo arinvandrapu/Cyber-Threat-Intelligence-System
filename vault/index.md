@@ -6,6 +6,7 @@ tags: [index]
 
 Map of notes. Every topic note is linked from here.
 Current status and next steps: `tasks/session-handoff.md`.
+Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 
 ## Design decisions
 
@@ -23,4 +24,5 @@ Current status and next steps: `tasks/session-handoff.md`.
 ## Security & cloud
 
 - [[aws-cost-and-security]] — S3-only footprint, bucket hardening, `cti` profile, budget
+- [[s3-archive-not-live-store]] — why S3 is a write-once archive, not the working store (vs capstone)
 - [[ssrf-safe-fetching]] — how the reference scraper avoids SSRF

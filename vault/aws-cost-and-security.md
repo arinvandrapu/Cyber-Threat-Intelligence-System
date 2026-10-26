@@ -4,7 +4,8 @@ tags: [aws, security, cost]
 
 # AWS: Cost and Security
 
-S3 is the **only** AWS service. All compute runs locally.
+S3 is the **only** AWS service. All compute runs locally. S3 holds a write-once
+archive copy, not the working data: [[s3-archive-not-live-store]].
 
 ## Bucket
 

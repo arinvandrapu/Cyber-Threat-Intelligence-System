@@ -1,0 +1,140 @@
+# Architecture
+
+How the Cyber Threat Intelligence System is put together: what runs where, how data
+moves, and where it is stored. The reasoning behind each choice is in
+[decisions.md](decisions.md).
+
+> Phases 0–3 are built (sources, scraper, gold set, snapshot, S3 upload). Stages marked
+> *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
+
+## Overview
+
+```mermaid
+flowchart LR
+    SRC[Public sources<br/>NVD · KEV · EPSS · Vulnrichment<br/>ExploitDB · Metasploit · Nuclei<br/>ATT&CK · CWE · abuse.ch<br/>CVE reference pages]
+    subgraph LAPTOP[Owner's laptop: all compute]
+        ING[cti ingest<br/>one-time fetch]
+        SNAP[(Raw snapshot<br/>data/snapshots/DATE/)]
+        PARSE[cti parse<br/>offline]
+        PROC[(Parsed records<br/>data/processed/DATE/)]
+        DOWN[Enrich → NLP → Risk scoring<br/>(planned)]
+        OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>(planned)]
+    end
+    S3[(Private S3 bucket<br/>write-once archive)]
+
+    SRC -->|HTTPS, rate-limited,<br/>SSRF-safe scraper| ING --> SNAP
+    SNAP --> PARSE --> PROC --> DOWN --> OUT
+    SNAP -->|cti upload<br/>after parse validates| S3
+```
+
+Three properties shape everything:
+
+1. **The network is touched once.** `cti ingest` is the only command that downloads
+   source data. Every later stage reads the stored snapshot.
+2. **All compute is local.** Parsing, NLP (SecureBERT 2.0 on CPU), and modeling run on
+   one machine. There is no EC2, Lambda, or SageMaker.
+3. **S3 is an archive, not a workspace.** It receives a write-once, checksummed copy of
+   the finished raw snapshot and the gold set. No pipeline stage reads from it.
+
+## Pipeline stages
+
+| Stage | Command / module | Network | Input → output |
+|---|---|---|---|
+| Probe | `cti probe` | yes (cheap) | Checks each source is reachable and keys work |
+| Ingest | `cti ingest` → `ingest.py`, `sources/*.fetch` | yes | Sources → raw snapshot + manifest |
+| Status | `cti status` | no | Prints the manifest: files, sizes, pinned versions, refetches |
+| Parse | `cti parse` → `sources/*.parse` | no | Raw snapshot → `Document` / `CveSignal` records (`.jsonl.gz`) |
+| Upload | `cti upload` → `upload.py` | S3 only | Raw snapshot + gold set → S3, write-once |
+| Enrich *(planned)* | Phase 4 | no | Joins KEV/EPSS/ExploitDB/CWE onto CVEs |
+| NLP *(planned)* | Phase 5 | no | Regex IOCs, SecureBERT 2.0 NER, ATT&CK mapping |
+| Classify + evaluate *(planned)* | Phase 6 | no | Category classifier vs baselines on the gold set |
+| Risk scoring *(planned)* | Phase 7 | no | scikit-learn model, forward-looking KEV evaluation |
+| Present *(planned)* | Phases 8–9 | no | Static Next.js dashboard on 127.0.0.1, STIX 2.1 export |
+
+Every source module has two halves: `fetch(ctx)` writes raw bytes to the snapshot
+(network), and `parse(snapshot)` turns them into records (offline). A parser bug is fixed
+by re-running `cti parse`, never by re-downloading.
+
+## Storage
+
+| Location | Contents | Mutability |
+|---|---|---|
+| `data/snapshots/<date>/` (local) | Raw source responses, gzip'd, plus `manifest.json` | Write-once; only the manifest is rewritten |
+| `data/processed/<date>/` (local) | Parsed records, one `.jsonl.gz` per source | Regenerated freely from the snapshot |
+| `data/gold/gold.jsonl.gz` (local) | Frozen evaluation gold set | Frozen; SHA-256 committed in `cti/gold.py` |
+| S3 `snapshots/<date>/…` | Copy of the raw snapshot | Write-once, enforced by code **and** IAM |
+| S3 `gold/` | Copy of the gold set | Write-once |
+
+Snapshot key layout (same locally and in S3):
+
+```
+<snapshot_id>/manifest.json
+<snapshot_id>/raw/<source>/<attempt>/<file>
+```
+
+- The manifest records, per file: source, URL (secrets redacted), fetch time, size,
+  SHA-256, and the source version (e.g. ATT&CK v20.0, EPSS model version).
+- `attempt` increases only through a logged `--refetch <source> --reason …`; older
+  attempts are kept, so the history of a source is never lost.
+- The storage layer (`storage/`) has no delete operation. Writes use no-overwrite by
+  default (S3 `If-None-Match: *`); retrying with identical bytes is accepted, different
+  bytes are rejected.
+- `data/` is gitignored. Raw feed data never enters the public repo (licensing).
+
+## Point-in-time data
+
+Risk scoring is evaluated forward-looking: score CVEs with data known at a **cutoff**
+(snapshot − 180 days), then check which were added to CISA KEV after it. So the single
+ingest captures two copies of time-sensitive sources:
+
+| Source | Cutoff copy | Snapshot copy |
+|---|---|---|
+| EPSS | Dated daily file | Dated daily file |
+| ExploitDB | GitLab first-parent commit at cutoff | Current |
+| Metasploit, Nuclei, Vulnrichment | Git first-parent commit at cutoff | Current |
+| KEV | `dateAdded` splits before/after | Full catalog |
+
+Leakage rules (fields that would reveal KEV status) are enforced at parse time. Details:
+`vault/point-in-time-pinning.md`, `vault/risk-scoring-design.md`.
+
+## Security boundaries
+
+```mermaid
+flowchart LR
+    U[Untrusted input<br/>feed data, CVE reference URLs,<br/>live IOCs] --> F[SafeFetcher<br/>http/https · 80/443 · public IPs only<br/>IP pinning · per-hop redirect checks]
+    F --> L[Local snapshot]
+    L -->|cti IAM user:<br/>Get/Put/List one bucket,<br/>no delete, no overwrite| S[(S3: Block Public Access,<br/>SSE-S3, TLS-only, versioned)]
+```
+
+- **Untrusted URLs.** Reference URLs come from public CVE records, so the scraper
+  validates every hop and connects to the validated IP to defeat DNS rebinding and SSRF
+  (`http/safe_fetch.py`, `vault/ssrf-safe-fetching.md`). robots.txt is honored.
+- **Malicious content.** IOCs are defanged for display (`hxxp://evil[.]com`); the gold set
+  keeps unmodified text privately because entity offsets index into it.
+- **Secrets.** Typed settings from `CTI_*` env vars; keys are `SecretStr`; the abuse.ch
+  key (which must go in the URL path) is redacted from manifests and errors.
+- **Cloud.** One private bucket; a dedicated `cti` IAM user that cannot delete and cannot
+  PUT without `If-None-Match` (except the manifest). AWS Budgets alert at $5/month.
+  Setup: [`infra/README.md`](../infra/README.md).
+- **Supply chain.** Pinned dependencies (`requirements.lock`), pip-audit, gitleaks, and
+  GitHub Actions pinned by commit SHA in CI.
+
+## Code map
+
+```
+src/cti/
+  cli.py             `cti` command: probe / ingest / status / parse / upload / gold-import
+  config.py          typed settings from CTI_* env vars; fail fast on missing values
+  models.py          Document: the normalized record every source produces
+  ingest.py          one-time ingest: per-source isolation, resume, logged refetch
+  snapshot.py        raw snapshot + manifest, write-once
+  upload.py          finished snapshot → S3, checksum-verified
+  sources/           one module per feed (fetch + parse); registry.py sets ingest order
+  references/        reference-link classifier, target selection, scraper, HTML→text
+  http/              retrying client, rate limiter, SSRF-safe fetcher
+  storage/           LocalStorage, S3Storage, MirroredStorage (no delete)
+  gold.py            frozen, checksummed gold set
+  defang.py          IOC defanging
+```
+
+Module-level detail: `vault/code-layout.md`.
