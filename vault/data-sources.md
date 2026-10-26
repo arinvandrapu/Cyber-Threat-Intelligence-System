@@ -4,7 +4,8 @@ tags: [data, sources, licensing]
 
 # Data Sources
 
-Verified 2026-10-24. Captured once per [[ingest-once-snapshot]].
+Verified 2026-10-24. Captured once per [[ingest-once-snapshot]]. Reader-facing version with
+why-each-source and corpus counts: `docs/data-sources.md`.
 
 | Source | Access | Key | Notes |
 |---|---|---|---|
