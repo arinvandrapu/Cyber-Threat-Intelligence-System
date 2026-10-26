@@ -70,7 +70,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       offline parser to `Document`s; recorded-fixture tests; IOC defanging; reference
       scraper (robots.txt, honest UA); finalize the data contract; gold-set fixture
       (frozen text + labels, deduplicated, defanged, checksummed, kept private).
-- [ ] **3. AWS setup + the one ingest** — *(AWS setup + `cti upload` done 2026-10-26; ingest pending)* budget alert, bucket (Block Public Access,
+- [x] **3. AWS setup + the one ingest** — *(done 2026-10-26: snapshot `2026-10-26`, references refetched once, uploaded)* budget alert, bucket (Block Public Access,
       ACLs disabled, TLS-only policy, versioning + lifecycle), `cti` IAM policy in
       `infra/`, `cti probe`, then the single real ingest to local disk (owner approves
       first), `cti parse` to validate, then `cti upload` to S3.
