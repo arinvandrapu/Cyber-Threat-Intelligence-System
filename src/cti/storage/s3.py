@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from typing import Any
 
 import boto3
@@ -60,6 +62,22 @@ class S3Storage:
                 return False
             raise
         return True
+
+    def sha256(self, key: str) -> str:
+        # Objects written by put_bytes carry a full-object SHA-256 that S3 verified on upload,
+        # so a HEAD is enough. Anything else (e.g. a multipart "-N" checksum) is downloaded.
+        try:
+            head = self._s3.head_object(
+                Bucket=self.bucket, Key=self._key(key), ChecksumMode="ENABLED"
+            )
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+                raise FileNotFoundError(key) from exc
+            raise
+        checksum = head.get("ChecksumSHA256", "")
+        if checksum and "-" not in checksum:
+            return base64.b64decode(checksum).hex()
+        return hashlib.sha256(self.get_bytes(key)).hexdigest()
 
     def list_keys(self, prefix: str = "") -> list[str]:
         full = f"{self.prefix}/{prefix}" if self.prefix else prefix

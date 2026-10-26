@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-10-24. **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-10-26. **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -10,12 +10,22 @@
 | 1. Foundation + core (config, HTTP, SSRF fetcher, storage, snapshot) | ✅ merged | #3, #4 |
 | 2a. Source fetchers + parsers + `cti` CLI | ✅ merged | #5, #6 |
 | 2b. Reference scraper, frozen gold set, data contract | ✅ merged | #7 |
-| **3. AWS setup + the one ingest** | **⏭ next** | — |
+| **3. AWS setup + the one ingest** | **🟡 AWS + upload done; ingest next** | #9 |
 | 4–9 | not started | — |
 
 `main` is green (176 offline tests, CI on Python 3.12 + 3.14). **No real ingest has run yet.**
 
-## Pick up here: Phase 3 (confirm each step with the owner before running it)
+## Phase 3 status (2026-10-26)
+
+Done and verified live: $5 budget `cti-project-5usd` (account-wide), bucket
+(name in `.env`, `CTI_S3_BUCKET`) hardened per `infra/README.md`, account-level Block Public
+Access, IAM user `cti` + local profile `cti` (write-once enforced by IAM), `.env` has
+`CTI_S3_BUCKET` and `CTI_AWS_PROFILE=cti`. `cti upload` code in PR #9.
+
+**Remaining:** the one ingest (owner approves the moment), then `cti upload --date D --gold`,
+then deactivate the `cti` access key. **Owner priority: AWS cost at an absolute minimum.**
+
+## Original Phase 3 plan (for reference)
 
 1. **Bucket name.** Ask the owner; suggest `cti-snapshots-<random suffix>` (globally unique).
 2. **Budget alert first:** AWS Budgets, $5/month, actual + forecast, email alert. Also
@@ -42,7 +52,7 @@
 | abuse.ch key + contact | `.env` | gitignored; `cti probe` passed for all 11 sources on 2026-10-24 |
 | **Gold fixture (only copy)** | `data/gold/gold.jsonl.gz` | SHA-256 `4a612d2f…ceb5` (in `cti/gold.py`). **Don't delete `data/`.** Upload in Phase 3. |
 | Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev]'` to rebuild |
-| AWS CLI | default profile = owner's IAM user `Arin`, us-east-1 | create the separate `cti` profile in Phase 3 |
+| AWS CLI | `default` = owner's admin IAM user, us-east-1; `cti` = pipeline user | `cti` key in `~/.aws/credentials`; deactivate after upload |
 
 The prototype repo used for porting was a temporary clone. If it's needed again:
 `git clone https://github.com/YussefAlta/ML-Threat-Intelligence-System` (reference commit `faa35b3`).
