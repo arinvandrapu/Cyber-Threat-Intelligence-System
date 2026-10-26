@@ -125,11 +125,17 @@ def write_fixture(records: list[GoldRecord], path: Path) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def load_gold(path: Path, expected_sha256: str | None = GOLD_SHA256) -> list[GoldRecord]:
+def read_verified(path: Path, expected_sha256: str | None = GOLD_SHA256) -> bytes:
+    """Return the fixture's bytes after checking them against the frozen checksum."""
     data = path.read_bytes()
     actual = hashlib.sha256(data).hexdigest()
     if expected_sha256 is None:
         raise ValueError("no frozen gold checksum is recorded (cti.gold.GOLD_SHA256)")
     if actual != expected_sha256:
         raise ValueError(f"gold fixture checksum mismatch: {actual} != {expected_sha256}")
+    return data
+
+
+def load_gold(path: Path, expected_sha256: str | None = GOLD_SHA256) -> list[GoldRecord]:
+    data = read_verified(path, expected_sha256)
     return [GoldRecord.model_validate_json(line) for line in gzip.decompress(data).splitlines()]

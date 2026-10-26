@@ -1,4 +1,4 @@
-"""Command-line interface: ``cti probe | ingest | status | parse``."""
+"""Command-line interface: ``cti probe | ingest | status | parse | upload``."""
 
 from __future__ import annotations
 
@@ -10,13 +10,16 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 
+from botocore.exceptions import BotoCoreError, ClientError
+
 from cti import gold
 from cti.config import ConfigError, Settings
 from cti.http.client import make_client
 from cti.ingest import IngestResult, ingest, refetch
 from cti.snapshot import Snapshot, SnapshotExistsError
 from cti.sources.registry import select
-from cti.storage import LocalStorage
+from cti.storage import LocalStorage, S3Storage
+from cti.upload import upload_gold, upload_snapshot
 
 log = logging.getLogger("cti")
 
@@ -130,6 +133,33 @@ def cmd_parse(args, settings: Settings) -> int:
     return 0
 
 
+def _s3(settings: Settings, prefix: str) -> S3Storage:
+    if not settings.s3_bucket:
+        raise ConfigError("upload needs CTI_S3_BUCKET")
+    return S3Storage(settings.s3_bucket, prefix, profile=settings.aws_profile)
+
+
+def cmd_upload(args, settings: Settings) -> int:
+    if not (args.date or args.gold):
+        raise ConfigError("upload needs --date, --gold, or both")
+    ok = True
+    if args.gold:
+        path = settings.data_dir / "gold" / "gold.jsonl.gz"
+        wrote = upload_gold(path, _s3(settings, "gold"))
+        print(f"gold     {'uploaded' if wrote else 'already present'}")
+    if args.date:
+        result = upload_snapshot(_snapshots(settings), _s3(settings, settings.s3_prefix), args.date)
+        print(
+            f"snapshot {result.snapshot_id}: {result.uploaded} uploaded "
+            f"({result.bytes_uploaded / 1e6:.1f} MB), {result.already_present} already present, "
+            f"manifest {'updated' if result.manifest_updated else 'unchanged'}"
+        )
+        for key in result.missing:
+            print(f"  MISSING  {key}")
+        ok = result.ok
+    return 0 if ok else 1
+
+
 def cmd_gold_import(args, settings: Settings) -> int:
     records, report = gold.import_legacy(Path(args.gold), Path(args.entities), Path(args.corpus))
     out = Path(args.out) if args.out else settings.data_dir / "gold" / "gold.jsonl.gz"
@@ -180,6 +210,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", required=True)
     only(p)
     p.set_defaults(func=cmd_parse)
+
+    p = sub.add_parser("upload", help="copy a finished snapshot and/or the gold set to S3")
+    p.add_argument("--date", help="snapshot to upload")
+    p.add_argument("--gold", action="store_true", help="upload the frozen gold fixture")
+    p.set_defaults(func=cmd_upload)
+
     p = sub.add_parser("gold-import", help="freeze the gold set from the prototype's files")
     p.add_argument("--gold", required=True, help="labels JSONL")
     p.add_argument("--entities", required=True, help="entity spans JSONL")
@@ -200,8 +236,17 @@ def main(argv: list[str] | None = None) -> int:
         logging.getLogger(noisy).setLevel(logging.WARNING)
     try:
         return args.func(args, Settings())
-    except (ConfigError, ValueError, FileNotFoundError, SnapshotExistsError) as exc:
+    except (
+        ConfigError,
+        ValueError,
+        FileNotFoundError,
+        FileExistsError,
+        SnapshotExistsError,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except (BotoCoreError, ClientError) as exc:  # AWS errors carry no secrets
+        print(f"aws error: {exc}", file=sys.stderr)
         return 2
 
 

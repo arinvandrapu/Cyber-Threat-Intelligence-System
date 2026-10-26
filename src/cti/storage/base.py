@@ -41,4 +41,7 @@ class Storage(Protocol):
 
     def exists(self, key: str) -> bool: ...
 
+    def sha256(self, key: str) -> str:
+        """Hex SHA-256 of the stored bytes, without downloading them where possible."""
+
     def list_keys(self, prefix: str = "") -> list[str]: ...

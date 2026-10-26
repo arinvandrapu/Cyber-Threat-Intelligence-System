@@ -18,16 +18,22 @@ S3 is the **only** AWS service. All compute runs locally.
 
 ## Access
 
-- Pipeline uses a dedicated `cti` profile: Get/Put/List on this bucket only, explicit
-  Deny on `DeleteObject`. boto3 default credential chain; no keys in code or repo.
+- Pipeline uses a dedicated `cti` IAM user/profile: Get/Put/List on this bucket only,
+  explicit Deny on `DeleteObject`, `DeleteObjectVersion`, `DeleteBucket`, and on
+  `PutObject` without `If-None-Match` except `*/manifest.json` (write-once in IAM; verified
+  live 2026-10-26). Templates and
+  setup steps: `infra/`. boto3 default credential chain; no keys in code or repo.
 - Bucket setup is a one-time admin step, separate from `cti`, never run as root.
 - Account ID and bucket name are not committed; they come from local config.
 
 ## Cost guardrails
 
-- AWS Budgets alert at $5/month (actual + forecast), created **before** the bucket.
-  Budget alerts are free.
-- Cost Anomaly Detection (free).
+- AWS Budgets alert at $5/month (80% actual, 100% forecast), created **before** the
+  bucket. Free (first two budgets per account). It counts the whole account, not only
+  this bucket, so it is stricter than needed.
+- Cost Anomaly Detection (free; the default monitor is on in new accounts).
+- Account-level Block Public Access is on too (it affects every bucket in the account).
+- Expected spend: ~2–3k PUTs on upload (≈ $0.015) + ~250 MB stored (≈ $0.006/month).
 - No CloudTrail data events.
 
 Used by [[ingest-once-snapshot]]. Data handling: [[data-sources]].

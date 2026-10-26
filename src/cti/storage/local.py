@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -42,6 +43,9 @@ class LocalStorage:
 
     def exists(self, key: str) -> bool:
         return self._path(key).is_file()
+
+    def sha256(self, key: str) -> str:
+        return hashlib.sha256(self.get_bytes(key)).hexdigest()
 
     def list_keys(self, prefix: str = "") -> list[str]:
         if not self.root.exists():

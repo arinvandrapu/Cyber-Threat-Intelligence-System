@@ -30,5 +30,10 @@ class MirroredStorage:
     def exists(self, key: str) -> bool:
         return self.primary.exists(key) or self.replica.exists(key)
 
+    def sha256(self, key: str) -> str:
+        if self.primary.exists(key):
+            return self.primary.sha256(key)
+        return self.replica.sha256(key)
+
     def list_keys(self, prefix: str = "") -> list[str]:
         return sorted(set(self.primary.list_keys(prefix)) | set(self.replica.list_keys(prefix)))

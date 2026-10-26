@@ -1,3 +1,5 @@
+import hashlib
+
 import boto3
 import pytest
 from moto import mock_aws
@@ -111,3 +113,10 @@ def test_mirrored_writes_both(local, s3):
     mirrored.put_bytes("k/v", b"data")
     assert local.get_bytes("k/v") == b"data"
     assert s3.get_bytes("k/v") == b"data"
+
+
+def test_sha256_matches_stored_bytes(storage):
+    storage.put_bytes("a/b.bin", b"payload")
+    assert storage.sha256("a/b.bin") == hashlib.sha256(b"payload").hexdigest()
+    with pytest.raises(FileNotFoundError):
+        storage.sha256("a/missing.bin")

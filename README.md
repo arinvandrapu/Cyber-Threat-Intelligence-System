@@ -88,8 +88,12 @@ cti ingest --date 2026-10-25 --resume                       # continue after a f
 cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
+cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
+
+One-time AWS setup (budget alert, hardened bucket, least-privilege `cti` user):
+[`infra/README.md`](infra/README.md).
 
 ## Project layout
 
@@ -105,10 +109,12 @@ src/cti/
   storage/           local, S3, and mirrored backends (no delete operation)
   sources/           one module per feed: fetch raw (network) + parse (offline)
   ingest.py, cli.py  one-time ingest orchestration and the `cti` command
+  upload.py          write-once, checksum-verified copy of a snapshot to S3
   defang.py          make IOCs non-clickable (hxxp, [.])
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set
 tests/unit/          offline unit tests
+infra/               AWS policy templates + one-time setup steps
 vault/               design notes
 tasks/todo.md        build plan and progress
 ```
