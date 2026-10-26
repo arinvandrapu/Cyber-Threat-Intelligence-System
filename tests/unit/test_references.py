@@ -33,6 +33,12 @@ PUBLIC = "93.184.216.34"
         ("https://vendor.example/patch/1", RefType.PATCH),
         ("https://blog.example/post", RefType.ARTICLE),
         ("https://nvd.nist.gov/vuln/detail/CVE-2026-1", RefType.UNKNOWN),
+        (
+            "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search=CVE-2026-1",
+            RefType.UNKNOWN,
+        ),
+        ("https://www.cisa.gov/Known-Exploited-Vulnerabilities-Catalog/", RefType.UNKNOWN),
+        ("https://www.cisa.gov/news-events/ics-advisories/icsa-26-001-01", RefType.GOVERNMENT),
         ("ftp://example.com/x", RefType.UNKNOWN),
         ("not a url", RefType.UNKNOWN),
     ],
