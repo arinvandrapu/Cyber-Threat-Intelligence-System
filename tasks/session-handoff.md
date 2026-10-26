@@ -11,10 +11,11 @@
 | 2a. Source fetchers + parsers + `cti` CLI | ✅ merged | #5, #6 |
 | 2b. Reference scraper, frozen gold set, data contract | ✅ merged | #7 |
 | 3. AWS setup + the one ingest | ✅ done 2026-10-26 | #9, #11 |
-| **4. Enrichment** | **⏭ next** | — |
-| 5–9 | not started | — |
+| 4. Enrichment (CVE joins, reference cleaning) | ✅ merged | #14, #15 |
+| **5. NLP extraction** | **⏭ next** | — |
+| 6–9 | not started | — |
 
-`main` is green (193 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
+`main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
 
 ## Phase 3 result (2026-10-26)
 
@@ -30,12 +31,32 @@
 - Noted for Phase 7: EPSS model differs between cutoff (v2025.03.14) and snapshot
   (v2026.06.15).
 
-## Pick up here: Phase 4 (enrichment, all offline, no AWS)
+## Phase 4 result (2026-10-26)
 
-- Content cleaner for scraped pages (navigation boilerplate); PDF text extraction
-  (`pypdf`, page/size limits); CWE/KEV/EPSS/ExploitDB joins onto CVEs.
-- Inputs: `data/snapshots/2026-10-26/` (raw) and `data/processed/2026-10-26/` (parsed).
-- Outputs go under `data/enriched/<date>/` (local only; see `vault/s3-archive-not-live-store.md`).
+- `cti enrich --date 2026-10-26` (≈2 min, offline) writes `data/enriched/2026-10-26/`:
+  `cves.jsonl.gz` + `cves-summary.json`, `references.jsonl.gz` + `references-summary.json`
+  (each summary carries the output's SHA-256; both outputs are byte-deterministic).
+- **cves:** 168,393 rows; 102,772 eligible at the cutoff `2026-04-29`; 17 forward KEV
+  positives (cutoff → snapshot); 0 unknown CWEs; CNA CVSS on 75.5%. Risk features come
+  only through `features_at(record, "cutoff")`; `context_snapshot` (NVD status, CVSS,
+  CWEs, references) is label-biased and only for a labelled ablation
+  (`vault/risk-scoring-design.md`).
+- **references:** 1,653 pages → **1,280 in the NLP corpus (842 CVEs)**; 366 `js_shell`,
+  7 `pdf_skipped`; trafilatura 1,233, fallback 35; median 6.7k → 2.8k chars.
+  The `enrich` extra (trafilatura, lxml) is required.
+- Owner decisions: JS-rendered pages are flagged and excluded (no new fetching); PDFs
+  skipped; the Phase 7 "17 positives" question is **deferred** (join already supports
+  more `as_of` cutoffs).
+
+## Pick up here: Phase 5 (NLP extraction, offline)
+
+- Start with `plan phase 5`: staged pipeline (external + internal due diligence, plan
+  audit), then PRs. Input corpus: rows with `in_corpus=true` in
+  `data/enriched/2026-10-26/references.jsonl.gz`, plus NVD/advisory text in `processed/`.
+- Scope (from `tasks/todo.md`): regex IOCs (strict IPv4 boundaries, CVSS patterns, defang),
+  SecureBERT 2.0 NER (local CPU batch), alias normalizer, ATT&CK mapping graded against
+  MITRE CTID CVE→ATT&CK mappings. Page text is never a Phase 7 risk feature
+  (snapshot-time + KEV-biased scrape selection).
 
 ## Local state that is NOT in git
 
@@ -43,8 +64,8 @@
 |---|---|---|
 | abuse.ch key, contact, bucket, profile | `.env` | gitignored |
 | Gold fixture | `data/gold/gold.jsonl.gz` | SHA-256 `4a612d2f…ceb5` (in `cti/gold.py`); also in S3 `gold/` |
-| **Snapshot + parsed data** | `data/snapshots/2026-10-26/`, `data/processed/2026-10-26/` | working copy; raw also in S3. **Don't delete `data/`.** |
-| Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev]'` to rebuild |
+| **Snapshot, parsed, enriched data** | `data/snapshots/`, `data/processed/`, `data/enriched/` (all `2026-10-26`) | working copy; raw also in S3; parsed/enriched regenerable via `cti parse` / `cti enrich`. **Don't delete `data/`.** |
+| Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev,enrich]'` to rebuild |
 | AWS CLI | `default` = owner's admin IAM user, us-east-1; `cti` = pipeline user | `cti` key in `~/.aws/credentials`, **Inactive** |
 
 The prototype repo used for porting was a temporary clone. If it's needed again:
@@ -55,18 +76,18 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 193 passed
+.venv/bin/pytest -q          # expect 226 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 
 ## Open items for later phases
 
-- Phase 4: content cleaner (scraped pages still contain navigation boilerplate), PDF
-  text extraction (`pypdf`, page/size limits), CWE/KEV/EPSS joins.
 - Phase 5: confirm the SecureBERT 2.0 **base** model ID for embeddings
   (`cisco-ai/SecureBERT2.0-NER` is confirmed); confirm MITRE CTID CVE→ATT&CK mapping
   coverage for grading.
-- Phase 7: features from `as_of="cutoff"` only; see `vault/risk-scoring-design.md`.
+- Phase 7: features via `features_at(record, "cutoff")` only; decide whether 17 forward
+  positives is enough or add more cutoffs (EPSS history is the main extra cost); EPSS model
+  differs between cutoff and snapshot. See `vault/risk-scoring-design.md`.
 
 ## Working agreements (from the owner)
 
