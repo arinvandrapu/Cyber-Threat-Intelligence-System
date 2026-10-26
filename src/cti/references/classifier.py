@@ -82,6 +82,9 @@ CODE_HOSTS = frozenset(
 )
 # Pages that only restate the CVE record itself: never worth fetching.
 SELF_REFERENCE_HOSTS = frozenset({"nvd.nist.gov", "cve.org", "cve.mitre.org"})
+# Same idea for one page on a host that is otherwise worth fetching: the KEV catalog page
+# restates the KEV feed we already ingest (and cisa.gov answers 403 to non-browser clients).
+SELF_REFERENCE_PAGES = frozenset({("cisa.gov", "/known-exploited-vulnerabilities-catalog")})
 
 _ADVISORY_PATH = re.compile(
     r"/(advisory|advisories|security-advisory|security-notice|security-bulletin|vuln/"
@@ -106,7 +109,7 @@ def classify_url(url: str) -> RefType:
     host = normalize_host(parts.netloc)
     path = parts.path or ""
 
-    if host in SELF_REFERENCE_HOSTS:
+    if host in SELF_REFERENCE_HOSTS or (host, path.rstrip("/").lower()) in SELF_REFERENCE_PAGES:
         return RefType.UNKNOWN
     if host in CODE_HOSTS:
         return RefType.CODE

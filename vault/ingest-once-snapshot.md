@@ -58,3 +58,13 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
   (`tasks/todo.md`) **before** the real run, including scraped reference pages.
 - Smoke-test every source with small limits first; owner approves the real run.
 - Storage location: [[aws-cost-and-security]]. Sources: [[data-sources]].
+
+## The 2026-10-26 run
+
+- Ingest ran once (≈ 25 min, 202 MB, all 12 sources complete). EPSS model differs
+  between cutoff (v2025.03.14) and snapshot (v2026.06.15): don't compare scores across them.
+- References attempt 1 lost 527 of 2,000 slots to CISA's KEV catalog page
+  (`cisa.gov/known-exploited-vulnerabilities-catalog?search=…`): it restates the KEV feed
+  and cisa.gov returns 403 to non-browser clients. The classifier now treats it as a
+  self-reference (like NVD), and references was refetched as attempt 2 (logged in the
+  manifest). Attempt 1 is kept as the audit trail.
