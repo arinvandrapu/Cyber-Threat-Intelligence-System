@@ -217,7 +217,7 @@ def data_dir(tmp_path, processed, monkeypatch):
 
 def test_cli_enrich_writes_outputs(data_dir, capsys):
     root, _ = data_dir
-    assert main(["enrich", "--date", SNAPSHOT]) == 0
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 0
     out = root / "enriched" / SNAPSHOT
     assert len(list(read_jsonl(out / "cves.jsonl.gz"))) == 4
     summary = json.loads((out / "cves-summary.json").read_text())
@@ -227,14 +227,14 @@ def test_cli_enrich_writes_outputs(data_dir, capsys):
 
 def test_cli_enrich_rejects_mismatched_cutoff(data_dir, capsys, monkeypatch):
     monkeypatch.setenv("CTI_CUTOFF_DAYS", "90")
-    assert main(["enrich", "--date", SNAPSHOT]) == 2
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 2
     assert f"snapshot cutoff is {CUTOFF}, but CTI_CUTOFF_DAYS=90" in capsys.readouterr().err
 
 
 def test_cli_enrich_needs_parsed_inputs(data_dir, capsys):
     _, processed = data_dir
     (processed / "kev.jsonl.gz").unlink()
-    assert main(["enrich", "--date", SNAPSHOT]) == 2
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 2
     assert "run `cti parse` first" in capsys.readouterr().err
     assert main(["enrich", "--date", SNAPSHOT, "--only", "bogus"]) == 2
     assert "unknown enrich steps" in capsys.readouterr().err
@@ -244,13 +244,13 @@ def test_cli_enrich_needs_a_dated_epss_cutoff(data_dir, capsys):
     _, processed = data_dir
     epss = [signal("CVE-2026-9999", "epss", "snapshot", epss=0.9)]
     (processed / "epss.jsonl.gz").write_bytes(gzip_bytes(jsonl(epss)))
-    assert main(["enrich", "--date", SNAPSHOT]) == 2
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 2
     assert "no dated EPSS cutoff rows" in capsys.readouterr().err
 
 
 def test_cli_summary_records_data_hash(data_dir):
     root, _ = data_dir
-    assert main(["enrich", "--date", SNAPSHOT]) == 0
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 0
     out = root / "enriched" / SNAPSHOT
     summary = json.loads((out / "cves-summary.json").read_text())
     assert (

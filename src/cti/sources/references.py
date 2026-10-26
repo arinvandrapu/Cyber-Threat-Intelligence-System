@@ -10,7 +10,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from collections import defaultdict
 from collections.abc import Iterator
 
 from cti.http.safe_fetch import SafeFetcher
@@ -25,6 +24,23 @@ from cti.sources.kev import KEVSource
 from cti.sources.nvd import NVDSource
 
 DEPENDS_ON = ("nvd", "kev", "epss")
+
+
+def iter_pages(snapshot: Snapshot) -> Iterator[tuple[dict, bytes]]:
+    """Fetched pages from the latest attempt, as (scrape record, decoded body)."""
+    for entry in snapshot.entries("references"):
+        if not entry.name.startswith("pages-"):
+            continue
+        for line in gunzip_stream(snapshot.read_raw(entry)):
+            record = json.loads(line)
+            if "body_b64" in record:  # skipped and failed fetches have none
+                yield record, base64.b64decode(record["body_b64"])
+
+
+def page_id(url: str) -> str:
+    return hashlib.sha256(url.encode()).hexdigest()[:16]
+
+
 SHARD_RECORDS = 250
 SHARD_BYTES = 64 * 1024 * 1024  # also flush by size: pages can be up to ~2.7 MB as base64
 
@@ -87,37 +103,28 @@ class ReferencesSource(Source):
         ctx.write(self.name, f"pages-{number:04d}.jsonl.gz", gz(body), None)
 
     def parse(self, snapshot: Snapshot) -> Iterator[Document]:
-        counts: dict[str, int] = defaultdict(int)
-        for entry in snapshot.entries(self.name):
-            if not entry.name.startswith("pages-"):
-                continue
-            for line in gunzip_stream(snapshot.read_raw(entry)):
-                record = json.loads(line)
-                if "body_b64" not in record:
-                    counts["no_body"] += 1
-                    continue
-                body = base64.b64decode(record["body_b64"])
-                ctype = record.get("content_type", "")
-                if ctype == "application/pdf":
-                    text = ""  # PDF text extraction happens in the enrichment phase
-                elif ctype == "text/plain":
-                    text = body.decode("utf-8", errors="replace")
-                else:
-                    text = html_to_text(body.decode("utf-8", errors="replace"))
-                url_id = hashlib.sha256(record["url"].encode()).hexdigest()[:16]
-                yield Document(
-                    id=Document.make_id(self.name, url_id),
-                    source=self.name,
-                    source_id=url_id,
-                    title=record["url"],
-                    text=text,
-                    url=record["url"],
-                    cves=(record["cve"],),
-                    metadata={
-                        "ref_type": record.get("ref_type"),
-                        "final_url": record.get("final_url"),
-                        "content_type": ctype,
-                        "truncated": record.get("truncated", False),
-                        "fetched_at": record.get("fetched_at"),
-                    },
-                )
+        for record, body in iter_pages(snapshot):
+            ctype = record.get("content_type", "")
+            if ctype == "application/pdf":
+                text = ""  # PDFs are not extracted (7 pages; see vault/nlp-design.md)
+            elif ctype == "text/plain":
+                text = body.decode("utf-8", errors="replace")
+            else:
+                text = html_to_text(body.decode("utf-8", errors="replace"))
+            url_id = page_id(record["url"])
+            yield Document(
+                id=Document.make_id(self.name, url_id),
+                source=self.name,
+                source_id=url_id,
+                title=record["url"],
+                text=text,
+                url=record["url"],
+                cves=(record["cve"],),
+                metadata={
+                    "ref_type": record.get("ref_type"),
+                    "final_url": record.get("final_url"),
+                    "content_type": ctype,
+                    "truncated": record.get("truncated", False),
+                    "fetched_at": record.get("fetched_at"),
+                },
+            )
