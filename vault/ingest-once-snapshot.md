@@ -57,7 +57,8 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
 - Anything a later phase needs must be listed in the data contract
   (`tasks/todo.md`) **before** the real run, including scraped reference pages.
 - Smoke-test every source with small limits first; owner approves the real run.
-- Storage location: [[aws-cost-and-security]]. Sources: [[data-sources]].
+- Storage location: [[aws-cost-and-security]]; why S3 is only an archive:
+  [[s3-archive-not-live-store]]. Sources: [[data-sources]].
 
 ## The 2026-10-26 run
 

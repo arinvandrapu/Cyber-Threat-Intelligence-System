@@ -30,11 +30,12 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   exploitation, so the top tier is small and meaningful.
 - **Presents** the results in a localhost Next.js dashboard and as STIX 2.1 output.
 
-## Architecture *(planned)*
+## Architecture
 
 ```mermaid
 flowchart LR
-    A[Public sources<br/>NVD · KEV · EPSS · Vulnrichment<br/>ExploitDB · Metasploit · Nuclei<br/>ATT&CK · CWE · abuse.ch] -->|one-time ingest| B[(Raw snapshot<br/>S3)]
+    A[Public sources<br/>NVD · KEV · EPSS · Vulnrichment<br/>ExploitDB · Metasploit · Nuclei<br/>ATT&CK · CWE · abuse.ch] -->|one-time ingest| B[(Raw snapshot<br/>local disk)]
+    B -->|write-once copy| S[(S3 archive)]
     B --> C[Parse to documents]
     C --> D[Enrich]
     D --> E[NLP: SecureBERT 2.0<br/>NER · ATT&CK mapping]
@@ -42,6 +43,13 @@ flowchart LR
     F --> G[Exports<br/>JSON · STIX 2.1]
     G --> H[Localhost dashboard]
 ```
+
+Ingest, snapshot, parse, and S3 upload are built; enrichment onward is *planned*.
+
+- [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
+  security boundaries.
+- [Design decisions](docs/decisions.md): why each choice was made and what it costs,
+  e.g. why S3 is a write-once archive rather than the pipeline's working store.
 
 ## Security skills and tools
 
@@ -114,6 +122,7 @@ src/cti/
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set
 tests/unit/          offline unit tests
+docs/                architecture and design decisions
 infra/               AWS policy templates + one-time setup steps
 vault/               design notes
 tasks/todo.md        build plan and progress
