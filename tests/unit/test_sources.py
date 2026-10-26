@@ -23,12 +23,13 @@ def nvd_cve(cve_id, published, **extra):
         "id": cve_id,
         "published": published,
         "lastModified": "2026-06-01T00:00:00.000",
+        "sourceIdentifier": "cna@vendor.example",
         "vulnStatus": extra.pop("vulnStatus", "Analyzed"),
         "descriptions": [{"lang": "en", "value": f"{cve_id} desc"}, {"lang": "es", "value": "x"}],
         "metrics": {
             "cvssMetricV31": [
                 {
-                    "source": "other",
+                    "source": "cna@vendor.example",
                     "type": "Secondary",
                     "cvssData": {"version": "3.1", "baseScore": 5.0, "vectorString": "S"},
                 },
@@ -76,13 +77,43 @@ def test_nvd_fetch_verifies_checksum_and_parse_filters(ctx, settings, snapshot):
     # rejected CVEs are dropped.
     assert [d.source_id for d in docs] == ["CVE-2024-0001", "CVE-2025-0001", "CVE-2026-0001"]
     doc = docs[0]
-    assert doc.metadata["cvss"]["base_score"] == 9.8  # Primary preferred
+    assert doc.metadata["cvss_nvd"]["base_score"] == 9.8  # NVD's own (Primary)
+    assert doc.metadata["cvss_cna"]["base_score"] == 5.0  # the assigning CNA's
     assert doc.metadata["cwes"] == ["CWE-79"]
     assert doc.text == "CVE-2024-0001 desc"
     # leakage: NVD's KEV copy and reference tags ("Exploit", ...) are dropped
     dumped = doc.model_dump_json()
     assert "2026-01-21" not in dumped and "Vendor Advisory" not in dumped
     assert doc.metadata["references"] == ["https://vendor.example/adv"]
+
+
+def test_nvd_skips_cvss_v4_with_threat_metric():
+    v4 = {
+        "source": "nvd@nist.gov",
+        "type": "Primary",
+        "cvssData": {"version": "4.0", "baseScore": 9.3, "vectorString": "CVSS:4.0/AV:N/E:A"},
+    }
+    cve = nvd_cve("CVE-2025-0001", "2025-03-01T10:00:00.000")
+    cve["metrics"]["cvssMetricV40"] = [v4]
+    for threat in ("A", "P", "U"):
+        v4["cvssData"]["vectorString"] = f"CVSS:4.0/AV:N/E:{threat}/CR:X"
+        [doc] = nvd.NVDSource._document(cve, nvd.date(2024, 1, 1))
+        assert doc.metadata["cvss_nvd"]["version"] == "3.1"  # threat-adjusted score skipped
+    v4["cvssData"]["vectorString"] = "CVSS:4.0/AV:N/E:X/RE:L"
+    [doc] = nvd.NVDSource._document(cve, nvd.date(2024, 1, 1))
+    assert doc.metadata["cvss_nvd"]["version"] == "4.0"
+
+
+def test_nvd_cvss_matched_by_source_not_type_label():
+    cve = nvd_cve("CVE-2025-0001", "2025-03-01T10:00:00.000")
+    for metric in cve["metrics"]["cvssMetricV31"]:  # CNA labelled Primary, NVD Secondary
+        metric["type"] = "Primary" if metric["source"] != "nvd@nist.gov" else "Secondary"
+    [doc] = nvd.NVDSource._document(cve, nvd.date(2024, 1, 1))
+    assert doc.metadata["cvss_nvd"]["base_score"] == 9.8
+    assert doc.metadata["cvss_cna"]["base_score"] == 5.0
+    cve = nvd_cve("CVE-2025-0002", "2025-03-01T10:00:00.000", metrics={})
+    [doc] = nvd.NVDSource._document(cve, nvd.date(2024, 1, 1))
+    assert doc.metadata["cvss_nvd"] is None and doc.metadata["cvss_cna"] is None
 
 
 @respx.mock

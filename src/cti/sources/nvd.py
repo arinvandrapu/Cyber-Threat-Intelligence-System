@@ -5,14 +5,20 @@ is fetched too and records are filtered by ``published`` at parse time. Each dow
 verified against the SHA-256 in NVD's ``.meta`` file.
 
 Fields that leak later knowledge are dropped at parse time: NVD's copy of CISA KEV
-data (``cisaExploitAdd`` etc.) and reference tags. The CVSS v4 threat metric (``E:``)
-is excluded from features in the risk phase.
+data (``cisaExploitAdd`` etc.), reference tags, and CVSS v4 scores whose threat metric
+(``E:``) is set (the score already includes exploit maturity; an older version is used).
+
+Two CVSS scores are kept: NVD's own (source ``nvd@nist.gov``; the Primary/Secondary label
+is not reliable) and the assigning CNA's. NVD analyzes
+KEV-listed CVEs first, so NVD-analyst fields are biased toward the risk label; the CNA's
+score is usually present at publication.
 """
 
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterator
+import re
+from collections.abc import Callable, Iterator
 from datetime import date, datetime
 
 import ijson
@@ -22,7 +28,9 @@ from cti.snapshot import Snapshot
 from cti.sources.base import FetchContext, Source, gunzip_stream
 
 BASE = "https://nvd.nist.gov/feeds/json/cve/2.0"
+NVD_SOURCE = "nvd@nist.gov"
 CVSS_PREFERENCE = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
+_V4_THREAT_SET = re.compile(r"/E:[^X/]")
 
 
 def _meta(text: str) -> dict[str, str]:
@@ -37,19 +45,20 @@ def _sha256_of_gunzipped(data: bytes) -> str:
     return digest.hexdigest().upper()
 
 
-def _best_cvss(metrics: dict) -> dict | None:
+def _best_cvss(metrics: dict, keep: Callable[[dict], bool]) -> dict | None:
+    """Newest-version CVSS among the metric entries ``keep`` accepts."""
     for key in CVSS_PREFERENCE:
-        entries = metrics.get(key) or []
-        entries = sorted(entries, key=lambda m: m.get("type") != "Primary")
-        if entries:
-            data = entries[0]["cvssData"]
+        for metric in metrics.get(key) or []:
+            data = metric["cvssData"]
+            vector = data.get("vectorString") or ""
+            if not keep(metric) or (key == "cvssMetricV40" and _V4_THREAT_SET.search(vector)):
+                continue
             return {
                 "version": data.get("version"),
                 "base_score": data.get("baseScore"),
-                "severity": data.get("baseSeverity") or entries[0].get("baseSeverity"),
-                "vector": data.get("vectorString"),
-                "source": entries[0].get("source"),
-                "type": entries[0].get("type"),
+                "severity": data.get("baseSeverity") or metric.get("baseSeverity"),
+                "vector": vector or None,
+                "source": metric.get("source"),
             }
     return None
 
@@ -108,6 +117,7 @@ class NVDSource(Source):
                 if d["value"].startswith("CWE-")
             }
         )
+        metrics, cna = cve.get("metrics", {}), cve.get("sourceIdentifier")
         yield Document(
             id=Document.make_id("nvd", cve["id"]),
             source="nvd",
@@ -120,7 +130,8 @@ class NVDSource(Source):
             cves=(cve["id"],),
             metadata={
                 "vuln_status": cve.get("vulnStatus"),
-                "cvss": _best_cvss(cve.get("metrics", {})),
+                "cvss_nvd": _best_cvss(metrics, lambda m: m.get("source") == NVD_SOURCE),
+                "cvss_cna": _best_cvss(metrics, lambda m: m.get("source") == cna),
                 "cwes": cwes,
                 # URLs only: reference tags ("Exploit", ...) are added after publication
                 # and would leak later knowledge into risk features.

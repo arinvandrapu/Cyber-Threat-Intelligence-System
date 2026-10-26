@@ -16,9 +16,10 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 | `http/safe_fetch.py` | SSRF-safe fetcher, see [[ssrf-safe-fetching]] |
 | `sources/` | One module per feed. `fetch(ctx)` writes raw to the snapshot (network); `parse(snapshot)` yields `Document`s or `CveSignal`s (offline). `registry.py` lists them in ingest order |
 | `ingest.py` | One-time ingest: per-source isolation, completion markers, resume, logged refetch, secret redaction |
-| `cli.py` | `cti probe / ingest / status / parse / upload` |
+| `cli.py` | `cti probe / ingest / status / parse / enrich / upload` |
+| `enrich/` | `cves.py`: per-CVE join, `signals[as_of]` vs `context_snapshot`, `features_at` (see [[risk-scoring-design]]); `cwe.py`: full catalog incl. categories/deprecated, View-1000 pillar. Plain dicts, deterministic gzip, atomic writes |
 | `upload.py` | Finished snapshot → S3, write-once: local SHA-256 re-check, keys already present compared via `sha256()` (S3 HEAD checksum, no download), manifest last and only overwritten if the remote one is a subset, final key listing; gold to `gold/` |
-| `references/` | `classifier.py` (ported rule-based URL typing), `selection.py` (KEV-first, then EPSS; capped), `scraper.py` (robots + throttle + SafeFetcher), `text.py` (stdlib HTML→text) |
+| `references/` | `classifier.py` (ported rule-based URL typing; `EXPLOIT` for exploit-db/Packet Storm, never scraped; added after the 2026-10-26 scrape, so re-running selection on that snapshot no longer reproduces `targets.json`, which stays authoritative), `selection.py` (KEV-first, then EPSS; capped), `scraper.py` (robots + throttle + SafeFetcher), `text.py` (stdlib HTML→text) |
 | `gold.py` | `cti gold-import` → frozen fixture; `read_verified` / `load_gold` check the committed SHA-256 |
 | `defang.py` | `hxxp://evil[.]com`, `203.0.113[.]7` |
 | `storage/` | `LocalStorage`, `S3Storage`, `MirroredStorage`; no delete, no overwrite by default; `sha256(key)` without download on S3; see [[aws-cost-and-security]] |

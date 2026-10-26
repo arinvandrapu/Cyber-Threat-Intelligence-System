@@ -1,22 +1,27 @@
-"""Command-line interface: ``cti probe | ingest | status | parse | upload``."""
+"""Command-line interface: ``cti probe | ingest | status | parse | enrich | upload``."""
 
 from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import logging
 import sys
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from botocore.exceptions import BotoCoreError, ClientError
 
 from cti import gold
 from cti.config import ConfigError, Settings
+from cti.enrich import cves as cve_join
+from cti.enrich import read_jsonl, write_json, write_jsonl
+from cti.enrich.cwe import load_catalog
 from cti.http.client import make_client
 from cti.ingest import IngestResult, ingest, refetch
 from cti.snapshot import Snapshot, SnapshotExistsError
+from cti.sources.cwe import CWESource
 from cti.sources.registry import select
 from cti.storage import LocalStorage, S3Storage
 from cti.upload import upload_gold, upload_snapshot
@@ -133,6 +138,60 @@ def cmd_parse(args, settings: Settings) -> int:
     return 0
 
 
+def _as_of_dates(snap: Snapshot, processed: Path, settings: Settings) -> dict[str, str]:
+    """Dates of the as_of labels. The cutoff comes from the data itself (the EPSS cutoff
+    file's score date) and must match the configured cutoff, so labels can never be
+    paired with a different cutoff than the one the snapshot was pinned at."""
+    expected = (snap.date - timedelta(days=settings.cutoff_days)).isoformat()
+    pinned = next(
+        (
+            (r["values"].get("score_date") or "")[:10]
+            for r in read_jsonl(processed / "epss.jsonl.gz")
+            if r.get("as_of") == "cutoff"
+        ),
+        None,
+    )
+    if not pinned:
+        raise ConfigError("no dated EPSS cutoff rows; the cutoff date can't be determined")
+    if pinned != expected:
+        raise ConfigError(
+            f"snapshot cutoff is {pinned}, but CTI_CUTOFF_DAYS={settings.cutoff_days} "
+            f"gives {expected}"
+        )
+    return {"cutoff": pinned, "snapshot": snap.id}
+
+
+ENRICH_STEPS = ("cves",)
+
+
+def cmd_enrich(args, settings: Settings) -> int:
+    wanted = args.only or list(ENRICH_STEPS)
+    if unknown := sorted(set(wanted) - set(ENRICH_STEPS)):
+        raise ConfigError(f"unknown enrich steps {unknown}; choose from {ENRICH_STEPS}")
+    processed = settings.data_dir / "processed" / args.date
+    out_dir = settings.data_dir / "enriched" / args.date
+    snap = Snapshot.open(_snapshots(settings), args.date)
+    if "cves" in wanted:
+        needed = ["nvd", "kev", "references", *cve_join.SIGNAL_SOURCES]
+        if missing := [n for n in needed if not (processed / f"{n}.jsonl.gz").exists()]:
+            raise ConfigError(f"missing parsed sources {missing}; run `cti parse` first")
+        with CWESource(settings).open_xml(snap) as fh:
+            catalog = load_catalog(fh)
+        as_of_dates = _as_of_dates(snap, processed, settings)
+        rows, summary = cve_join.build(processed, catalog, as_of_dates)
+        write_jsonl(out_dir / "cves.jsonl.gz", rows)
+        # ties the summary to the exact data file it describes
+        summary["cves_sha256"] = hashlib.sha256(
+            (out_dir / "cves.jsonl.gz").read_bytes()
+        ).hexdigest()
+        write_json(out_dir / "cves-summary.json", summary)
+        print(
+            f"  enriched cves          {summary['cves']:,} CVEs, eligible {summary['eligible']}, "
+            f"KEV positives {summary['kev_positives']}  -> {out_dir / 'cves.jsonl.gz'}"
+        )
+    return 0
+
+
 def _s3(settings: Settings, prefix: str) -> S3Storage:
     if not settings.s3_bucket:
         raise ConfigError("upload needs CTI_S3_BUCKET")
@@ -210,6 +269,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", required=True)
     only(p)
     p.set_defaults(func=cmd_parse)
+
+    p = sub.add_parser("enrich", help="offline joins and cleaning into data/enriched/<date>/")
+    p.add_argument("--date", required=True)
+    p.add_argument("--only", type=lambda s: s.split(","), help=f"subset of {ENRICH_STEPS}")
+    p.set_defaults(func=cmd_enrich)
 
     p = sub.add_parser("upload", help="copy a finished snapshot and/or the gold set to S3")
     p.add_argument("--date", help="snapshot to upload")

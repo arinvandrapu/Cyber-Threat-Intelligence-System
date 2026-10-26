@@ -44,7 +44,7 @@ flowchart LR
     G --> H[Localhost dashboard]
 ```
 
-Ingest, snapshot, parse, and S3 upload are built; enrichment onward is *planned*.
+Ingest, snapshot, parse, S3 upload, and the per-CVE enrichment join are built; reference cleaning, NLP, and scoring are *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -97,6 +97,7 @@ cti ingest --date 2026-10-25 --resume                       # continue after a f
 cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
+cti enrich --date 2026-10-25    # offline: per-CVE join -> data/enriched/<date>/cves.jsonl.gz
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -119,6 +120,7 @@ src/cti/
   sources/           one module per feed: fetch raw (network) + parse (offline)
   ingest.py, cli.py  one-time ingest orchestration and the `cti` command
   upload.py          write-once, checksum-verified copy of a snapshot to S3
+  enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup
   defang.py          make IOCs non-clickable (hxxp, [.])
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set

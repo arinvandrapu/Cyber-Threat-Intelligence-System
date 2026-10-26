@@ -17,13 +17,14 @@ flowchart LR
         SNAP[(Raw snapshot<br/>data/snapshots/DATE/)]
         PARSE[cti parse<br/>offline]
         PROC[(Parsed records<br/>data/processed/DATE/)]
-        DOWN[Enrich → NLP → Risk scoring<br/>planned]
+        ENR[(Per-CVE join<br/>data/enriched/DATE/)]
+        DOWN[NLP → Risk scoring<br/>planned]
         OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>planned]
     end
     S3[(Private S3 bucket<br/>write-once archive)]
 
     SRC -->|HTTPS, rate-limited,<br/>SSRF-safe scraper| ING --> SNAP
-    SNAP --> PARSE --> PROC --> DOWN --> OUT
+    SNAP --> PARSE --> PROC -->|cti enrich| ENR --> DOWN --> OUT
     SNAP -->|cti upload<br/>after parse validates| S3
 ```
 
@@ -45,7 +46,7 @@ Three properties shape everything:
 | Status | `cti status` | no | Prints the manifest: files, sizes, pinned versions, refetches |
 | Parse | `cti parse` → `sources/*.parse` | no | Raw snapshot → `Document` / `CveSignal` records (`.jsonl.gz`) |
 | Upload | `cti upload` → `upload.py` | S3 only | Raw snapshot + gold set → S3, write-once |
-| Enrich *(planned)* | Phase 4 | no | Joins KEV/EPSS/ExploitDB/CWE onto CVEs |
+| Enrich | Phase 4 | no | `cti enrich`: one record per CVE joining KEV, EPSS, ExploitDB, Metasploit, Nuclei, Vulnrichment, CWE names and pillars, and reference-link types; point-in-time features kept apart from snapshot-time context. Reference-page cleaning *(planned, 4b)* |
 | NLP *(planned)* | Phase 5 | no | Regex IOCs, SecureBERT 2.0 NER, ATT&CK mapping |
 | Classify + evaluate *(planned)* | Phase 6 | no | Category classifier vs baselines on the gold set |
 | Risk scoring *(planned)* | Phase 7 | no | scikit-learn model, forward-looking KEV evaluation |
@@ -61,6 +62,7 @@ by re-running `cti parse`, never by re-downloading.
 |---|---|---|
 | `data/snapshots/<date>/` (local) | Raw source responses, gzip'd, plus `manifest.json` | Write-once; only the manifest is rewritten |
 | `data/processed/<date>/` (local) | Parsed records, one `.jsonl.gz` per source | Regenerated freely from the snapshot |
+| `data/enriched/<date>/` (local) | `cves.jsonl.gz` + `cves-summary.json` | Regenerated freely from processed records; never uploaded |
 | `data/gold/gold.jsonl.gz` (local) | Frozen evaluation gold set | Frozen; SHA-256 committed in `cti/gold.py` |
 | S3 `snapshots/<date>/…` | Copy of the raw snapshot | Write-once, enforced by code **and** IAM |
 | S3 `gold/` | Copy of the gold set | Write-once |
@@ -94,7 +96,11 @@ ingest captures two copies of time-sensitive sources:
 | Metasploit, Nuclei, Vulnrichment | Git first-parent commit at cutoff | Current |
 | KEV | `dateAdded` splits before/after | Full catalog |
 
-Leakage rules (fields that would reveal KEV status) are enforced at parse time. Details:
+Leakage rules (fields that would reveal KEV status) are enforced at parse time. The
+enriched per-CVE record then keeps point-in-time `signals[<as_of>]` apart from
+`context_snapshot` (NVD status, scores, CWEs, reference lists as known at the snapshot).
+NVD analyzes KEV-listed CVEs first, so those NVD fields are biased toward the label: all
+17 forward positives are "Analyzed" vs about half of other CVEs. Details:
 `vault/point-in-time-pinning.md`, `vault/risk-scoring-design.md`.
 
 ## Security boundaries
@@ -123,12 +129,13 @@ flowchart LR
 
 ```
 src/cti/
-  cli.py             `cti` command: probe / ingest / status / parse / upload / gold-import
+  cli.py             `cti` command: probe / ingest / status / parse / enrich / upload / gold-import
   config.py          typed settings from CTI_* env vars; fail fast on missing values
   models.py          Document: the normalized record every source produces
   ingest.py          one-time ingest: per-source isolation, resume, logged refetch
   snapshot.py        raw snapshot + manifest, write-once
   upload.py          finished snapshot → S3, checksum-verified
+  enrich/            offline per-CVE join (cves.py) and CWE catalog lookup (cwe.py)
   sources/           one module per feed (fetch + parse); registry.py sets ingest order
   references/        reference-link classifier, target selection, scraper, HTML→text
   http/              retrying client, rate limiter, SSRF-safe fetcher

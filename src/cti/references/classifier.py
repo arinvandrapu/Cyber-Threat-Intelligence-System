@@ -17,6 +17,7 @@ class RefType(StrEnum):
     PATCH = "patch"
     MAILING_LIST = "mailing_list"
     CODE = "code"
+    EXPLOIT = "exploit"
     MEDIA = "media"
     ARTICLE = "article"
     UNKNOWN = "unknown"
@@ -36,8 +37,6 @@ ADVISORY_HOSTS = frozenset(
         "jvndb.jvn.jp",
         "oracle.com",
         "zerodayinitiative.com",
-        "exploit-db.com",
-        "packetstormsecurity.com",
         "msrc.microsoft.com",
         "portal.msrc.microsoft.com",
         "chromereleases.googleblog.com",
@@ -69,6 +68,8 @@ MAILING_LIST_HOSTS = frozenset(
         "mail-archive.com",
     }
 )
+# Public exploit archives: a link here signals exploit code exists, not analyst prose.
+EXPLOIT_HOSTS = frozenset({"exploit-db.com", "packetstormsecurity.com", "packetstorm.news"})
 MEDIA_HOSTS = frozenset({"youtube.com", "youtu.be", "vimeo.com", "dailymotion.com"})
 CODE_HOSTS = frozenset(
     {
@@ -113,6 +114,8 @@ def classify_url(url: str) -> RefType:
         return RefType.UNKNOWN
     if host in CODE_HOSTS:
         return RefType.CODE
+    if host in EXPLOIT_HOSTS:
+        return RefType.EXPLOIT
     if host == "github.com":
         if "/advisories/GHSA-" in path:
             return RefType.GITHUB_ADVISORY
