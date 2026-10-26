@@ -48,6 +48,7 @@ Ingest, snapshot, parse, and S3 upload are built; enrichment onward is *planned*
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
+- [Data sources](docs/data-sources.md): every source, why it is ingested, and corpus size.
 - [Design decisions](docs/decisions.md): why each choice was made and what it costs,
   e.g. why S3 is a write-once archive rather than the pipeline's working store.
 
@@ -122,7 +123,7 @@ src/cti/
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set
 tests/unit/          offline unit tests
-docs/                architecture and design decisions
+docs/                architecture, design decisions, data sources
 infra/               AWS policy templates + one-time setup steps
 vault/               design notes
 tasks/todo.md        build plan and progress
