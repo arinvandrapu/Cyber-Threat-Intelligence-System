@@ -74,7 +74,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       ACLs disabled, TLS-only policy, versioning + lifecycle), `cti` IAM policy in
       `infra/`, `cti probe`, then the single real ingest to local disk (owner approves
       first), `cti parse` to validate, then `cti upload` to S3.
-- [ ] **4. Enrichment** — *(4a per-CVE join done; 4b reference cleaning next)* reference-link classifier, content cleaner, CWE lookup,
+- [ ] **4. Enrichment** — *(4a per-CVE join merged #14; 4b reference cleaning in review)* reference-link classifier, content cleaner, CWE lookup,
       KEV/EPSS/ExploitDB joins onto CVEs.
 - [ ] **5. NLP extraction** — regex for structured IOCs (correct IPv4 boundaries, strict
       CVSS patterns); **SecureBERT 2.0 NER** (`cisco-ai/SecureBERT2.0-NER`, local CPU

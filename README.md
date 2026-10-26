@@ -44,7 +44,7 @@ flowchart LR
     G --> H[Localhost dashboard]
 ```
 
-Ingest, snapshot, parse, S3 upload, and the per-CVE enrichment join are built; reference cleaning, NLP, and scoring are *planned*.
+Ingest, snapshot, parse, S3 upload, and enrichment (per-CVE join, reference-page cleaning) are built; NLP and scoring are *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -60,7 +60,7 @@ Ingest, snapshot, parse, S3 upload, and the per-CVE enrichment join are built; r
 | Vulnerability management | Risk-based prioritization, forward-looking evaluation | Python, pandas, scikit-learn |
 | Secure engineering | SSRF defense, secrets management, least-privilege IAM, threat modeling (STRIDE) | httpx, pydantic, GitHub Actions, pip-audit, secret scanning |
 | Cloud security | Private, encrypted, TLS-only storage; cost guardrails | AWS S3, IAM, AWS Budgets |
-| NLP / ML | Security-domain NER and embeddings, risk modeling, baselines and ablations | SecureBERT 2.0, Hugging Face Transformers, scikit-learn |
+| NLP / ML | Security-domain NER and embeddings, risk modeling, baselines and ablations, boilerplate removal on untrusted HTML | SecureBERT 2.0, Hugging Face Transformers, scikit-learn, trafilatura, lxml |
 | Visualization | Analyst dashboard | Next.js, TypeScript, Tailwind CSS |
 
 ## Design principles
@@ -82,7 +82,7 @@ Requirements: Python 3.12+. Later phases add Node.js 20+ (dashboard), an AWS acc
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -c requirements.lock -e '.[dev]'
+pip install -c requirements.lock -e '.[dev,enrich]'
 cp .env.example .env   # fill in values; .env is gitignored
 pytest                 # offline: no network or AWS access needed
 ruff check .
@@ -97,7 +97,7 @@ cti ingest --date 2026-10-25 --resume                       # continue after a f
 cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
-cti enrich --date 2026-10-25    # offline: per-CVE join -> data/enriched/<date>/cves.jsonl.gz
+cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -120,7 +120,8 @@ src/cti/
   sources/           one module per feed: fetch raw (network) + parse (offline)
   ingest.py, cli.py  one-time ingest orchestration and the `cti` command
   upload.py          write-once, checksum-verified copy of a snapshot to S3
-  enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup
+  enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup;
+                     reference-page cleaning (boilerplate removal, JS-shell detection)
   defang.py          make IOCs non-clickable (hxxp, [.])
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set

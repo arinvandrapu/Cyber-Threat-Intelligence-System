@@ -147,6 +147,12 @@ closing them would mean working around a site's wishes.
 Pages by type: 696 articles, 654 vendor advisories, 153 GitHub advisories, 123
 mailing-list posts, 27 GitHub issues.
 
+**Usable text after cleaning** (`cti enrich`): **1,280 pages covering 842 CVEs**. The
+other 373 are 366 pages with no content for a client that doesn't run JavaScript or log in
+(application shells such as MSRC's 135, redirect stubs, bot checks, login walls) and 7
+PDFs, which are not extracted. Boilerplate removal cuts the median HTML page from 6.7k to 2.8k characters;
+35 pages fall back to whole-page text.
+
 ## Sources considered and not used
 
 - **PhishTank**: new registrations are disabled.

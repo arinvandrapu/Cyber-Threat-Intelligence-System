@@ -17,7 +17,7 @@ flowchart LR
         SNAP[(Raw snapshot<br/>data/snapshots/DATE/)]
         PARSE[cti parse<br/>offline]
         PROC[(Parsed records<br/>data/processed/DATE/)]
-        ENR[(Per-CVE join<br/>data/enriched/DATE/)]
+        ENR[(Per-CVE join · cleaned pages<br/>data/enriched/DATE/)]
         DOWN[NLP → Risk scoring<br/>planned]
         OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>planned]
     end
@@ -46,7 +46,7 @@ Three properties shape everything:
 | Status | `cti status` | no | Prints the manifest: files, sizes, pinned versions, refetches |
 | Parse | `cti parse` → `sources/*.parse` | no | Raw snapshot → `Document` / `CveSignal` records (`.jsonl.gz`) |
 | Upload | `cti upload` → `upload.py` | S3 only | Raw snapshot + gold set → S3, write-once |
-| Enrich | Phase 4 | no | `cti enrich`: one record per CVE joining KEV, EPSS, ExploitDB, Metasploit, Nuclei, Vulnrichment, CWE names and pillars, and reference-link types; point-in-time features kept apart from snapshot-time context. Reference-page cleaning *(planned, 4b)* |
+| Enrich | Phase 4 | no | `cti enrich`: one record per CVE joining KEV, EPSS, ExploitDB, Metasploit, Nuclei, Vulnrichment, CWE names and pillars, and reference-link types; point-in-time features kept apart from snapshot-time context. Cleans reference pages (trafilatura boilerplate removal; pages with no content without JavaScript or a login, and PDFs, flagged and kept out of the corpus) |
 | NLP *(planned)* | Phase 5 | no | Regex IOCs, SecureBERT 2.0 NER, ATT&CK mapping |
 | Classify + evaluate *(planned)* | Phase 6 | no | Category classifier vs baselines on the gold set |
 | Risk scoring *(planned)* | Phase 7 | no | scikit-learn model, forward-looking KEV evaluation |
@@ -62,7 +62,7 @@ by re-running `cti parse`, never by re-downloading.
 |---|---|---|
 | `data/snapshots/<date>/` (local) | Raw source responses, gzip'd, plus `manifest.json` | Write-once; only the manifest is rewritten |
 | `data/processed/<date>/` (local) | Parsed records, one `.jsonl.gz` per source | Regenerated freely from the snapshot |
-| `data/enriched/<date>/` (local) | `cves.jsonl.gz` + `cves-summary.json` | Regenerated freely from processed records; never uploaded |
+| `data/enriched/<date>/` (local) | `cves.jsonl.gz`, `references.jsonl.gz`, and a `*-summary.json` for each | Regenerated freely (cves from processed records, references from the raw snapshot); never uploaded |
 | `data/gold/gold.jsonl.gz` (local) | Frozen evaluation gold set | Frozen; SHA-256 committed in `cti/gold.py` |
 | S3 `snapshots/<date>/…` | Copy of the raw snapshot | Write-once, enforced by code **and** IAM |
 | S3 `gold/` | Copy of the gold set | Write-once |
@@ -135,7 +135,8 @@ src/cti/
   ingest.py          one-time ingest: per-source isolation, resume, logged refetch
   snapshot.py        raw snapshot + manifest, write-once
   upload.py          finished snapshot → S3, checksum-verified
-  enrich/            offline per-CVE join (cves.py) and CWE catalog lookup (cwe.py)
+  enrich/            offline per-CVE join (cves.py), CWE lookup (cwe.py), page cleaning
+                     (cleaner.py, references.py)
   sources/           one module per feed (fetch + parse); registry.py sets ingest order
   references/        reference-link classifier, target selection, scraper, HTML→text
   http/              retrying client, rate limiter, SSRF-safe fetcher

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import importlib.util
 import logging
 import sys
 from collections import Counter
@@ -17,6 +18,7 @@ from cti import gold
 from cti.config import ConfigError, Settings
 from cti.enrich import cves as cve_join
 from cti.enrich import read_jsonl, write_json, write_jsonl
+from cti.enrich import references as ref_clean
 from cti.enrich.cwe import load_catalog
 from cti.http.client import make_client
 from cti.ingest import IngestResult, ingest, refetch
@@ -161,13 +163,24 @@ def _as_of_dates(snap: Snapshot, processed: Path, settings: Settings) -> dict[st
     return {"cutoff": pinned, "snapshot": snap.id}
 
 
-ENRICH_STEPS = ("cves",)
+ENRICH_STEPS = ("cves", "references")
+
+
+def _write_enriched(out_dir: Path, name: str, rows: list[dict], summary: dict) -> Path:
+    path = out_dir / f"{name}.jsonl.gz"
+    write_jsonl(path, rows)
+    # ties the summary to the exact data file it describes
+    summary[f"{name}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    write_json(out_dir / f"{name}-summary.json", summary)
+    return path
 
 
 def cmd_enrich(args, settings: Settings) -> int:
     wanted = args.only or list(ENRICH_STEPS)
     if unknown := sorted(set(wanted) - set(ENRICH_STEPS)):
         raise ConfigError(f"unknown enrich steps {unknown}; choose from {ENRICH_STEPS}")
+    if "references" in wanted and importlib.util.find_spec("trafilatura") is None:
+        raise ConfigError("cleaning references needs the enrich extra: pip install -e '.[enrich]'")
     processed = settings.data_dir / "processed" / args.date
     out_dir = settings.data_dir / "enriched" / args.date
     snap = Snapshot.open(_snapshots(settings), args.date)
@@ -179,15 +192,17 @@ def cmd_enrich(args, settings: Settings) -> int:
             catalog = load_catalog(fh)
         as_of_dates = _as_of_dates(snap, processed, settings)
         rows, summary = cve_join.build(processed, catalog, as_of_dates)
-        write_jsonl(out_dir / "cves.jsonl.gz", rows)
-        # ties the summary to the exact data file it describes
-        summary["cves_sha256"] = hashlib.sha256(
-            (out_dir / "cves.jsonl.gz").read_bytes()
-        ).hexdigest()
-        write_json(out_dir / "cves-summary.json", summary)
+        path = _write_enriched(out_dir, "cves", rows, summary)
         print(
             f"  enriched cves          {summary['cves']:,} CVEs, eligible {summary['eligible']}, "
-            f"KEV positives {summary['kev_positives']}  -> {out_dir / 'cves.jsonl.gz'}"
+            f"KEV positives {summary['kev_positives']}  -> {path}"
+        )
+    if "references" in wanted:
+        rows, summary = ref_clean.build(snap)
+        path = _write_enriched(out_dir, "references", rows, summary)
+        print(
+            f"  enriched references    {summary['pages']:,} pages, {summary['in_corpus']:,} in "
+            f"corpus, flags {summary['flags']}  -> {path}"
         )
     return 0
 
