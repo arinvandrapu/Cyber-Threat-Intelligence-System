@@ -9,7 +9,7 @@ why-each-source and corpus counts: `docs/data-sources.md`.
 
 | Source | Access | Key | Notes |
 |---|---|---|---|
-| NVD CVE 2.0 | Yearly `nvdcve-2.0-{year}.json.gz` feeds | none | Grouped by CVE-ID year, so window start − 1 is fetched and filtered by `published`. Verified against `.meta` SHA-256. ~37% of 2026 CVEs are "Deferred" (no NVD analysis); CNA CVSS still present. |
+| NVD CVE 2.0 | Yearly `nvdcve-2.0-{year}.json.gz` feeds | none | Grouped by CVE-ID year, so window start − 1 is fetched and filtered by `published`. Verified against `.meta` SHA-256. ~37% of 2026 CVEs are "Deferred" (no NVD analysis); CNA CVSS still present. **Match CVSS by `source`, not `type`:** ~1,500 CNA metrics are labelled `Primary` and some `nvd@nist.gov` ones `Secondary`; `cvss_nvd` = source `nvd@nist.gov`, `cvss_cna` = source == `sourceIdentifier` (fixed 2026-10-26, PR #14). |
 | CISA KEV | JSON feed | none | CC0. Use `dateAdded` for point-in-time evaluation. |
 | FIRST EPSS | Dated bulk CSV `epss_scores-YYYY-MM-DD.csv.gz` | none | Model changed between cutoff (`v2025.03.14`) and snapshot (`v2026.06.15`); model version kept per signal. |
 | ExploitDB | `files_exploits.csv` (GitLab) | none | GPL-2.0; `codes` column maps to CVEs. Don't redistribute. |
