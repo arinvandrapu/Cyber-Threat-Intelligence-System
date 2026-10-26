@@ -17,8 +17,8 @@ flowchart LR
         SNAP[(Raw snapshot<br/>data/snapshots/DATE/)]
         PARSE[cti parse<br/>offline]
         PROC[(Parsed records<br/>data/processed/DATE/)]
-        DOWN[Enrich → NLP → Risk scoring<br/>(planned)]
-        OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>(planned)]
+        DOWN[Enrich → NLP → Risk scoring<br/>planned]
+        OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>planned]
     end
     S3[(Private S3 bucket<br/>write-once archive)]
 
