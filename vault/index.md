@@ -19,6 +19,7 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 - [[nlp-design]] — where NLP applies; SecureBERT 2.0 vs scikit-learn roles; evaluation;
   Phase 4 reference corpus (`cti enrich`: trafilatura cleaning, `js_shell`/`pdf_skipped`
   flags, why the 25%/own-CVE fallback checks were dropped)
+  and 5b-2 SecureBERT practice (pinning + weight hashes, CyNER labels, BPE span fixes, NER gold check)
 - [[ioc-extraction]] — Phase 5a `cti extract`: IPv4-vs-version and code-vs-domain rules,
   offline PSL, alias matching guards, review-sample and gold-set evaluation
 - [[attack-mapping]] — Phase 5b `cti attack-eval`: CTID KEV ground truth (pinned, leaky

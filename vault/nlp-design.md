@@ -6,7 +6,7 @@ tags: [design, nlp, ml]
 
 Status (2026-10-27): regex IOCs and aliases built (Phase 5a, [[ioc-extraction]]);
 ATT&CK grading harness and baselines built (5b-1, [[attack-mapping]]); SecureBERT 2.0
-NER and embeddings are 5b-2, a core deliverable.
+NER, embeddings and prior+bi-encoder ATT&CK mapping built (5b-2).
 
 ## Where NLP applies
 
@@ -50,6 +50,28 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
 - Classification: SecureBERT vs TF-IDF vs the source-only baseline, disclosed as a
   sanity check.
 
-## Open items
+## SecureBERT 2.0 in practice (5b-2, 2026-10-27)
 
-- None for model choice (verified 2026-10-27). Phase 5 plan: `tasks/todo.md`.
+- Pinning: NER `cisco-ai/SecureBERT2.0-NER@792db5b`, bi-encoder `@b42d43a`; safetensors +
+  JSON only, no `trust_remote_code`, `local_files_only`. The weights' SHA-256 is pinned in
+  `nlp/models.py` and re-checked on every load (`cti models verify`). The cache already
+  held the NER weights; they matched the pin.
+- NER label scheme (CyNER): **CVE IDs are tagged Indicator**, not Vulnerability.
+  Vulnerability marks bug descriptions ("Missing Authorization Vulnerability"). Spans
+  often include context words ("exploiting", "the FBI"). APT names can come out as
+  Malware ("Volt Typhoon").
+- The stock pipeline's "simple" aggregation splits words at byte-level BPE pieces
+  (`X`/`-`/`Agent`). Token offsets include the leading space, so a "same word" fragment is
+  one that touches the previous token and doesn't start with whitespace. Output is
+  padding-invariant (same spans alone or batched).
+- Gold sanity check (`cti ner-eval`, text-derived spans, overlap recall): Indicator 1.0,
+  Malware 0.78, Organization 0.29, System 0.26. Precision is a lower bound (the gold set is
+  incomplete and rule-generated; [[gold-set-provenance]]).
+- Corpus run (`cti ner`, 1,280 pages, 10 min CPU): noisy on code, tables and logs (far
+  from CyNER prose). Indicator 181k spans, 46k of them on 5 pages. Top "Malware" spans
+  include "for", "CWE", "exposed". All spans are kept with scores. Displays use score ≥ 0.9
+  (`CONFIDENT`) or an alias link; spot sample: junk median 0.61, real families 0.94.
+- `link()` respects the alias stoplist (66 "payload" spans had linked to ThreatFox
+  "Payload" through `lookup()`).
+- ATT&CK: the bi-encoder alone loses to the label prior; prior + bi-encoder wins
+  ([[attack-mapping]]).

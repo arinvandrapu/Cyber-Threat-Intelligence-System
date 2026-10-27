@@ -25,7 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter, defaultdict
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -68,19 +68,38 @@ def gold_labels(rows: list[dict], revoked: dict[str, str]) -> tuple[Gold, int]:
     return {c: dict(t) for c, t in gold.items()}, remapped
 
 
-def rank_parents(scores: np.ndarray, techniques: Sequence[Technique]) -> list[list[str]]:
-    """Per row: parents by the max score over themselves and their sub-techniques.
-
-    Ties break by technique ID, so rankings are deterministic.
-    """
+def parent_matrix(
+    scores: np.ndarray, techniques: Sequence[Technique]
+) -> tuple[list[str], np.ndarray]:
+    """Technique scores -> parent scores (max over a parent and its sub-techniques)."""
     parents = sorted({parent(t.id) for t in techniques})
     col = {p: i for i, p in enumerate(parents)}
     best = np.full((scores.shape[0], len(parents)), -np.inf)
     for j, t in enumerate(techniques):
         k = col[parent(t.id)]
         best[:, k] = np.maximum(best[:, k], scores[:, j])
-    order = np.lexsort((np.arange(len(parents))[None, :].repeat(len(best), 0), -best), axis=1)
+    return parents, best
+
+
+def rank_matrix(parents: list[str], scores: np.ndarray) -> list[list[str]]:
+    """Per row: parents best first; ties break by technique ID (deterministic)."""
+    ids = np.arange(len(parents))[None, :].repeat(len(scores), 0)
+    order = np.lexsort((ids, -scores), axis=1)
     return [[parents[i] for i in row] for row in order]
+
+
+def rank_parents(scores: np.ndarray, techniques: Sequence[Technique]) -> list[list[str]]:
+    return rank_matrix(*parent_matrix(scores, techniques))
+
+
+def log_prior(counts: Counter, parents: list[str], exclude: Iterable[str] = ()) -> np.ndarray:
+    """Add-one smoothed log label frequency per parent, optionally leaving one CVE's labels
+    out (``exclude``), so a dev CVE is never scored with a prior that counted it."""
+    c = np.array([counts[p] for p in parents], dtype=float)
+    for t in exclude:
+        if t in counts:
+            c[parents.index(t)] -= 1
+    return np.log((c + 1) / (c.sum() + len(parents)))
 
 
 def _per_cve(ranking: list[str], labels: set[str]) -> dict[str, float]:
@@ -190,44 +209,121 @@ def cve_texts(processed: Path, cves: set[str]) -> dict[str, dict[str, str]]:
     return texts
 
 
+BETAS = (0.0, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0)
+
+
+def _counts(gold: Gold, mapping_type: str) -> Counter:
+    return Counter(t for labels in gold.values() for t in labels.get(mapping_type, ()))
+
+
+def _prior_rows(
+    cves: list[str],
+    counts: Counter,
+    parents: list[str],
+    gold: Gold,
+    mapping_type: str,
+    leave_one_out: bool,
+) -> np.ndarray:
+    if not leave_one_out:
+        return np.tile(log_prior(counts, parents), (len(cves), 1))
+    return np.array(
+        [log_prior(counts, parents, gold.get(c, {}).get(mapping_type, ())) for c in cves]
+    ).reshape(len(cves), len(parents))
+
+
+def _select_beta(sim: np.ndarray, prior: np.ndarray, parents, cves, gold) -> dict:
+    """Pick the prior weight on dev only: best hit@5 on the primary type, then MRR, then the
+    smaller weight."""
+    grid = {}
+    for beta in BETAS:
+        ranking = dict(zip(cves, rank_matrix(parents, sim + beta * prior), strict=True))
+        names, table = _table(ranking, gold, PRIMARY_TYPE)
+        grid[beta] = (table[:, names.index("hit@5")].mean(), table[:, names.index("mrr")].mean())
+    best = max(BETAS, key=lambda b: (round(grid[b][0], 6), round(grid[b][1], 6), -b))
+    return {
+        "beta": best,
+        "selected_on": f"dev/kev/{PRIMARY_TYPE}, leave-one-out prior, hit@5",
+        "grid_hit@5": {str(b): round(float(v[0]), 4) for b, v in grid.items()},
+    }
+
+
 def evaluate(
     gold: Gold,
     texts: dict[str, dict[str, str]],
     techniques: Sequence[Technique],
-    rankers: dict[str, Callable[[Sequence[str]], list[list[str]]]],
+    scorers: dict[str, Callable[[Sequence[str]], np.ndarray]],
 ) -> dict:
-    """Score every ranker on every split and text variant, per mapping type.
+    """Score every method on every split and text variant, per mapping type.
 
-    ``rankers`` maps a name to a ``rank(texts)`` function; the majority baseline is always
-    added, fitted per mapping type on the dev split.
+    ``scorers`` maps a name to a ``scores(texts)`` function returning technique-level
+    similarities. Methods graded:
+
+    - ``majority``: the dev label prior (on dev CVEs, leave-one-out);
+    - each scorer on its own (zero-shot similarity);
+    - ``prior+<scorer>``: similarity + beta * log prior, with beta picked on dev only.
     """
-    test = {c for c in gold if c in texts["nvd"]}
-    dev = set(gold) - test
+    test = sorted(c for c in gold if c in texts["nvd"])
+    dev = sorted(set(gold) - set(test))
     dev_gold = {c: gold[c] for c in dev}
     splits = {
-        "test": {"nvd": {c: texts["nvd"][c] for c in test}, "kev": _subset(texts["kev"], test)},
-        "dev": {"kev": _subset(texts["kev"], dev)},
+        "test": {"nvd": _pick(texts["nvd"], test), "kev": _pick(texts["kev"], test)},
+        "dev": {"kev": _pick(texts["kev"], dev)},
     }
+    parents = sorted({parent(t.id) for t in techniques})
+    sims = {
+        (split, variant, name): parent_matrix(fn([subset[c] for c in subset]), techniques)[1]
+        for split, variants in splits.items()
+        for variant, subset in variants.items()
+        for name, fn in scorers.items()
+    }
+    primary_counts = _counts(dev_gold, PRIMARY_TYPE)
+    betas = {}
+    for name in scorers:
+        cves = list(splits["dev"]["kev"])
+        prior = _prior_rows(cves, primary_counts, parents, gold, PRIMARY_TYPE, True)
+        betas[name] = _select_beta(sims[("dev", "kev", name)], prior, parents, cves, gold)
+
     results: dict = {}
     for split, variants in splits.items():
         for variant, subset in variants.items():
+            cves = list(subset)
+            cell = results.setdefault(split, {}).setdefault(variant, {})
             for mapping_type in MAPPING_TYPES:
-                majority = MajorityRanker(dev_gold, mapping_type, techniques)
-                ranked = {"majority": rankings_for(majority.rank, subset)}
-                ranked |= {name: rankings_for(rank, subset) for name, rank in rankers.items()}
-                cell = results.setdefault(split, {}).setdefault(variant, {})
-                for name, ranking in ranked.items():
-                    entry = cell.setdefault(name, {})
+                prior = _prior_rows(
+                    cves,
+                    _counts(dev_gold, mapping_type),
+                    parents,
+                    gold,
+                    mapping_type,
+                    leave_one_out=split == "dev",
+                )
+                ranked = {"majority": dict(zip(cves, rank_matrix(parents, prior), strict=True))}
+                for name in scorers:
+                    sim = sims[(split, variant, name)]
+                    ranked[name] = dict(zip(cves, rank_matrix(parents, sim), strict=True))
+                    hybrid = sim + betas[name]["beta"] * prior
+                    ranked[f"prior+{name}"] = dict(
+                        zip(cves, rank_matrix(parents, hybrid), strict=True)
+                    )
+                for method, ranking in ranked.items():
+                    entry = cell.setdefault(method, {})
                     entry[mapping_type] = score(ranking, gold, mapping_type)
-                    if name != "majority":
+                    if method != "majority":
                         entry[mapping_type]["vs_majority"] = compare(
                             ranking, ranked["majority"], gold, mapping_type, "hit@5"
                         )
+    methods = ["majority", *scorers, *(f"prior+{n}" for n in scorers)]
     return {
         "splits": {"dev": len(dev), "test": len(test)},
         "primary": {"split": "test", "variant": "nvd", "mapping_type": PRIMARY_TYPE},
+        "methods": methods,
+        "prior_weight": betas,
         "results": results,
     }
+
+
+def _pick(texts: dict[str, str], cves: list[str]) -> dict[str, str]:
+    return {c: texts[c] for c in cves if c in texts}
 
 
 def _subset(texts: dict[str, str], cves: set[str]) -> dict[str, str]:
