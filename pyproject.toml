@@ -16,6 +16,7 @@ dependencies = [
     "ijson>=3.3,<4",  # streaming JSON: NVD yearly feeds are ~300 MB uncompressed
     "defusedxml>=0.7,<1",  # safe XML parsing (no XXE / entity expansion)
     "protego>=0.3,<1",  # RFC 9309 robots.txt (wildcards, longest match)
+    "tldextract>=5.3,<6",  # public-suffix check for extracted domains (bundled list, offline)
 ]
 
 [project.scripts]

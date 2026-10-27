@@ -24,8 +24,11 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   reproducible ingest.
 - **Enriches** each CVE with exploit availability, KEV status, EPSS, CWE, and the content
   of its reference pages, fetched with an SSRF-safe scraper.
+- **Extracts IOCs** (IPs, domains, URLs, file hashes, CVE IDs, CVSS vectors) from advisory
+  and threat-report text with validated, defang-aware regexes, and normalizes threat-actor
+  and malware names (APT28 = Fancy Bear = Sednit) to MITRE ATT&CK IDs.
 - **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
-  malware, products, and IOCs, and maps CVEs to ATT&CK techniques.
+  malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - **Prioritizes** vulnerabilities with a risk score validated against real-world
   exploitation, so the top tier is small and meaningful.
 - **Presents** the results in a localhost Next.js dashboard and as STIX 2.1 output.
@@ -38,13 +41,34 @@ flowchart LR
     B -->|write-once copy| S[(S3 archive)]
     B --> C[Parse to documents]
     C --> D[Enrich]
-    D --> E[NLP: SecureBERT 2.0<br/>NER · ATT&CK mapping]
+    D --> X[Extract<br/>regex IOCs · aliases]
+    X --> E[NLP: SecureBERT 2.0<br/>NER · ATT&CK mapping]
     E --> F[Risk scoring]
     F --> G[Exports<br/>JSON · STIX 2.1]
     G --> H[Localhost dashboard]
 ```
 
-Ingest, snapshot, parse, S3 upload, and enrichment (per-CVE join, reference-page cleaning) are built; NLP and scoring are *planned*.
+Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
+and IOC/alias extraction are built; SecureBERT NER, ATT&CK mapping, and scoring are
+*planned*.
+
+## Results so far
+
+IOC extraction over the 2026-10-26 snapshot (1,280 cleaned reference pages and 168,393 NVD
+descriptions). Numbers come from `cti extract` and `cti extract-eval`.
+
+| Measure | Result |
+|---|---|
+| IOCs from reference pages | 25,681 (CVE IDs 14,433, SHA-256 4,654, URLs 2,330, IPv4 1,446, CVSS vectors 1,594, domains 938) |
+| Precision, reference pages (200-IOC review sample) | 99.3% (95% CI 89.4–100%) |
+| Precision, NVD descriptions | 88.0% (95% CI 79.6–96.3%); weakest: IPv4, 2 of 12, because version numbers like `11.0.32.1` look like addresses |
+| Gold-set recall | CVE IDs 59/59; domains 132/140 (94.3%) |
+
+The review sample is stratified by IOC type and text origin and was labelled by the
+author with an AI assistant. "Correct" means the span really is a value of that type
+(an address, hostname, digest), not that it is malicious. The gold set is rule-generated,
+so it is a sanity check only; its IPv4 and CVSS labels are not scored (see
+[`vault/ioc-extraction.md`](vault/ioc-extraction.md)).
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -56,7 +80,7 @@ Ingest, snapshot, parse, S3 upload, and enrichment (per-CVE join, reference-page
 
 | Area | Skills | Tools |
 |---|---|---|
-| Threat intelligence | CVE/KEV/EPSS analysis, IOC handling and defanging, MITRE ATT&CK mapping, STIX 2.1 | NVD, CISA KEV, FIRST EPSS, MITRE ATT&CK/CWE, abuse.ch |
+| Threat intelligence | CVE/KEV/EPSS analysis, IOC extraction and defanging, threat-actor alias normalization, MITRE ATT&CK mapping, STIX 2.1 | NVD, CISA KEV, FIRST EPSS, MITRE ATT&CK/CWE, abuse.ch, tldextract (Public Suffix List) |
 | Vulnerability management | Risk-based prioritization, forward-looking evaluation | Python, pandas, scikit-learn |
 | Secure engineering | SSRF defense, secrets management, least-privilege IAM, threat modeling (STRIDE) | httpx, pydantic, GitHub Actions, pip-audit, secret scanning |
 | Cloud security | Private, encrypted, TLS-only storage; cost guardrails | AWS S3, IAM, AWS Budgets |
@@ -98,6 +122,8 @@ cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old 
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
 cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
+cti extract --date 2026-10-25   # offline: regex IOCs + alias mentions -> data/extracted/<date>/
+cti extract-eval --date 2026-10-25 --labels data/reference/ioc-review-2026-10-26.csv  # precision
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -122,7 +148,8 @@ src/cti/
   upload.py          write-once, checksum-verified copy of a snapshot to S3
   enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup;
                      reference-page cleaning (boilerplate removal, JS-shell detection)
-  defang.py          make IOCs non-clickable (hxxp, [.])
+  nlp/               regex IOC extraction, alias normalizer, extraction evaluation
+  defang.py          make IOCs non-clickable (hxxp, [.]) and undo common defang forms
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set
 tests/unit/          offline unit tests

@@ -1,7 +1,9 @@
 """Defang indicators so they can't be clicked or auto-linked.
 
 ``https://evil.example.com/x`` -> ``hxxps://evil[.]example[.]com/x``,
-``203.0.113.7`` -> ``203.0.113[.]7``.
+``203.0.113.7`` -> ``203.0.113[.]7``, ``2001:db8::1`` -> ``2001[:]db8[:][:]1``.
+``refang`` undoes these and the other common in-text forms (``(.)``, ``{.}``, ``[dot]``,
+``[:]``, ``[@]``, ``hxxp``/``fxp`` anywhere).
 """
 
 from __future__ import annotations
@@ -16,8 +18,8 @@ def defang_host(host: str) -> str:
 
 
 def defang_ip(ip: str) -> str:
-    if ":" in ip:  # IPv6: colons are not auto-linked; bracket for consistency
-        return f"[{ip}]"
+    if ":" in ip:  # IPv6; "[...]" would read as a URL host, so bracket the colons instead
+        return ip.replace(":", "[:]")
     head, _, last = ip.rpartition(".")
     return f"{head}[.]{last}" if head else ip
 
@@ -31,5 +33,16 @@ def defang_url(url: str) -> str:
     return f"{scheme}{sep}{defang_host(host)}{slash}{path}"
 
 
+_REFANG = (
+    (re.compile(r"\[\.\]|\(\.\)|\{\.\}|\[dot\]|\(dot\)", re.IGNORECASE), "."),
+    (re.compile(r"\[:\]"), ":"),
+    (re.compile(r"\[@\]|\[at\]", re.IGNORECASE), "@"),
+    (re.compile(r"\bhxxp", re.IGNORECASE), "http"),
+    (re.compile(r"\bfxp(?=s?(?::|\[:\])//)", re.IGNORECASE), "ftp"),
+)
+
+
 def refang(text: str) -> str:
-    return re.sub(r"^hxxp", "http", text.replace("[.]", "."), flags=re.IGNORECASE)
+    for pattern, plain in _REFANG:
+        text = pattern.sub(plain, text)
+    return text

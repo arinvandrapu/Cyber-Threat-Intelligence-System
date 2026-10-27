@@ -14,9 +14,9 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
 
 | Job | Tool |
 |---|---|
-| Entity extraction | Regex for structured IOCs; `cisco-ai/SecureBERT2.0-NER` for malware, products, orgs |
-| ATT&CK technique mapping | SecureBERT 2.0 embeddings, similarity to technique descriptions |
-| Text risk signals | NER and embedding features fed into the risk model |
+| Entity extraction | Regex for structured IOCs; `cisco-ai/SecureBERT2.0-NER` (labels: Indicator, Malware, Organization, System, Vulnerability) |
+| ATT&CK technique mapping | `cisco-ai/SecureBERT2.0-biencoder` embeddings (the base model is MLM-only), similarity to technique descriptions |
+| Text risk signals | Description-derived features only, KEV-language flagged ([[risk-scoring-design]]) |
 | Category classification | Gold-set sanity check only; see [[gold-set-provenance]] |
 
 ## Reference-page corpus (Phase 4, `data/enriched/<date>/references.jsonl.gz`)
@@ -42,12 +42,13 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
 
 - Risk: an ablation with and without SecureBERT text features, using the
   forward-looking KEV evaluation in [[risk-scoring-design]].
-- ATT&CK mapping: graded against the MITRE CTID Mappings Explorer CVE→ATT&CK
-  mappings (to verify).
+- ATT&CK mapping: graded against the MITRE CTID Mappings Explorer KEV file (ATT&CK 16.1,
+  419 CVEs, Apache-2.0). Dev = 284 CVEs outside the corpus; test = 135 in the corpus
+  (82 with corpus pages). Primary: hit@5/recall@5 on `exploitation_technique`, technique
+  level, vs majority and TF-IDF baselines. KEV-only, so results don't generalize to all CVEs.
 - Classification: SecureBERT vs TF-IDF vs the source-only baseline, disclosed as a
   sanity check.
 
 ## Open items
 
-- Verify the base-model ID for embeddings.
-- Verify Mappings Explorer coverage and format.
+- None for model choice (verified 2026-10-27). Phase 5 plan: `tasks/todo.md`.

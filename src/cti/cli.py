@@ -1,4 +1,4 @@
-"""Command-line interface: ``cti probe | ingest | status | parse | enrich | upload``."""
+"""Command-line interface: ``cti probe | ingest | status | parse | enrich | extract | upload``."""
 
 from __future__ import annotations
 
@@ -22,6 +22,8 @@ from cti.enrich import references as ref_clean
 from cti.enrich.cwe import load_catalog
 from cti.http.client import make_client
 from cti.ingest import IngestResult, ingest, refetch
+from cti.nlp import evaluate as extract_eval
+from cti.nlp import extract
 from cti.snapshot import Snapshot, SnapshotExistsError
 from cti.sources.cwe import CWESource
 from cti.sources.registry import select
@@ -207,6 +209,71 @@ def cmd_enrich(args, settings: Settings) -> int:
     return 0
 
 
+EXTRACT_STEPS = ("iocs", "aliases")
+
+
+def _extract_inputs(settings: Settings, day: str) -> tuple[Path, Path]:
+    processed = settings.data_dir / "processed" / day
+    enriched = settings.data_dir / "enriched" / day
+    needed = [processed / f"{n}.jsonl.gz" for n in ("nvd", "attack", "threatfox")]
+    needed.append(enriched / "references.jsonl.gz")
+    if missing := [str(p) for p in needed if not p.exists()]:
+        raise ConfigError(f"missing inputs {missing}; run `cti parse` and `cti enrich` first")
+    return processed, enriched
+
+
+def cmd_extract(args, settings: Settings) -> int:
+    wanted = args.only or list(EXTRACT_STEPS)
+    if unknown := sorted(set(wanted) - set(EXTRACT_STEPS)):
+        raise ConfigError(f"unknown extract steps {unknown}; choose from {EXTRACT_STEPS}")
+    processed, enriched = _extract_inputs(settings, args.date)
+    out_dir = settings.data_dir / "extracted" / args.date
+    if "iocs" in wanted:
+        rows, summary = extract.build_iocs(processed, enriched)
+        path = _write_enriched(out_dir, "iocs", rows, summary)
+        head = summary["iocs"].get(extract.HEADLINE_ORIGIN, {})
+        print(f"  extracted iocs         {sum(head.values()):,} from pages {head}  -> {path}")
+    if "aliases" in wanted:
+        rows, summary = extract.build_aliases(processed, enriched)
+        path = _write_enriched(out_dir, "aliases", rows, summary)
+        print(
+            f"  extracted aliases      {summary['matches']} mentions, "
+            f"{summary['ambiguous_matches']} ambiguous  -> {path}"
+        )
+    return 0
+
+
+def cmd_extract_eval(args, settings: Settings) -> int:
+    processed, enriched = _extract_inputs(settings, args.date)
+    iocs_path = settings.data_dir / "extracted" / args.date / "iocs.jsonl.gz"
+    if not iocs_path.exists():
+        raise ConfigError(f"missing {iocs_path}; run `cti extract` first")
+    rows = list(read_jsonl(iocs_path))
+    eval_dir = settings.data_dir / "eval" / args.date
+    if args.sample:
+        sample = extract_eval.draw_sample(rows, args.sample, args.seed)
+        wanted = {row["doc_id"] for row, _ in sample}
+        texts = {d: t for d, _, _, t in extract.iter_texts(processed, enriched) if d in wanted}
+        sheet = eval_dir / f"ioc-review-sample-seed{args.seed}.csv"
+        extract_eval.write_review_sheet(sheet, sample, texts)
+        print(f"  review sheet           {len(sample)} IOCs  -> {sheet}")
+        return 0
+    result: dict = {"iocs_sha256": hashlib.sha256(iocs_path.read_bytes()).hexdigest()}
+    gold_path = settings.data_dir / "gold" / "gold.jsonl.gz"
+    if gold_path.exists():
+        result["gold"] = extract_eval.gold_eval(gold.load_gold(gold_path))
+        print(f"  gold set               {result['gold']['scores']}")
+    if args.labels:
+        labels = extract_eval.read_labels(Path(args.labels))
+        result["review"] = extract_eval.score_review(rows, labels)
+        result["review"]["labels"] = args.labels
+        print(f"  review sample          {result['review']['overall']}")
+    out = eval_dir / "extract-eval.json"
+    write_json(out, result)
+    print(f"  wrote {out}")
+    return 0
+
+
 def _s3(settings: Settings, prefix: str) -> S3Storage:
     if not settings.s3_bucket:
         raise ConfigError("upload needs CTI_S3_BUCKET")
@@ -289,6 +356,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", required=True)
     p.add_argument("--only", type=lambda s: s.split(","), help=f"subset of {ENRICH_STEPS}")
     p.set_defaults(func=cmd_enrich)
+
+    p = sub.add_parser("extract", help="regex IOCs and alias mentions into data/extracted/<date>/")
+    p.add_argument("--date", required=True)
+    p.add_argument("--only", type=lambda s: s.split(","), help=f"subset of {EXTRACT_STEPS}")
+    p.set_defaults(func=cmd_extract)
+
+    p = sub.add_parser("extract-eval", help="score the IOC extractor (gold set, review sample)")
+    p.add_argument("--date", required=True)
+    p.add_argument("--sample", type=int, metavar="N", help="write a review sheet of N IOCs")
+    p.add_argument("--seed", type=int, default=20261027, help="sampling seed")
+    p.add_argument("--labels", help="labelled review CSV to score")
+    p.set_defaults(func=cmd_extract_eval)
 
     p = sub.add_parser("upload", help="copy a finished snapshot and/or the gold set to S3")
     p.add_argument("--date", help="snapshot to upload")

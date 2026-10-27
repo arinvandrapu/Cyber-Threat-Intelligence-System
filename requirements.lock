@@ -54,6 +54,7 @@ pytz==2026.5
 PyYAML==6.0.3
 regex==2026.9.29
 requests==2.34.2
+requests-file==3.0.1
 responses==0.26.3
 respx==0.23.1
 rich==15.0.0
@@ -62,6 +63,7 @@ s3transfer==0.19.3
 six==1.17.0
 sortedcontainers==2.4.0
 tld==0.13.2
+tldextract==5.4.0
 tomli==2.5.0
 tomli_w==1.2.0
 trafilatura==2.3.1
