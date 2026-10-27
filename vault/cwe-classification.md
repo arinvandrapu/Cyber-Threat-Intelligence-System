@@ -55,15 +55,23 @@ Label chain NVD > CNA > CISA-ADP (other ADPs not used).
 | nearest centroid (embeddings) | 0.137 | 0.20 | 0.46 |
 
 - Paired, embedding − TF-IDF: −0.13 (−0.14 to −0.12) name-absent; −0.20 over all test.
-  Frozen retrieval embeddings (mean pooled) lose the lexical bug cues TF-IDF keeps.
-  Published fine-tuned transformers beat TF-IDF, but fine-tuning was out of scope (CPU).
+  Hypothesis (untested): frozen retrieval embeddings, mean pooled, blur lexical bug cues
+  that TF-IDF keeps. Fine-tuned transformers (V2W-BERT, arXiv 2102.11498) are what the
+  literature uses; out of scope on CPU.
 - Name leakage confirmed: name-present stratum TF-IDF 0.91, embedding 0.52.
 - **Both chosen C values sit at an edge of their grid** (TF-IDF top, embedding bottom).
   Better values may lie outside; not explored, per the pre-registration.
 - Secondary: train-only models score lower (TF-IDF 0.36), so the refit on train + dev
   helps. ID masking barely matters (552 test CVEs). Multi-label pool, any label in top 5:
-  TF-IDF 0.96 (lenient). Accuracy by assigner ranges from 0.52 (GitHub) to 0.91
+  TF-IDF 0.96. That is inflated, because an unknown label maps to `other` and `other` in
+  the top 5 counts (1,564 of 7,641 sets have an unknown label). Accuracy by assigner ranges from 0.52 (GitHub) to 0.91
   (Microsoft) for TF-IDF; by label source 0.65 (NVD) / 0.68 (CNA) / 0.56 (CISA-ADP).
-- Below the published 70–88% top-1 because of the time split, the CNA-heavy test, the
-  name-absent stratum, and macro over 118 classes.
+- Below the rough published 70–88% top-1 (V2W-BERT, ThreatZoom; not measured here),
+  likely because of the time split, the CNA-heavy test, the name-absent stratum, and
+  macro over 118 classes. Top-1 counts a correct `other` as a hit; macro-F1 excludes it.
+- Counts differ slightly between the 6a table (79,471 / 19,046 / 58,973 labelled) and
+  `cwe-eval.json` (79,338 / 19,017 / 58,884): 6b drops Prohibited CWEs (categories,
+  views, deprecated IDs), which removes 133 / 29 / 89 CVEs whose only CWEs are Prohibited
+  (verified), and moves 5 to a later source in the chain. Name-present shares match to
+  within 0.1 point.
 - Gold row (circular): source-only 0.997 = TF-IDF 0.997 = the label-equals-source share.

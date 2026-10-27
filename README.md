@@ -127,12 +127,13 @@ CVE's NVD description. From `cti attack-eval`:
 
 ### CWE classification of CVE descriptions
 
-Each 2024+ CVE description is classified into one of 118 CWE weakness classes. Labels
-are the human-assigned CWEs (from NVD, else the CVE's CNA, else CISA's Vulnrichment). The
-split is by time: train on 2024–2025, choose settings on dev (2026-01-01 to 2026-04-29),
-and test once on the 51,243 later CVEs. Every choice was committed before any test score
-existed (`src/cti/nlp/cwe_config.py`). The headline uses the test CVEs whose description
-does **not** contain the CWE's name, because about a quarter do. From `cti cwe-eval`:
+Each 2024+ CVE description with a usable CWE label is classified into one of 118 CWE
+weakness classes (plus "other"). Labels are the human-assigned CWEs: from NVD, else the
+CVE's CNA, else CISA's Vulnrichment. The split is by time: train on 2024–2025, choose
+settings on dev (2026-01-01 to 2026-04-29), and test once on the 51,243 later single-label
+CVEs. Every choice was committed before any test score existed
+(`src/cti/nlp/cwe_config.py`). The headline uses the test CVEs whose description does
+**not** contain the CWE's name, because 26–30% do. From `cti cwe-eval`:
 
 | Method (test, name absent, n = 37,794) | macro-F1 (95% CI) | top-1 | top-5 |
 |---|---|---|---|
@@ -142,14 +143,20 @@ does **not** contain the CWE's name, because about a quarter do. From `cti cwe-e
 | Nearest centroid on the embeddings | 0.137 | 0.20 | 0.46 |
 
 - **Frozen SecureBERT sentence embeddings lose to TF-IDF** by 0.13 macro-F1 (paired 95% CI
-  −0.14 to −0.12). The bi-encoder is trained for similarity search, and mean pooling drops
-  the specific bug terms a linear model on words keeps. Fine-tuning a transformer (what
-  published work does) was out of scope for CPU-only compute.
+  −0.14 to −0.12). A likely reason, not tested here: the bi-encoder is trained for
+  similarity search, and mean pooling may blur the specific bug terms a linear model on
+  words keeps. Published work fine-tunes a transformer instead (e.g.
+  [V2W-BERT](https://arxiv.org/abs/2102.11498)); that was out of scope for CPU-only compute.
 - **Name leakage is real.** When the description names the CWE, TF-IDF scores 0.91.
 - **Both chosen regularization values sit at an edge of their pre-registered grids**, so
   slightly better settings may exist. They were not explored after the fact.
-- **Scores sit below published results** (70–88% top-1) because of the time split, a
-  test set labelled mostly by CNAs, and macro-averaging over 118 classes.
+- **Scores sit below published top-1 accuracy** (roughly 70–88% in work such as
+  [V2W-BERT](https://arxiv.org/abs/2102.11498) and
+  [ThreatZoom](https://arxiv.org/abs/2009.11501), not measured here). The likely reasons are
+  the time split, a test set labelled mostly by CNAs, the name-absent stratum, and
+  macro-averaging over 118 classes.
+- **How to read the metrics.** Macro-F1 excludes "other"; top-1/top-5 count a correct
+  "other" (8.8% of test) as a hit. Intervals are percentile bootstraps over CVEs.
 - **The gold set is circular.** On the rule-generated gold set, predicting from the
   source feed alone scores 0.997, the same as TF-IDF, because its labels were generated
   from the source.
