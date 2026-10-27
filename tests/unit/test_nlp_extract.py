@@ -118,6 +118,48 @@ def test_cli_review_sample_and_score(data_dir):
     assert result["review"]["overall"]["ci95"][0] < 1.0  # all-correct still has an interval
 
 
+def test_cli_review_sample_rejects_bad_requests(data_dir, capsys):
+    main(["extract", "--date", DAY, "--only", "iocs"])
+    assert main(["extract-eval", "--date", DAY, "--sample", "0"]) == 2
+    assert main(["extract-eval", "--date", DAY, "--sample", "2", "--labels", "x.csv"]) == 2
+    assert main(["extract-eval", "--date", DAY, "--sample", "2", "--seed", "3"]) == 0
+    assert (
+        main(["extract-eval", "--date", DAY, "--sample", "2", "--seed", "3"]) == 2
+    )  # no overwrite
+    assert main(["extract", "--date", "../escape"]) == 2
+    assert "already exists" in capsys.readouterr().err
+
+
+def test_safe_context_defangs_everything_and_marks_the_target():
+    text = "see version 10.0.0.1 at http://example.com/a, build.example.dev and 1.2.3.4 here"
+    start = text.index("1.2.3.4")
+    target = {"start": start, "end": start + 7, "value": "1.2.3[.]4"}
+    out = evaluate._safe_context(text, target)
+    assert "[[1.2.3[.]4]]" in out
+    assert "http://" not in out and "example.com" not in out and "10.0.0.1" not in out
+
+
+def test_draw_sample_is_stable_when_the_population_grows():
+    base = [
+        {"doc_id": f"d{i}", "origin": "o", "iocs": [{"type": "a", "start": 0, "end": 1}]}
+        for i in range(40)
+    ]
+    extra = [{"doc_id": "zz", "origin": "o", "iocs": [{"type": "b", "start": 0, "end": 1}]}]
+    first = {r["doc_id"] for r, _ in evaluate.draw_sample(base, 5, seed=1)}
+    second = {r["doc_id"] for r, _ in evaluate.draw_sample(base + extra, 6, seed=1)}
+    assert first <= second  # a new stratum doesn't reshuffle the existing one
+
+
+def test_read_labels_rejects_bad_files(tmp_path):
+    path = tmp_path / "l.csv"
+    path.write_text("doc_id,type,start,end\nd,a,0,1\n")
+    with pytest.raises(ValueError, match="missing columns"):
+        evaluate.read_labels(path)
+    path.write_text("doc_id,type,start,end,correct\nd,a,0,1,y\nd,a,0,1,n\n")
+    with pytest.raises(ValueError, match="duplicate"):
+        evaluate.read_labels(path)
+
+
 def test_draw_sample_is_stratified_and_seeded():
     rows_ = [
         {"doc_id": f"d{i}", "origin": "o", "iocs": [{"type": t, "start": 0, "end": 1}]}

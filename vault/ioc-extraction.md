@@ -5,7 +5,8 @@ tags: [nlp, ioc, evaluation, gotchas]
 # IOC Extraction (Phase 5a, `cti extract`)
 
 Regex extraction in `src/cti/nlp/iocs.py`; aliases in `nlp/aliases.py`. Design context:
-[[nlp-design]]. Outputs never feed risk features: [[risk-scoring-design]].
+[[nlp-design]]. Feature rules (page rows never; NVD rows only in the snapshot-time
+ablation): [[risk-scoring-design]].
 
 ## Rules worth knowing
 
@@ -36,16 +37,23 @@ Regex extraction in `src/cti/nlp/iocs.py`; aliases in `nlp/aliases.py`. Design c
 
 ## Evaluation (2026-10-26)
 
-- Review sample: 200 IOCs, seeded, equal allocation over type × origin. Labels are in
-  `data/reference/ioc-review-2026-10-26.csv` (doc ID, span, y/n only), labelled by the
-  author with an AI assistant. "Correct" = a value of that type, not malicious. Hashes =
-  digests (git object and build IDs count; keys, IVs, secrets and Message-IDs don't).
-- Results: pages 99.3% (CI 89–100), NVD 88.0% (CI 80–96). NVD IPv4 is 2/12: lists of
-  plain version quads (Oracle, IBM) have no keyword to catch.
-- Disclosures: the rules were tuned by reading corpus matches before sampling. One rule
-  (the "to" cue) was removed after labelling. That only adds candidates (+19 IPv4 of
-  about 3,000), and every labelled span still matches.
-- Gold set ([[gold-set-provenance]]): only sources that carry a type's labels are scored
-  (domains = ThreatFox "Malicious domains" lists). Domain recall 132/140; precision is a
-  lower bound, because other real names in those records are unlabelled. IPv4 (circular)
-  and CVSS (68 of 103 spans label a version or sub-score) are counted, not scored.
+- Review sample: 200 items, equal allocation over type × origin, taken in seeded-hash
+  order of each item's identity (`draw_sample`). That makes it reproducible from code and
+  stable when the extractor adds or drops items. Labels are in
+  `data/reference/ioc-review-2026-10-26.csv` (doc ID, span, y/n only), made by an AI
+  assistant (Claude) and not yet reviewed by the owner.
+- Criterion: "correct" = a value of that type, not malicious. Hashes = digests: file
+  hashes, git commit/patch IDs, module build IDs and JA3 count. Keys, IVs, secrets,
+  Message-IDs, anonymized researcher IDs (ZDI credits) and the hex after `#N` in a kernel
+  oops header don't. NVD SHA-1 items are almost all commit or build IDs, not file hashes.
+- Results: pages 98.5% (approx. CI 89–100), NVD 89.1% (approx. CI 81–97). Weak strata:
+  NVD IPv4 1/12 (plain version lists, RFC or IEEE section numbers), NVD MD5 0/5, page
+  SHA-1 7/11. Precision is population-weighted, so CVE IDs carry 56% of the page weight.
+- Disclosures: the rules were tuned by reading corpus matches before sampling. After the
+  first labelling round, audit fixes changed the extractor (the "to" cue, hash at sentence
+  end) and the sampler; the sample was redrawn and 181 items labelled anew.
+- Gold set ([[gold-set-provenance]]): an agreement check only, not accuracy. Gold domains
+  are regex spans in ThreatFox records (as circular as IPv4) and 59 of 62 CVE spans are
+  the record's own ID. Scored only where a source carries that type's labels: domains
+  132/140, CVE 59/59. CVSS (68 of 103 spans label a version or sub-score) is counted, not
+  scored.

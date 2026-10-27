@@ -58,7 +58,9 @@ IPV6_RE = re.compile(
 
 _LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 DOMAIN_RE = re.compile(
-    rf"(?<![\w.@/\\>-])(?:{_LABEL}{_DOT})+(?:[a-z]{{2,63}}|xn--[a-z0-9-]{{2,59}})"
+    # "])}" in the lookbehind and the {1,126} cap (the DNS label limit) keep long defanged
+    # chains like "a[.]a[.]a[.]..." linear: no new match attempt after each "[.]"
+    rf"(?<![\w.@/\\>\])}}-])(?:{_LABEL}{_DOT}){{1,126}}(?:[a-z]{{2,63}}|xn--[a-z0-9-]{{2,59}})"
     rf"(?![\w-]|{_DOT}\w|\()",  # "(": a method call such as "obj.name(", not a host
     re.IGNORECASE,
 )
@@ -91,7 +93,7 @@ URL_RE = re.compile(
 _URL_TRAIL = ".,;:!?'\""
 
 HASH_RE = re.compile(
-    r"(?<![\w/.=@#-])(?:[0-9a-f]{64}|[0-9a-f]{40}|[0-9a-f]{32})(?![\w/.=-])", re.IGNORECASE
+    r"(?<![\w/.=@#-])(?:[0-9a-f]{64}|[0-9a-f]{40}|[0-9a-f]{32})(?![\w/=-]|\.\w)", re.IGNORECASE
 )
 _HASH_TYPES = {32: "md5", 40: "sha1", 64: "sha256"}
 # commit IDs: "commit 1a2b...", "before e28e...", "up to 92f5...", "check-in 8bdc..."
@@ -195,8 +197,9 @@ def _looks_like_version(text: str, start: int, end: int) -> bool:
     before = text[max(0, start - 80) : start]
     if _VERSION_BEFORE.search(before) or _VERSION_AFTER.match(text, end):
         return True
-    # search the whole text (not a slice) so a quad cut at the window edge isn't a version
-    near = _VERSION_NEAR.search(text, max(0, start - 60))
+    # search past the window edge so a quad cut there isn't read as a three-part version,
+    # but stop soon after it (each address must not rescan the rest of the document)
+    near = _VERSION_NEAR.search(text, max(0, start - 60), min(len(text), end + 124))
     if near and near.start() <= end + 60:
         return True
     product = _PRODUCT_BEFORE.search(before)
@@ -253,11 +256,11 @@ def extract(text: str) -> list[Ioc]:
     """All IOCs in ``text``, sorted by position, with no overlapping spans."""
     rank = {t: i for i, t in enumerate(PRIORITY)}
     found = sorted(_candidates(text), key=lambda c: (rank[c[0]], c[2]))
-    taken: list[tuple[int, int]] = []
+    taken = bytearray(len(text))  # 1 = character already inside an accepted span
     out = []
     for kind, value, start, end, defanged, public in found:
-        if any(start < e and s < end for s, e in taken):
+        if any(taken[start:end]):
             continue
-        taken.append((start, end))
+        taken[start:end] = b"\x01" * (end - start)
         out.append(Ioc(kind, value, start, end, defanged, public))
     return sorted(out, key=lambda i: (i.start, i.type))

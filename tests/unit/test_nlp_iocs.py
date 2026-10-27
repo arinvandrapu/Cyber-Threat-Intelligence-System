@@ -1,4 +1,5 @@
 import socket
+import time
 from itertools import pairwise
 
 import pytest
@@ -28,9 +29,9 @@ def found(text: str, kind: str | None = None) -> list[str]:
         ("OTP 28.4.2 and OTP 27.3.4.10", []),  # a three-part version nearby
         ("Netgear EX6200 1.0.3.94 is affected", []),  # product name right before
         ("IP 10.0.0.1 and route 192.168.1.100/32", ["10.0.0.1", "192.168.1.100"]),
-        ("LHOST => 10.5.135.210", ["10.5.135.210"]),
+        ("LHOST => 10.0.0.5", ["10.0.0.5"]),
         # defanged addresses are indicators even in a version-like list
-        ("IOCs: 38.60.218[.]153 - 185.108.105[.]110", ["38.60.218.153", "185.108.105.110"]),
+        ("IOCs: 198.51.100[.]23 - 203.0.113[.]5", ["198.51.100.23", "203.0.113.5"]),
     ],
 )
 def test_ipv4(text, expected):
@@ -64,7 +65,7 @@ def test_ipv6(text, expected):
     [
         ("C2 evil.example.com", ["evil.example.com"]),
         ("hosted on bad[.]top and c2(.)xyz", ["bad.top", "c2.xyz"]),
-        ("plain kittycom.xyz", ["kittycom.xyz"]),  # newer TLD common in abuse.ch data
+        ("plain c2-example.xyz", ["c2-example.xyz"]),  # newer TLD common in abuse.ch data
         ("app.example.co.uk", ["app.example.co.uk"]),
         ("see setup.py, README.md, build.sh", []),  # real TLDs used as file extensions
         ("ASP.NET and VB.NET", []),
@@ -180,3 +181,24 @@ def test_public_suffix_list_is_never_fetched(monkeypatch):
         assert found("evil.example.com", "domain") == ["evil.example.com"]
     finally:
         iocs._psl.cache_clear()
+
+
+def test_hash_at_end_of_sentence():
+    md5 = "d41d8cd98f00b204e9800998ecf8427e"
+    assert [i.value for i in extract(f"the md5 is {md5}.")] == [md5]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "a[.]" * 30000,
+        "ab(.)" * 30000,
+        "a." * 50000,
+        " ".join(f"10.0.{i // 250}.{i % 250}" for i in range(8000)),
+    ],
+)
+def test_adversarial_input_stays_linear(text):
+    # scraped pages are untrusted: no input shape may make extraction blow up
+    start = time.perf_counter()
+    extract(text)
+    assert time.perf_counter() - start < 2.0

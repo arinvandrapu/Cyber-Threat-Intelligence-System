@@ -15,7 +15,7 @@ year. Severity scores alone don't say what to fix first: most "high" and "critic
 vulnerabilities are never exploited. This project answers a practical analyst question:
 **which threats deserve attention first, and why?**
 
-## What it does *(planned)*
+## What it does
 
 - **Collects** CVEs (NVD), known-exploited vulnerabilities (CISA KEV), exploit-likelihood
   scores (FIRST EPSS), public exploits (ExploitDB), attacker techniques (MITRE ATT&CK),
@@ -24,14 +24,15 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   reproducible ingest.
 - **Enriches** each CVE with exploit availability, KEV status, EPSS, CWE, and the content
   of its reference pages, fetched with an SSRF-safe scraper.
-- **Extracts IOCs** (IPs, domains, URLs, file hashes, CVE IDs, CVSS vectors) from advisory
-  and threat-report text with validated, defang-aware regexes, and normalizes threat-actor
-  and malware names (APT28 = Fancy Bear = Sednit) to MITRE ATT&CK IDs.
-- **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
+- **Extracts IOCs and observables** (IPs, domains, URLs, file hashes, CVE IDs, CVSS
+  vectors) from advisory and threat-report text with validated, defang-aware regexes, and
+  normalizes threat-actor and malware names (APT28 = Fancy Bear = Sednit) to MITRE ATT&CK
+  IDs (alias matching is not yet evaluated).
+- *(planned)* **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
-- **Prioritizes** vulnerabilities with a risk score validated against real-world
+- *(planned)* **Prioritizes** vulnerabilities with a risk score validated against real-world
   exploitation, so the top tier is small and meaningful.
-- **Presents** the results in a localhost Next.js dashboard and as STIX 2.1 output.
+- *(planned)* **Presents** the results in a localhost Next.js dashboard and as STIX 2.1 output.
 
 ## Architecture
 
@@ -52,29 +53,39 @@ Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cle
 and IOC/alias extraction are built; SecureBERT NER, ATT&CK mapping, and scoring are
 *planned*.
 
-## Results so far
-
-IOC extraction over the 2026-10-26 snapshot (1,280 cleaned reference pages and 168,393 NVD
-descriptions). Numbers come from `cti extract` and `cti extract-eval`.
-
-| Measure | Result |
-|---|---|
-| IOCs from reference pages | 25,681 (CVE IDs 14,433, SHA-256 4,654, URLs 2,330, IPv4 1,446, CVSS vectors 1,594, domains 938) |
-| Precision, reference pages (200-IOC review sample) | 99.3% (95% CI 89.4–100%) |
-| Precision, NVD descriptions | 88.0% (95% CI 79.6–96.3%); weakest: IPv4, 2 of 12, because version numbers like `11.0.32.1` look like addresses |
-| Gold-set recall | CVE IDs 59/59; domains 132/140 (94.3%) |
-
-The review sample is stratified by IOC type and text origin and was labelled by the
-author with an AI assistant. "Correct" means the span really is a value of that type
-(an address, hostname, digest), not that it is malicious. The gold set is rule-generated,
-so it is a sanity check only; its IPv4 and CVSS labels are not scored (see
-[`vault/ioc-extraction.md`](vault/ioc-extraction.md)).
-
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
 - [Data sources](docs/data-sources.md): every source, why it is ingested, and corpus size.
 - [Design decisions](docs/decisions.md): why each choice was made and what it costs,
   e.g. why S3 is a write-once archive rather than the pipeline's working store.
+
+## Results so far
+
+IOC and observable extraction over the 2026-10-26 snapshot (1,280 cleaned reference pages
+and 168,393 NVD descriptions). Every number below comes from `cti extract` and
+`cti extract-eval --labels data/reference/ioc-review-2026-10-26.csv`.
+
+| Measure | Result |
+|---|---|
+| Observables from reference pages | 25,684: CVE IDs 14,433 · SHA-256 4,658 · URLs 2,330 · CVSS vectors 1,594 · IPv4 1,446 · domains 935 · SHA-1 124 · MD5 111 · IPv6 53 |
+| Precision, reference pages | 98.5% (approx. 95% CI 88.6–100%) |
+| Precision, NVD descriptions | 89.1% (approx. 95% CI 81.3–96.8%) |
+| Weakest strata | NVD IPv4 1/12 (version lists such as `11.0.32.1` look like addresses) · NVD MD5 0/5 (keys and IVs) · page SHA-1 7/11 · page MD5 9/11 |
+
+How to read this:
+
+- **Sample.** 200 extracted items, about 12 per (type × origin) stratum, drawn
+  reproducibly (seeded hash order). Labels were made by an AI assistant (Claude) under a
+  written criterion, and are committed for review. "Correct" means the span really is a
+  value of that type (an address, hostname, URL, or digest), not that it is malicious.
+- **Weighting.** Each precision weights strata by their size, so CVE IDs (56% of page
+  items) dominate the page figure. Intervals are approximate: a normal interval with
+  Agresti-Coull variance per stratum.
+- **Counts.** These are observables, not all threats. They include benign hosts
+  (vendor sites, `127.0.0.1`), and NVD-origin items are left out of headline IOC counts.
+- **Gold set.** It is rule-generated, so it only checks agreement: CVE IDs 59/59 (mostly
+  each record's own ID) and domains 132/140 (spans from an older regex). It is not an
+  accuracy claim; see [`vault/ioc-extraction.md`](vault/ioc-extraction.md).
 
 ## Security skills and tools
 

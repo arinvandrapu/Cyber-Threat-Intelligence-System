@@ -26,11 +26,14 @@ def index():
             attack("S1073", "Royal", "malware", ["Royal"]),
             attack("S9001", "INC", "malware", ["INC"]),
             attack("S0085", "S-Type", "malware", ["S-Type"]),
+            attack("S0013", "PlugX", "malware", ["PlugX", "Korplug"]),
+            attack("G0129", "Mustang Panda", "intrusion-set", ["Mustang Panda", "RedDelta"]),
             attack("T1059", "Command and Scripting Interpreter", "attack-pattern"),
         ],
         [
             threatfox("Cobalt Strike", "BEACON,CobaltStrike"),
             threatfox("Mirai", "Katana"),
+            threatfox("PlugX", "Korplug,RedDelta"),  # an alias list that names a group
             threatfox("Unknown malware"),
         ],
     )
@@ -46,6 +49,11 @@ def test_lookup_normalizes_and_joins_threatfox(index):
     assert [e.id for e in index.lookup("Katana")] == ["threatfox:Mirai"]
     assert index.lookup("Unknown malware") == ()
     assert index.lookup("Command and Scripting Interpreter") == ()  # techniques aren't names
+
+
+def test_threatfox_family_joins_software_not_groups(index):
+    assert [e.id for e in index.lookup("PlugX")] == ["S0013"]
+    assert [e.id for e in index.lookup("RedDelta")] == ["G0129", "S0013"]  # truly ambiguous
 
 
 def test_ambiguous_alias_returns_every_candidate(index):
@@ -85,5 +93,5 @@ def test_offsets(index):
 
 def test_stats(index):
     stats = index.stats()
-    assert stats["ambiguous_names"] == 1
-    assert stats["entities"] == {"group": 3, "malware": 3, "threatfox": 1, "tool": 1}
+    assert stats["ambiguous_names"] == 2  # UAC-0056, RedDelta
+    assert stats["entities"] == {"group": 4, "malware": 4, "threatfox": 1, "tool": 1}

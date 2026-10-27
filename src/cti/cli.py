@@ -213,6 +213,7 @@ EXTRACT_STEPS = ("iocs", "aliases")
 
 
 def _extract_inputs(settings: Settings, day: str) -> tuple[Path, Path]:
+    date.fromisoformat(day)  # a path component: reject anything but YYYY-MM-DD
     processed = settings.data_dir / "processed" / day
     enriched = settings.data_dir / "enriched" / day
     needed = [processed / f"{n}.jsonl.gz" for n in ("nvd", "attack", "threatfox")]
@@ -250,11 +251,17 @@ def cmd_extract_eval(args, settings: Settings) -> int:
         raise ConfigError(f"missing {iocs_path}; run `cti extract` first")
     rows = list(read_jsonl(iocs_path))
     eval_dir = settings.data_dir / "eval" / args.date
-    if args.sample:
+    if args.sample is not None:
+        if args.sample < 1:
+            raise ConfigError("--sample needs a positive number of IOCs")
+        if args.labels:
+            raise ConfigError("--sample writes a new sheet; score labels in a separate run")
+        sheet = eval_dir / f"ioc-review-sample-seed{args.seed}.csv"
+        if sheet.exists():  # it may already hold labels
+            raise ConfigError(f"{sheet} already exists; move it or pick another --seed")
         sample = extract_eval.draw_sample(rows, args.sample, args.seed)
         wanted = {row["doc_id"] for row, _ in sample}
         texts = {d: t for d, _, _, t in extract.iter_texts(processed, enriched) if d in wanted}
-        sheet = eval_dir / f"ioc-review-sample-seed{args.seed}.csv"
         extract_eval.write_review_sheet(sheet, sample, texts)
         print(f"  review sheet           {len(sample)} IOCs  -> {sheet}")
         return 0
@@ -267,6 +274,9 @@ def cmd_extract_eval(args, settings: Settings) -> int:
         labels = extract_eval.read_labels(Path(args.labels))
         result["review"] = extract_eval.score_review(rows, labels)
         result["review"]["labels"] = args.labels
+        result["review"]["labels_sha256"] = hashlib.sha256(
+            Path(args.labels).read_bytes()
+        ).hexdigest()
         print(f"  review sample          {result['review']['overall']}")
     out = eval_dir / "extract-eval.json"
     write_json(out, result)

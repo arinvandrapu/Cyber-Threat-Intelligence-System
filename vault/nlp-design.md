@@ -4,8 +4,8 @@ tags: [design, nlp, ml]
 
 # NLP Design
 
-Status: **in the build plan (2026-10-24)**. SecureBERT 2.0 is a core Phase 5
-deliverable, not a stretch goal.
+Status (2026-10-27): regex IOCs and aliases built (Phase 5a, [[ioc-extraction]]);
+SecureBERT 2.0 NER and ATT&CK mapping are Phase 5b, a core deliverable.
 
 ## Where NLP applies
 

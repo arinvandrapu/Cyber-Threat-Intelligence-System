@@ -2,8 +2,8 @@
 
 Names come from ATT&CK (groups' ``aliases``, software's ``x_mitre_aliases``) and ThreatFox
 (``malware`` and ``malware_alias``). The canonical ID is the ATT&CK ID (``G0007``,
-``S0154``) when one exists, else ``threatfox:<name>``. A ThreatFox name joins an ATT&CK
-entity when its key matches exactly one ATT&CK entity.
+``S0154``) when one exists, else ``threatfox:<name>``. A ThreatFox family joins the one
+ATT&CK malware or tool its name matches (else the one its aliases match).
 
 ``lookup`` keys ignore case, spaces, hyphens, and underscores, so "APT 28", "apt-28", and
 "APT28" are one name. A key shared by several entities (e.g. "UAC-0056" is both Saint Bear
@@ -178,12 +178,18 @@ def build_index(attack_docs: Iterable[dict], threatfox_docs: Iterable[dict]) -> 
             continue
         alias = meta.get("malware_alias") or ""
         families[name].update(a.strip() for a in alias.split(",") if a.strip() not in ("", "None"))
-    attack_keys = {k: set(v) for k, v in index._by_key.items()}  # join ATT&CK names only
+    # ThreatFox families are software, so they only join ATT&CK malware or tools (their
+    # alias lists often name a group too: PlugX lists RedDelta). The family's own name
+    # decides first; its aliases are a fallback.
+    software = {
+        k: {i for i in ids if index.entities[i].kind in ("malware", "tool")}
+        for k, ids in index._by_key.items()
+    }
     for name in sorted(families):
         names = {name, *families[name]}
-        matches = {i for n in names for i in attack_keys.get(key(n), ())}
+        matches = software.get(key(name)) or {i for n in names for i in software.get(key(n), ())}
         if len(matches) == 1:
-            index.add(index.entities[matches.pop()], names)
+            index.add(index.entities[next(iter(matches))], names)
         else:
             index.add(Entity(f"threatfox:{name}", name, "threatfox"), names)
     return index

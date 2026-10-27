@@ -54,6 +54,10 @@ thresholds that were never validated.
   the threat metric (`E:` set) are skipped for an older version (the score includes E).
 - Scraped reference pages reflect snapshot-time knowledge, so they are **not** risk-eval
   features (used for NER/ATT&CK/dashboard only).
+- Phase 5 extraction (`data/extracted/`): `reference_page` rows are never features.
+  `nvd_description` rows are allowed only in the labelled snapshot-time ablation, like
+  description text. Alias matches are snapshot-time too: the index is built from ATT&CK
+  v20 and ThreatFox as of the snapshot.
 
 ## Caveats
 

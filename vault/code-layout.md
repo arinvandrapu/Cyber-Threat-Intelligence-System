@@ -16,7 +16,7 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 | `http/safe_fetch.py` | SSRF-safe fetcher, see [[ssrf-safe-fetching]] |
 | `sources/` | One module per feed. `fetch(ctx)` writes raw to the snapshot (network); `parse(snapshot)` yields `Document`s or `CveSignal`s (offline). `registry.py` lists them in ingest order |
 | `ingest.py` | One-time ingest: per-source isolation, completion markers, resume, logged refetch, secret redaction |
-| `cli.py` | `cti probe / ingest / status / parse / enrich / upload` |
+| `cli.py` | `cti probe / ingest / status / parse / enrich / extract / extract-eval / upload / gold-import` |
 | `enrich/` | `cves.py`: per-CVE join, `signals[as_of]` vs `context_snapshot`, `features_at` (see [[risk-scoring-design]]); `cwe.py`: full catalog incl. categories/deprecated, View-1000 pillar; `cleaner.py` + `references.py`: trafilatura cleaning of raw pages (`iter_pages` shared with the parser), js_shell/PDF flags. Plain dicts, deterministic gzip, atomic writes |
 | `nlp/` | `iocs.py`: regex IOCs on original-text offsets, defanged values, validation (ipaddress, bundled PSL, CVSS grammar); `aliases.py`: ATT&CK + ThreatFox alias index, strict in-text matching; `extract.py`: `cti extract` rows tagged `origin`; `evaluate.py`: stratified review sample + gold P/R (see [[ioc-extraction]]) |
 | `upload.py` | Finished snapshot → S3, write-once: local SHA-256 re-check, keys already present compared via `sha256()` (S3 HEAD checksum, no download), manifest last and only overwritten if the remote one is a subset, final key listing; gold to `gold/` |

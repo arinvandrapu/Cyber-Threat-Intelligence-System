@@ -82,7 +82,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       technique mapping via SecureBERT embeddings, graded against MITRE CTID
       CVE→ATT&CK mappings (verify availability). Tests for all.
       *Plan (audited 2026-10-27; owner decisions: CTID file committed under
-      `data/reference/`, one-time model download approved, IOC sample labeled by the
+      `data/reference/`, one-time model download approved, IOC sample labelled by an AI
       assistant and disclosed):*
   - [x] **5a. `cti extract`** *(2026-10-27; see `vault/ioc-extraction.md`)* — regex IOCs on original-text offsets (strict IPv4,
         IPv6 via `ipaddress`, defanged forms, domains via tldextract's bundled PSL with no
