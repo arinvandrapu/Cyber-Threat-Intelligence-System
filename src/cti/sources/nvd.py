@@ -159,6 +159,7 @@ class NVDSource(Source):
                 "vuln_status": cve.get("vulnStatus"),
                 "cvss_nvd": _best_cvss(metrics, lambda m: m.get("source") == NVD_SOURCE),
                 "cvss_cna": _best_cvss(metrics, lambda m: m.get("source") == cna),
+                "assigner": cna,  # the CNA of record (sourceIdentifier)
                 "cwes": cwes,
                 "cwe_assignments": [
                     {"source_kind": k, "type": t, "id": i} for k, t, i in assignments

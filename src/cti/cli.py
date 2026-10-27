@@ -346,6 +346,62 @@ def cmd_attack_eval(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_cwe_eval(args, settings: Settings) -> int:
+    if importlib.util.find_spec("sklearn") is None:
+        raise ConfigError("CWE evaluation needs the ml extra: pip install -e '.[ml]'")
+    import numpy as np
+
+    from cti.nlp import cwe_eval
+
+    date.fromisoformat(args.date)
+    processed = settings.data_dir / "processed" / args.date
+    extracted = settings.data_dir / "extracted" / args.date
+    needed = [
+        processed / "nvd.jsonl.gz",
+        extracted / "nvd-embeddings.npy",
+        extracted / "nvd-embeddings-masked.npy",
+    ]
+    if missing := [str(p) for p in needed if not p.exists()]:
+        raise ConfigError(
+            f"missing {missing}; run `cti parse`, `cti embed`, `cti embed --cwe-id-masked`"
+        )
+    snap = Snapshot.open(_snapshots(settings), args.date)
+    with CWESource(settings).open_xml(snap) as fh:
+        catalog = load_catalog(fh)
+    examples = cwe_eval.load_examples(processed, catalog)
+    full = np.load(extracted / "nvd-embeddings.npy", mmap_mode="r")
+    rows = {r["cve"]: r["row"] for r in read_jsonl(extracted / "nvd-embeddings-index.jsonl.gz")}
+    masked = np.load(extracted / "nvd-embeddings-masked.npy")
+    masked_rows = {
+        r["cve"]: r["row"] for r in read_jsonl(extracted / "nvd-embeddings-masked-index.jsonl.gz")
+    }
+
+    def vectors(cves, use_masked):
+        out = np.asarray(full[[rows[c] for c in cves]], dtype=np.float32)
+        if use_masked:
+            for i, c in enumerate(cves):
+                if c in masked_rows:
+                    out[i] = masked[masked_rows[c]]
+        return out
+
+    result = cwe_eval.run(examples, vectors, catalog, log=print)
+    result["inputs"] = {
+        name: hashlib.sha256((extracted / f"{name}-index.jsonl.gz").read_bytes()).hexdigest()
+        for name in ("nvd-embeddings", "nvd-embeddings-masked")
+    }
+    gold_path = settings.data_dir / "gold" / "gold.jsonl.gz"
+    if gold_path.exists():
+        result["gold_sanity_check"] = cwe_eval.gold_check(gold.load_gold(gold_path))
+    out = settings.data_dir / "eval" / args.date / "cwe-eval.json"
+    write_json(out, result)
+    head = result["test"]
+    for method, cell in head.items():
+        m = cell["name_absent"]
+        print(f"  {method:<10} test name-absent macro-F1 {m['macro_f1']} {m['macro_f1_ci95']}")
+    print(f"  wrote {out}")
+    return 0
+
+
 def _need_nlp() -> None:
     if (
         importlib.util.find_spec("torch") is None
@@ -421,17 +477,22 @@ def cmd_embed(args, settings: Settings) -> int:
     processed = settings.data_dir / "processed" / args.date
     if not (processed / "nvd.jsonl.gz").exists():
         raise ConfigError("missing parsed nvd; run `cti parse` first")
-    vectors, index, summary = semantic.build_embeddings(
-        processed, embed.Encoder(), progress=_progress("embedded")
-    )
+    if args.cwe_id_masked:
+        vectors, index, summary = semantic.build_masked_embeddings(processed, embed.Encoder())
+        name = "nvd-embeddings-masked"
+    else:
+        vectors, index, summary = semantic.build_embeddings(
+            processed, embed.Encoder(), progress=_progress("embedded")
+        )
+        name = "nvd-embeddings"
     out_dir = settings.data_dir / "extracted" / args.date
     out_dir.mkdir(parents=True, exist_ok=True)
-    npy = out_dir / "nvd-embeddings.npy"
+    npy = out_dir / f"{name}.npy"
     tmp = npy.with_name(f".{npy.name}.tmp")
     with tmp.open("wb") as fh:
         np.save(fh, vectors)
     tmp.replace(npy)
-    path = _write_enriched(out_dir, "nvd-embeddings-index", index, summary)
+    path = _write_enriched(out_dir, f"{name}-index", index, summary)
     print(f"  embeddings             {summary['rows']:,} x {summary['dim']}  -> {npy}, {path}")
     return 0
 
@@ -541,6 +602,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_attack_eval)
 
+    p = sub.add_parser("cwe-eval", help="classify NVD descriptions into CWEs (Phase 6)")
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_cwe_eval)
+
     p = sub.add_parser("models", help="SecureBERT 2.0 models: one-time fetch, or verify")
     p.add_argument("action", choices=("fetch", "verify"))
     p.set_defaults(func=cmd_models)
@@ -555,6 +620,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("embed", help="SecureBERT bi-encoder embeddings of NVD descriptions")
     p.add_argument("--date", required=True)
+    p.add_argument(
+        "--cwe-id-masked",
+        action="store_true",
+        help="only descriptions with a literal CWE-<n>, embedded with the ID masked",
+    )
     p.set_defaults(func=cmd_embed)
 
     p = sub.add_parser("upload", help="copy a finished snapshot and/or the gold set to S3")

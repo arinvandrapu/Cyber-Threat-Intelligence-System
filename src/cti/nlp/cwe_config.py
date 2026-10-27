@@ -62,3 +62,9 @@ TOP_K = (1, 3, 5)
 N_BOOT = 1000
 SEED = 20261027
 TOP_ASSIGNERS = 5  # breakdown of test by the assigning CNA
+
+# ---- added after the pre-registration commit (gold sanity row only; never the test split) ----
+# The rule-generated gold set (299 docs; primary label == source feed for 298) gets one
+# circular row: per-source majority vs TF-IDF + logistic regression, stratified 5-fold CV.
+GOLD_FOLDS = 5
+GOLD_C = 1.0
