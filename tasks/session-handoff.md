@@ -14,7 +14,7 @@
 | 4. Enrichment (CVE joins, reference cleaning) | ✅ merged | #14, #15 |
 | 5a. Regex IOCs + aliases (`cti extract`) | ✅ merged | #17 |
 | 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ merged | #18 |
-| 5b-2. SecureBERT NER + embeddings + prior+bi-encoder | ✅ PR open | — |
+| 5b-2. SecureBERT NER + embeddings + prior+bi-encoder | ✅ merged | #19 |
 | **6. Classification + evaluation** | **⏭ next** | — |
 | 6–9 | not started | — |
 
@@ -101,7 +101,7 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 347 passed
+.venv/bin/pytest -q          # expect 349 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 
