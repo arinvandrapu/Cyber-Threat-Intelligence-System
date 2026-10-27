@@ -25,11 +25,15 @@ THREADS = 8
 class ModelSpec:
     repo: str
     revision: str
-    files: dict[str, str]  # path in the snapshot -> SHA-256
+    # path in the snapshot -> SHA-256. These are public hashes of public files; the
+    # tokenizer lines carry gitleaks:allow because "token" + 64 hex chars looks like a key.
+    files: dict[str, str]
 
 
 _TOKENIZER = {
-    "special_tokens_map.json": "ea97ecdbcc73713039d8d64dbb05e3689495c96657fbd9a18f5bed381be81049",
+    "special_tokens_map.json": (
+        "ea97ecdbcc73713039d8d64dbb05e3689495c96657fbd9a18f5bed381be81049"  # gitleaks:allow
+    ),
 }
 NER = ModelSpec(
     "cisco-ai/SecureBERT2.0-NER",
@@ -37,8 +41,12 @@ NER = ModelSpec(
     {
         "model.safetensors": "b51c0e57b125250d02513d8c603e0cd8898d6e743fe1925840dff285a9f07719",
         "config.json": "76a07de1d10b1d2ac5b4c2795215eed3335f3e087029bfe287403076dff9a52d",
-        "tokenizer.json": "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30",
-        "tokenizer_config.json": "c16f1b07f93d05be753ec0acf8cb511d895a8bdb09669f6b156df81e3f96c2eb",
+        "tokenizer.json": (
+            "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30"  # gitleaks:allow
+        ),
+        "tokenizer_config.json": (
+            "c16f1b07f93d05be753ec0acf8cb511d895a8bdb09669f6b156df81e3f96c2eb"  # gitleaks:allow
+        ),
         **_TOKENIZER,
     },
 )
@@ -48,8 +56,12 @@ BIENCODER = ModelSpec(
     {
         "model.safetensors": "ab97ffc3039e63cde330b9e83b6c359fbbd4cb3eb59c05d804ca29000486ef9e",
         "config.json": "7939c4542cdf9dc371c2bfb84e10c199dd3196e0dbeeb5f7ec641944b3410b7e",
-        "tokenizer.json": "b18211964db7d0ae2a8d2c4a4c00e271c13905859726fe980622488d95db75af",
-        "tokenizer_config.json": "234b4cc1fd763b657ec4612d29ff3a7843e5f755e994db7ab6b1a5813b745e1a",
+        "tokenizer.json": (
+            "b18211964db7d0ae2a8d2c4a4c00e271c13905859726fe980622488d95db75af"  # gitleaks:allow
+        ),
+        "tokenizer_config.json": (
+            "234b4cc1fd763b657ec4612d29ff3a7843e5f755e994db7ab6b1a5813b745e1a"  # gitleaks:allow
+        ),
         "1_Pooling/config.json": "35bbd47d7fdf1e378db6130bcc668b09d1aa67a7bbf7c8f89a9c71f4cc8ebcc6",
         "modules.json": "8f4b264b80206c830bebbdcae377e137925650a433b689343a63bdc9b3145460",
         **_TOKENIZER,
