@@ -45,7 +45,23 @@ def nvd_cve(cve_id, published, **extra):
                 },
             ]
         },
-        "weaknesses": [{"description": [{"value": "CWE-79"}, {"value": "NVD-CWE-noinfo"}]}],
+        "weaknesses": [
+            {
+                "source": "nvd@nist.gov",
+                "type": "Primary",
+                "description": [{"value": "CWE-79"}, {"value": "NVD-CWE-noinfo"}],
+            },
+            {
+                "source": "cna@vendor.example",
+                "type": "Secondary",
+                "description": [{"value": "CWE-79"}, {"value": "CWE-20"}],
+            },
+            {
+                "source": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "type": "Secondary",
+                "description": [{"value": "CWE-79"}],
+            },
+        ],
         "references": [{"url": "https://vendor.example/adv", "tags": ["Vendor Advisory"]}],
         **extra,
     }
@@ -79,7 +95,14 @@ def test_nvd_fetch_verifies_checksum_and_parse_filters(ctx, settings, snapshot):
     doc = docs[0]
     assert doc.metadata["cvss_nvd"]["base_score"] == 9.8  # NVD's own (Primary)
     assert doc.metadata["cvss_cna"]["base_score"] == 5.0  # the assigning CNA's
-    assert doc.metadata["cwes"] == ["CWE-79"]
+    assert doc.metadata["cwes"] == ["CWE-20", "CWE-79"]  # flat union, noinfo dropped
+    assert doc.metadata["cwe_assignments"] == [  # who assigned what (Phase 6 labels)
+        {"source_kind": "adp", "type": "Secondary", "id": "CWE-79"},
+        {"source_kind": "cna", "type": "Secondary", "id": "CWE-20"},
+        {"source_kind": "cna", "type": "Secondary", "id": "CWE-79"},
+        {"source_kind": "nvd", "type": "Primary", "id": "CWE-79"},
+        {"source_kind": "nvd", "type": "Primary", "id": "NVD-CWE-noinfo"},
+    ]
     assert doc.text == "CVE-2024-0001 desc"
     # leakage: NVD's KEV copy and reference tags ("Exploit", ...) are dropped
     dumped = doc.model_dump_json()

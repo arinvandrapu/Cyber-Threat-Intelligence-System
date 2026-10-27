@@ -22,6 +22,8 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   and 5b-2 SecureBERT practice (pinning + weight hashes, CyNER labels, BPE span fixes, NER gold check)
 - [[ioc-extraction]] — Phase 5a `cti extract`: IPv4-vs-version and code-vs-domain rules,
   offline PSL, alias matching guards, review-sample and gold-set evaluation
+- [[cwe-classification]] — Phase 6 main eval: CWE label provenance (nvd/cna/adp), mapping
+  Usage, label-source shift and name leakage that shape the evaluation
 - [[attack-mapping]] — Phase 5b `cti attack-eval`: CTID KEV ground truth (pinned, leaky
   fields dropped), dev/test split, technique-level metrics, baselines
 

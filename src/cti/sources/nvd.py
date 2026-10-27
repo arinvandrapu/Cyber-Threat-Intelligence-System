@@ -29,6 +29,18 @@ from cti.sources.base import FetchContext, Source, gunzip_stream
 
 BASE = "https://nvd.nist.gov/feeds/json/cve/2.0"
 NVD_SOURCE = "nvd@nist.gov"
+CISA_ADP_SOURCE = "134c704f-9b21-4f2e-91b3-4a467353bcc0"  # CISA-ADP (Vulnrichment)
+NO_CWE = ("NVD-CWE-noinfo", "NVD-CWE-Other")
+
+
+def _source_kind(source: str | None) -> str:
+    if source == NVD_SOURCE:
+        return "nvd"
+    if source == CISA_ADP_SOURCE:
+        return "adp"
+    return "cna"  # the assigning CNA (an email or a UUID, depending on the record)
+
+
 CVSS_PREFERENCE = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
 _V4_THREAT_SET = re.compile(r"/E:[^X/]")
 
@@ -109,12 +121,22 @@ class NVDSource(Source):
         if cve.get("vulnStatus") == "Rejected":
             return
         text = next((d["value"] for d in cve.get("descriptions", []) if d["lang"] == "en"), "")
+        weaknesses = cve.get("weaknesses", [])
         cwes = sorted(
             {
                 d["value"]
-                for w in cve.get("weaknesses", [])
+                for w in weaknesses
                 for d in w.get("description", [])
                 if d["value"].startswith("CWE-")
+            }
+        )
+        # who assigned each CWE: CWE labels are graded per source in Phase 6
+        assignments = sorted(
+            {
+                (_source_kind(w.get("source")), w.get("type") or "", d["value"])
+                for w in weaknesses
+                for d in w.get("description", [])
+                if d["value"].startswith("CWE-") or d["value"] in NO_CWE
             }
         )
         metrics, cna = cve.get("metrics", {}), cve.get("sourceIdentifier")
@@ -133,6 +155,9 @@ class NVDSource(Source):
                 "cvss_nvd": _best_cvss(metrics, lambda m: m.get("source") == NVD_SOURCE),
                 "cvss_cna": _best_cvss(metrics, lambda m: m.get("source") == cna),
                 "cwes": cwes,
+                "cwe_assignments": [
+                    {"source_kind": k, "type": t, "id": i} for k, t, i in assignments
+                ],
                 # URLs only: reference tags ("Exploit", ...) are added after publication
                 # and would leak later knowledge into risk features.
                 "references": [r["url"] for r in cve.get("references", [])],
