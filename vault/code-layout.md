@@ -31,6 +31,9 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 - CI: ruff lint + format, pytest on 3.12 and 3.14, pip-audit, gitleaks. Actions pinned
   by commit SHA.
 - Dependencies: ranges in `pyproject.toml`, exact pins in `requirements.lock`.
+- gitleaks: a 64-hex hash next to a key containing "token" trips `generic-api-key`. Mark the
+  line `# gitleaks:allow` (see `nlp/models.py`); for a commit already pushed, add its
+  fingerprint to `.gitleaksignore` with a reason. Never weaken the repo-wide config.
 - `nlp` extra (torch, transformers) lives in `.venv-nlp/` (gitignored), pinned in
   `requirements-nlp.lock` (a superset of `requirements.lock`, same shared pins). CI never
   installs it; it runs `pip-audit -r requirements-nlp.lock --no-deps` instead. Torch-dependent
