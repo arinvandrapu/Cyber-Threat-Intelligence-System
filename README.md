@@ -61,6 +61,8 @@ and IOC/alias extraction are built; SecureBERT NER, ATT&CK mapping, and scoring 
 
 ## Results so far
 
+### IOC extraction
+
 IOC and observable extraction over the 2026-10-26 snapshot (1,280 cleaned reference pages
 and 168,393 NVD descriptions). Every number below comes from `cti extract` and
 `cti extract-eval --labels data/reference/ioc-review-2026-10-26.csv`.
@@ -86,6 +88,23 @@ How to read this:
 - **Gold set.** It is rule-generated, so it only checks agreement: CVE IDs 59/59 (mostly
   each record's own ID) and domains 132/140 (spans from an older regex). It is not an
   accuracy claim; see [`vault/ioc-extraction.md`](vault/ioc-extraction.md).
+
+### CVE → ATT&CK technique mapping (baselines)
+
+Graded against MITRE CTID's expert mappings of KEV CVEs to ATT&CK (ATT&CK 16.1,
+remapped to v20). Test = the 135 mapped CVEs in our NVD data, graded on how each CVE
+is exploited (`exploitation_technique`, 132 CVEs). Each ranks 227 parent techniques
+from the CVE's NVD description. From `cti attack-eval`:
+
+| Method | hit@5 (95% CI) | MRR |
+|---|---|---|
+| Majority (most common labels on the 284 dev CVEs) | 0.41 (0.33–0.50) | 0.37 |
+| TF-IDF text similarity | 0.14 (0.08–0.20) | 0.11 |
+
+Keyword matching loses to the trivial baseline: CVE text describes the bug, technique
+text describes attacker behaviour. SecureBERT 2.0 embeddings are next (*planned*).
+Every graded CVE is in KEV, so the scores don't generalize to all CVEs; see
+[`vault/attack-mapping.md`](vault/attack-mapping.md).
 
 ## Security skills and tools
 
@@ -117,7 +136,7 @@ Requirements: Python 3.12+. Later phases add Node.js 20+ (dashboard), an AWS acc
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -c requirements.lock -e '.[dev,enrich]'
+pip install -c requirements.lock -e '.[dev,enrich,ml]'
 cp .env.example .env   # fill in values; .env is gitignored
 pytest                 # offline: no network or AWS access needed
 ruff check .
@@ -135,6 +154,7 @@ cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>
 cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
 cti extract --date 2026-10-25   # offline: regex IOCs + alias mentions -> data/extracted/<date>/
 cti extract-eval --date 2026-10-25 --labels data/reference/ioc-review-2026-10-26.csv  # precision
+cti attack-eval --date 2026-10-25   # grade CVE -> ATT&CK ranking on MITRE CTID's KEV mappings
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -159,7 +179,8 @@ src/cti/
   upload.py          write-once, checksum-verified copy of a snapshot to S3
   enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup;
                      reference-page cleaning (boilerplate removal, JS-shell detection)
-  nlp/               regex IOC extraction, alias normalizer, extraction evaluation
+  nlp/               regex IOC extraction, alias normalizer, extraction evaluation,
+                     ATT&CK technique ranking graded on MITRE CTID mappings
   defang.py          make IOCs non-clickable (hxxp, [.]) and undo common defang forms
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set

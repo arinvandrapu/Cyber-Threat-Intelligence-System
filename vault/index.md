@@ -21,6 +21,8 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   flags, why the 25%/own-CVE fallback checks were dropped)
 - [[ioc-extraction]] — Phase 5a `cti extract`: IPv4-vs-version and code-vs-domain rules,
   offline PSL, alias matching guards, review-sample and gold-set evaluation
+- [[attack-mapping]] — Phase 5b `cti attack-eval`: CTID KEV ground truth (pinned, leaky
+  fields dropped), dev/test split, technique-level metrics, baselines
 
 ## Code
 

@@ -284,6 +284,61 @@ def cmd_extract_eval(args, settings: Settings) -> int:
     return 0
 
 
+ATTACK_METHODS = ("tfidf",)
+
+
+def cmd_attack_eval(args, settings: Settings) -> int:
+    if importlib.util.find_spec("sklearn") is None:
+        raise ConfigError("ATT&CK grading needs the ml extra: pip install -e '.[ml]'")
+    from cti.nlp import attack_catalog, attack_eval
+
+    wanted = args.methods or list(ATTACK_METHODS)
+    if unknown := sorted(set(wanted) - set(ATTACK_METHODS)):
+        raise ConfigError(f"unknown methods {unknown}; choose from {ATTACK_METHODS}")
+    date.fromisoformat(args.date)
+    processed = settings.data_dir / "processed" / args.date
+    if missing := [
+        n for n in ("nvd", "kev", "attack") if not (processed / f"{n}.jsonl.gz").exists()
+    ]:
+        raise ConfigError(f"missing parsed sources {missing}; run `cti parse` first")
+    snap = Snapshot.open(_snapshots(settings), args.date)
+    techniques = attack_catalog.load_techniques(processed)
+    revoked = attack_catalog.revocations(snap)
+    ctid_path = Path(args.ctid) if args.ctid else settings.data_dir / attack_eval.CTID_FILE
+    gold_rows = attack_eval.load_ctid(ctid_path)
+    gold_set, remapped = attack_eval.gold_labels(gold_rows, revoked)
+    texts = attack_eval.cve_texts(processed, set(gold_set))
+    rankers = {}
+    if "tfidf" in wanted:
+        rankers["tfidf"] = attack_eval.TfidfRanker(techniques).rank
+    result = attack_eval.evaluate(gold_set, texts, techniques, rankers)
+    result |= {
+        "ctid": {
+            "file": str(ctid_path),
+            "sha256": hashlib.sha256(ctid_path.read_bytes()).hexdigest(),
+            "rows": len(gold_rows),
+            "cves": len(gold_set),
+            "revoked_rows_remapped": remapped,
+        },
+        "candidates": {
+            "techniques": len(techniques),
+            "parents": len({attack_catalog.parent(t.id) for t in techniques}),
+        },
+        "methods": ["majority", *rankers],
+    }
+    out = settings.data_dir / "eval" / args.date / "attack-eval.json"
+    write_json(out, result)
+    primary = result["results"]["test"]["nvd"]
+    for name in result["methods"]:
+        cell = primary[name][attack_eval.PRIMARY_TYPE]
+        print(
+            f"  {name:<10} test/nvd {attack_eval.PRIMARY_TYPE}: n={cell['cves']} "
+            f"hit@5 {cell['hit@5']['value']} {cell['hit@5']['ci95']}  mrr {cell['mrr']['value']}"
+        )
+    print(f"  wrote {out}")
+    return 0
+
+
 def _s3(settings: Settings, prefix: str) -> S3Storage:
     if not settings.s3_bucket:
         raise ConfigError("upload needs CTI_S3_BUCKET")
@@ -378,6 +433,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=20261027, help="sampling seed")
     p.add_argument("--labels", help="labelled review CSV to score")
     p.set_defaults(func=cmd_extract_eval)
+
+    p = sub.add_parser("attack-eval", help="grade CVE -> ATT&CK ranking on CTID KEV mappings")
+    p.add_argument("--date", required=True)
+    p.add_argument("--methods", type=lambda s: s.split(","), help=f"subset of {ATTACK_METHODS}")
+    p.add_argument(
+        "--ctid", help="CTID mapping file (default: the pinned copy in data/reference/ctid/)"
+    )
+    p.set_defaults(func=cmd_attack_eval)
 
     p = sub.add_parser("upload", help="copy a finished snapshot and/or the gold set to S3")
     p.add_argument("--date", help="snapshot to upload")
