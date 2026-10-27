@@ -49,7 +49,8 @@ Three properties shape everything:
 | Upload | `cti upload` → `upload.py` | S3 only | Raw snapshot + gold set → S3, write-once |
 | Enrich | Phase 4 | no | `cti enrich`: one record per CVE joining KEV, EPSS, ExploitDB, Metasploit, Nuclei, Vulnrichment, CWE names and pillars, and reference-link types; point-in-time features kept apart from snapshot-time context. Cleans reference pages (trafilatura boilerplate removal; pages with no content without JavaScript or a login, and PDFs, flagged and kept out of the corpus) |
 | Extract | `cti extract` → `nlp/` | no | Cleaned pages + NVD descriptions → regex IOCs (offsets, defanged values, `origin` tag) and alias mentions normalized to ATT&CK IDs; `cti extract-eval` scores precision on a labelled review sample and recall on the gold set |
-| NLP *(planned)* | Phase 5b | no | SecureBERT 2.0 NER, embeddings, ATT&CK mapping |
+| ATT&CK grading | `cti attack-eval` → `nlp/attack_eval.py` | no | CVE text → ranked ATT&CK techniques, graded on MITRE CTID's KEV mappings (pinned copy in `data/reference/ctid/`); majority and TF-IDF baselines |
+| NLP *(planned)* | Phase 5b-2 | no | SecureBERT 2.0 NER and embeddings, embedding-based ATT&CK mapping |
 | Classify + evaluate *(planned)* | Phase 6 | no | Category classifier vs baselines on the gold set |
 | Risk scoring *(planned)* | Phase 7 | no | scikit-learn model, forward-looking KEV evaluation |
 | Present *(planned)* | Phases 8–9 | no | Static Next.js dashboard on 127.0.0.1, STIX 2.1 export |
@@ -67,7 +68,7 @@ by re-running `cti parse`, never by re-downloading.
 | `data/enriched/<date>/` (local) | `cves.jsonl.gz`, `references.jsonl.gz`, and a `*-summary.json` for each | Regenerated freely (cves from processed records, references from the raw snapshot); never uploaded |
 | `data/extracted/<date>/` (local) | `iocs.jsonl.gz`, `aliases.jsonl.gz`, and a `*-summary.json` for each; IOC values defanged | Regenerated freely; never uploaded |
 | `data/eval/<date>/` (local) | Evaluation outputs (aggregates) and review sheets (defanged context) | Regenerated freely; never uploaded |
-| `data/reference/` (in git) | Review labels: document ID, span, y/n; no feed content | Committed |
+| `data/reference/` (in git) | IOC review labels (document ID, span, y/n; no feed content) and the CTID KEV → ATT&CK mapping file with its Apache-2.0 notice | Committed; the CTID file's SHA-256 is pinned in code |
 | `data/gold/gold.jsonl.gz` (local) | Frozen evaluation gold set | Frozen; SHA-256 committed in `cti/gold.py` |
 | S3 `snapshots/<date>/…` | Copy of the raw snapshot | Write-once, enforced by code **and** IAM |
 | S3 `gold/` | Copy of the gold set | Write-once |

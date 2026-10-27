@@ -92,7 +92,8 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         out of headline counts. Eval: a seeded, stratified 200-IOC precision sample; gold P/R
         for `cve_id`/`domain` only (gold CVSS spans counted as label errors); no alias P/R
         on gold (circular).
-  - [ ] **5b. SecureBERT + ATT&CK** — `ml` extra (numpy, sklearn; in CI) and `nlp` extra
+  - [ ] **5b. SecureBERT + ATT&CK** *(5b-1 grading harness + `ml` extra + majority/TF-IDF
+        baselines: 2026-10-27, `vault/attack-mapping.md`; 5b-2 SecureBERT models next)* — `ml` extra (numpy, sklearn; in CI) and `nlp` extra
         (torch, transformers `<6`; not in CI, lock audited with `pip-audit --no-deps`).
         `cti models fetch` (pinned revisions, safetensors only, no `trust_remote_code`).
         NER on the reference corpus + CTID subset (pipeline stride, fragment merge).

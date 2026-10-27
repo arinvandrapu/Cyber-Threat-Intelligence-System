@@ -5,7 +5,8 @@ tags: [design, nlp, ml]
 # NLP Design
 
 Status (2026-10-27): regex IOCs and aliases built (Phase 5a, [[ioc-extraction]]);
-SecureBERT 2.0 NER and ATT&CK mapping are Phase 5b, a core deliverable.
+ATT&CK grading harness and baselines built (5b-1, [[attack-mapping]]); SecureBERT 2.0
+NER and embeddings are 5b-2, a core deliverable.
 
 ## Where NLP applies
 

@@ -12,8 +12,9 @@
 | 2b. Reference scraper, frozen gold set, data contract | ✅ merged | #7 |
 | 3. AWS setup + the one ingest | ✅ done 2026-10-26 | #9, #11 |
 | 4. Enrichment (CVE joins, reference cleaning) | ✅ merged | #14, #15 |
-| 5a. Regex IOCs + aliases (`cti extract`) | ✅ PR open | see PR list |
-| **5b. SecureBERT NER + ATT&CK mapping** | **⏭ next** | — |
+| 5a. Regex IOCs + aliases (`cti extract`) | ✅ merged | #17 |
+| 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ PR open | — |
+| **5b-2. SecureBERT NER + embeddings** | **⏭ next** | — |
 | 6–9 | not started | — |
 
 `main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
@@ -77,7 +78,7 @@
 | abuse.ch key, contact, bucket, profile | `.env` | gitignored |
 | Gold fixture | `data/gold/gold.jsonl.gz` | SHA-256 `4a612d2f…ceb5` (in `cti/gold.py`); also in S3 `gold/` |
 | **Snapshot, parsed, enriched data** | `data/snapshots/`, `data/processed/`, `data/enriched/` (all `2026-10-26`) | working copy; raw also in S3; parsed/enriched regenerable via `cti parse` / `cti enrich`. **Don't delete `data/`.** |
-| Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev,enrich]'` to rebuild |
+| Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev,enrich,ml]'` to rebuild |
 | AWS CLI | `default` = owner's admin IAM user, us-east-1; `cti` = pipeline user | `cti` key in `~/.aws/credentials`, **Inactive** |
 
 The prototype repo used for porting was a temporary clone. If it's needed again:
@@ -88,7 +89,7 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 322 passed
+.venv/bin/pytest -q          # expect 333 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 
