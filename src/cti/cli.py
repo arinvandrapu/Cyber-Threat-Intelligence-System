@@ -292,7 +292,9 @@ def cmd_attack_eval(args, settings: Settings) -> int:
         raise ConfigError("ATT&CK grading needs the ml extra: pip install -e '.[ml]'")
     from cti.nlp import attack_catalog, attack_eval
 
-    wanted = args.methods or list(ATTACK_METHODS)
+    # default: every method whose extra is installed (the output records which ran)
+    has_torch = importlib.util.find_spec("torch") is not None
+    wanted = args.methods or [m for m in ATTACK_METHODS if m != "biencoder" or has_torch]
     if unknown := sorted(set(wanted) - set(ATTACK_METHODS)):
         raise ConfigError(f"unknown methods {unknown}; choose from {ATTACK_METHODS}")
     if "biencoder" in wanted and importlib.util.find_spec("torch") is None:

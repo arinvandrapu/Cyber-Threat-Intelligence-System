@@ -1,10 +1,11 @@
 """Pinned SecureBERT 2.0 models: one-time download, then offline, verified loading.
 
-Every model is pinned to a Hugging Face commit and to the SHA-256 of its weights. Only
-``*.json`` and ``*.safetensors`` files are fetched (no pickle weights), ``trust_remote_code``
-is never set (ModernBERT is built into transformers), and loading runs with
-``local_files_only``, so after ``cti models fetch`` nothing touches the network. The weights
-are re-hashed on load; a cache that doesn't match the pin is refused.
+Every model is pinned to a Hugging Face commit and to the SHA-256 of every file it loads
+(weights, config, tokenizer). Only ``*.json`` and ``*.safetensors`` files are fetched (no
+pickle weights), ``trust_remote_code`` is never set (ModernBERT is built into
+transformers), and loading runs with ``local_files_only``, so after ``cti models fetch``
+nothing touches the network. Every file is re-hashed on load; a cache that doesn't match
+the pin is refused.
 
 Inference is CPU only, in eval mode, with a fixed thread count. Scores are rounded before
 they are stored, because float results can differ in the last digits across thread counts
@@ -24,18 +25,35 @@ THREADS = 8
 class ModelSpec:
     repo: str
     revision: str
-    weights_sha256: str  # model.safetensors
+    files: dict[str, str]  # path in the snapshot -> SHA-256
 
 
+_TOKENIZER = {
+    "special_tokens_map.json": "ea97ecdbcc73713039d8d64dbb05e3689495c96657fbd9a18f5bed381be81049",
+}
 NER = ModelSpec(
     "cisco-ai/SecureBERT2.0-NER",
     "792db5b533118afee8c3fab86db119d09ab77ff6",
-    "b51c0e57b125250d02513d8c603e0cd8898d6e743fe1925840dff285a9f07719",
+    {
+        "model.safetensors": "b51c0e57b125250d02513d8c603e0cd8898d6e743fe1925840dff285a9f07719",
+        "config.json": "76a07de1d10b1d2ac5b4c2795215eed3335f3e087029bfe287403076dff9a52d",
+        "tokenizer.json": "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30",
+        "tokenizer_config.json": "c16f1b07f93d05be753ec0acf8cb511d895a8bdb09669f6b156df81e3f96c2eb",
+        **_TOKENIZER,
+    },
 )
 BIENCODER = ModelSpec(
     "cisco-ai/SecureBERT2.0-biencoder",
     "b42d43ac3167e9e4d6ec6afb4f27cba791a2f6a0",
-    "ab97ffc3039e63cde330b9e83b6c359fbbd4cb3eb59c05d804ca29000486ef9e",
+    {
+        "model.safetensors": "ab97ffc3039e63cde330b9e83b6c359fbbd4cb3eb59c05d804ca29000486ef9e",
+        "config.json": "7939c4542cdf9dc371c2bfb84e10c199dd3196e0dbeeb5f7ec641944b3410b7e",
+        "tokenizer.json": "b18211964db7d0ae2a8d2c4a4c00e271c13905859726fe980622488d95db75af",
+        "tokenizer_config.json": "234b4cc1fd763b657ec4612d29ff3a7843e5f755e994db7ab6b1a5813b745e1a",
+        "1_Pooling/config.json": "35bbd47d7fdf1e378db6130bcc668b09d1aa67a7bbf7c8f89a9c71f4cc8ebcc6",
+        "modules.json": "8f4b264b80206c830bebbdcae377e137925650a433b689343a63bdc9b3145460",
+        **_TOKENIZER,
+    },
 )
 MODELS = {"ner": NER, "biencoder": BIENCODER}
 _PATTERNS = ["*.json", "*.safetensors"]
@@ -61,12 +79,15 @@ def local_path(spec: ModelSpec) -> Path:
 
 
 def verify(spec: ModelSpec, path: Path) -> None:
-    digest = hashlib.sha256()
-    with (path / "model.safetensors").open("rb") as fh:
-        for block in iter(lambda: fh.read(1 << 20), b""):
-            digest.update(block)
-    if digest.hexdigest() != spec.weights_sha256:
-        raise ValueError(f"{spec.repo}@{spec.revision}: weights do not match the pinned SHA-256")
+    for name, expected in spec.files.items():
+        digest = hashlib.sha256()
+        with (path / name).open("rb") as fh:
+            for block in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(block)
+        if digest.hexdigest() != expected:
+            raise ValueError(
+                f"{spec.repo}@{spec.revision}: {name} does not match the pinned SHA-256"
+            )
 
 
 def _setup_torch():

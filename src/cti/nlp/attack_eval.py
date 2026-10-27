@@ -319,6 +319,55 @@ def evaluate(
         "methods": methods,
         "prior_weight": betas,
         "results": results,
+        "diagnostics": {
+            name: _diagnose(
+                sims[("test", "nvd", name)],
+                list(splits["test"]["nvd"]),
+                parents,
+                gold,
+                dev_gold,
+                betas[name]["beta"],
+            )
+            for name in scorers
+        },
+    }
+
+
+def _diagnose(sim, cves, parents, gold, dev_gold, beta) -> dict:
+    """Post-hoc analysis of the primary cell, never used for any choice: how test hit@5
+    moves with beta, and which labels the hybrid gains over majority."""
+    prior = _prior_rows(cves, _counts(dev_gold, PRIMARY_TYPE), parents, gold, PRIMARY_TYPE, False)
+    majority = dict(zip(cves, rank_matrix(parents, prior), strict=True))
+
+    def hit5(ranking):
+        names, table = _table(ranking, gold, PRIMARY_TYPE)
+        return round(float(table[:, names.index("hit@5")].mean()), 4)
+
+    sensitivity = {
+        str(b): hit5(dict(zip(cves, rank_matrix(parents, sim + b * prior), strict=True)))
+        for b in BETAS
+    }
+    hybrid = dict(zip(cves, rank_matrix(parents, sim + beta * prior), strict=True))
+    wins, losses, gained = 0, 0, Counter()
+    for c in cves:
+        labels = gold.get(c, {}).get(PRIMARY_TYPE)
+        if not labels:
+            continue
+        h, m = bool(set(hybrid[c][:5]) & labels), bool(set(majority[c][:5]) & labels)
+        if h and not m:
+            wins += 1
+            gained.update(set(hybrid[c][:5]) & labels)
+        losses += m and not h
+    return {
+        "note": "post hoc on test/nvd/" + PRIMARY_TYPE + "; not used for selection",
+        "test_hit@5_by_beta": sensitivity,
+        "wins_vs_majority": wins,
+        "losses_vs_majority": losses,
+        "labels_gained": dict(gained.most_common()),
+        "dev_label_counts": {t: _counts(dev_gold, PRIMARY_TYPE)[t] for t in gained},
+        "test_label_counts": {
+            t: sum(t in gold[c].get(PRIMARY_TYPE, ()) for c in cves) for t in gained
+        },
     }
 
 

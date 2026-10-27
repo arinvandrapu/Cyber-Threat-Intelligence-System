@@ -166,6 +166,32 @@ def test_evaluate_splits_and_compares_with_majority():
     assert "prior+tfidf" in cell
 
 
+def test_prior_weight_is_chosen_without_test_labels():
+    texts = {
+        "nvd": {"CVE-2024-0001": "kernel driver elevate privileges", "CVE-2024-0002": "web"},
+        "kev": {
+            "CVE-2024-0001": "a",
+            "CVE-2024-0002": "b",
+            "CVE-2020-0001": "internet facing web server exploit",
+            "CVE-2020-0002": "kernel driver elevate privileges",
+        },
+    }
+    dev = {
+        "CVE-2020-0001": {"exploitation_technique": {"T1190"}},
+        "CVE-2020-0002": {"exploitation_technique": {"T1068"}},
+    }
+    scorers = {"tfidf": ae.TfidfRanker(TECHNIQUES).scores}
+    weights = []
+    for test_labels in ({"T1068"}, {"T1059"}):  # flip the test labels; beta must not move
+        gold = {
+            **dev,
+            "CVE-2024-0001": {"exploitation_technique": test_labels},
+            "CVE-2024-0002": {"exploitation_technique": test_labels},
+        }
+        weights.append(ae.evaluate(gold, texts, TECHNIQUES, scorers)["prior_weight"])
+    assert weights[0] == weights[1]
+
+
 def test_log_prior_smooths_and_leaves_one_out():
     from collections import Counter
 

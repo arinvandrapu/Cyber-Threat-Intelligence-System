@@ -1,9 +1,10 @@
 """Sentence embeddings with the SecureBERT 2.0 bi-encoder.
 
-Attention-masked mean pooling over the last hidden state, then L2 normalization, which
-reproduces the model's sentence-transformers config (``1_Pooling``: mean) without that
-dependency. Texts are batched in length order (less padding), and results are returned in
-input order.
+Attention-masked mean pooling over the last hidden state, as the model's
+sentence-transformers ``1_Pooling`` config specifies, then L2 normalization (the model
+ships no Normalize module, but its similarity function is cosine, so normalized dot
+products are the intended scores). Texts are batched in length order (less padding), and
+results are returned in input order.
 """
 
 from __future__ import annotations

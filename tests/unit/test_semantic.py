@@ -62,6 +62,21 @@ def test_group_starts_a_new_entity_on_b_tag_after_a_space():
     assert [text[e.start : e.end] for e in group(text, toks)] == ["CISA", "FBI"]
 
 
+def test_keep_best_prefers_the_window_where_a_token_is_central():
+    from cti.nlp.ner import keep_best
+
+    best: dict = {}
+    # window 1 covers tokens a..d; window 2 overlaps on c, d and continues to f
+    w1 = [(0, 0), (0, 1), (2, 3), (4, 5), (6, 7), (0, 0)]  # [CLS] a b c d [SEP]
+    w2 = [(0, 0), (4, 5), (6, 7), (8, 9), (10, 11), (0, 0)]  # [CLS] c d e f [SEP]
+    keep_best(best, w1, ["O", "O", "O", "B-X", "B-X", "O"], [1, 1, 1, 0.1, 0.2, 1])
+    keep_best(best, w2, ["O", "B-Y", "I-Y", "O", "O", "O"], [1, 0.3, 0.4, 1, 1, 1])
+    # c: margin 1 in w1, 0 in w2 -> w1; d: margin 0 in w1 (its last), 1 in w2 -> w2
+    assert best[(4, 5)] == (1, "B-X", 0.1)
+    assert best[(6, 7)] == (1, "I-Y", 0.4)
+    assert sorted(best) == [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11)]
+
+
 def test_entity_text_is_defanged():
     assert inert("contacting evil.example.com via https://x.io") == (
         "contacting evil[.]example[.]com via hxxps[:]//x[.]io"
@@ -194,10 +209,15 @@ def test_build_embeddings_flags_kev_language(tmp_path):
 
 def test_models_verify_rejects_unpinned_weights(tmp_path):
     (tmp_path / "model.safetensors").write_bytes(b"weights")
-    good = models.ModelSpec("x/y", "rev", hashlib.sha256(b"weights").hexdigest())
-    models.verify(good, tmp_path)
-    with pytest.raises(ValueError, match="pinned SHA-256"):
-        models.verify(models.ModelSpec("x/y", "rev", "0" * 64), tmp_path)
+    (tmp_path / "config.json").write_bytes(b"{}")
+    files = {
+        "model.safetensors": hashlib.sha256(b"weights").hexdigest(),
+        "config.json": hashlib.sha256(b"{}").hexdigest(),
+    }
+    models.verify(models.ModelSpec("x/y", "rev", files), tmp_path)
+    tampered = {**files, "config.json": "0" * 64}  # a swapped config is caught too
+    with pytest.raises(ValueError, match=r"config\.json does not match"):
+        models.verify(models.ModelSpec("x/y", "rev", tampered), tmp_path)
 
 
 def test_cli_explains_missing_nlp_extra(monkeypatch, capsys, tmp_path):

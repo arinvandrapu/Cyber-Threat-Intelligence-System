@@ -53,8 +53,9 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
 ## SecureBERT 2.0 in practice (5b-2, 2026-10-27)
 
 - Pinning: NER `cisco-ai/SecureBERT2.0-NER@792db5b`, bi-encoder `@b42d43a`; safetensors +
-  JSON only, no `trust_remote_code`, `local_files_only`. The weights' SHA-256 is pinned in
-  `nlp/models.py` and re-checked on every load (`cti models verify`). The cache already
+  JSON only, no `trust_remote_code`, `local_files_only`. The SHA-256 of every loaded file
+  (weights, config, tokenizer) is pinned in `nlp/models.py` and re-checked on every load
+  (`cti models verify`). The cache already
   held the NER weights; they matched the pin.
 - NER label scheme (CyNER): **CVE IDs are tagged Indicator**, not Vulnerability.
   Vulnerability marks bug descriptions ("Missing Authorization Vulnerability"). Spans
@@ -73,5 +74,6 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
   (`CONFIDENT`) or an alias link; spot sample: junk median 0.61, real families 0.94.
 - `link()` respects the alias stoplist (66 "payload" spans had linked to ThreatFox
   "Payload" through `lookup()`).
-- ATT&CK: the bi-encoder alone loses to the label prior; prior + bi-encoder wins
+- ATT&CK: the bi-encoder alone loses to the label prior. Prior + bi-encoder wins on
+  test, almost all of it through T1068 under a time shift, and it is β-sensitive
   ([[attack-mapping]]).

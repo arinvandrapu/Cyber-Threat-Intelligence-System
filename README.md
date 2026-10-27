@@ -105,14 +105,24 @@ CVE's NVD description. From `cti attack-eval`:
 | Label prior + TF-IDF | 0.43 (0.35–0.52) | +0.02 (0.00–0.05) |
 | **Label prior + SecureBERT 2.0 bi-encoder** | **0.57 (0.48–0.65)** | **+0.16 (0.10–0.23)** |
 
-- **Similarity alone loses to the trivial baseline.** CVE text describes the bug, while
-  technique text describes attacker behaviour, and a few techniques (T1190, T1068) cover
-  most labels.
-- **The combination wins.** Adding the dev label prior (weight picked on dev only) to
-  semantic similarity is what beats it.
-- **Disclosures.** The combined method was designed after the similarity-only test
-  results were seen. Every graded CVE is in KEV, so the scores don't generalize to all
-  CVEs. Details: [`vault/attack-mapping.md`](vault/attack-mapping.md).
+- **Similarity alone loses to the trivial baseline.** CVE text describes the bug,
+  while technique text describes attacker behaviour, and two techniques (T1190, T1068)
+  account for half the test CVEs.
+- **What the combination fixes.** The gain comes almost entirely from one shift over time.
+  T1068 (privilege escalation) is rare among older KEV CVEs (8 of 300 dev labels) but
+  common in 2024+ ones (32 of 160). Text similarity pulls it into the top 5 when a
+  description says so: 17 of the 22 CVEs the combination wins over majority (it loses 1).
+- **Limits.** There is no gain at rank 1 (hit@1 0.26, the same as majority). On dev the
+  combination only matches majority (+0.01, CI −0.01 to 0.04).
+- **β sensitivity.** The prior weight β was chosen on dev, which cannot separate the
+  values 0.1–1.0. On test, β = 0.5 or 1.0 would give no gain, and TF-IDF at β = 0.02
+  would match the bi-encoder (0.58). So the robust finding is "label prior + text
+  similarity corrects a time-shifted prior", not "SecureBERT beats keywords".
+- **Disclosures.** The combined method and its β grid were written after the
+  similarity-only test results were seen. β is picked on KEV text and applied to NVD
+  text. Every graded CVE is in KEV, so the scores don't generalize to all CVEs. These
+  diagnostics are written by `cti attack-eval` (`diagnostics` in its output); details in
+  [`vault/attack-mapping.md`](vault/attack-mapping.md).
 
 ### SecureBERT 2.0 NER (sanity check)
 

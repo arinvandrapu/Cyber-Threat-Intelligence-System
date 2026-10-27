@@ -110,6 +110,24 @@ def group(text: str, tokens: list[tuple[int, int, str, float]]) -> list[Entity]:
     ]
 
 
+def keep_best(best: dict, offsets, tags: Sequence[str], confs: Sequence[float]) -> None:
+    """Record one window's predictions into ``best`` (``(start, end) -> (margin, tag,
+    prob)``), keeping for each token the window where it sits furthest from an edge.
+
+    ``offsets`` are the window's character offsets; special tokens have ``(0, 0)``.
+    """
+    real = [k for k, (s, e) in enumerate(offsets) if e > s]
+    if not real:
+        return
+    first, last = real[0], real[-1]
+    for k in real:
+        span = tuple(offsets[k])
+        margin = min(k - first, last - k)
+        seen = best.get(span)
+        if seen is None or margin > seen[0]:
+            best[span] = (margin, tags[k], float(confs[k]))
+
+
 class Tagger:
     def __init__(self, spec: models.ModelSpec = models.NER):
         self.torch, self.tokenizer, self.model = models.load_token_classifier(spec)
@@ -128,6 +146,8 @@ class Tagger:
         return enc["input_ids"], enc["offset_mapping"], enc["overflow_to_sample_mapping"]
 
     def tag(self, texts: Sequence[str], progress=None) -> list[list[Entity]]:
+        if not texts:
+            return []
         torch = self.torch
         ids, offsets, owner = self._windows(texts)
         # per text: (start, end) -> (margin to the window edge, tag, prob)
@@ -148,17 +168,8 @@ class Tagger:
                 )
                 conf, label = probs.max(-1)
                 for row, i in enumerate(idx):
-                    real = [k for k, (s, e) in enumerate(offsets[i]) if e > s]
-                    if not real:
-                        continue
-                    first, last = real[0], real[-1]
-                    for k in real:
-                        span = tuple(offsets[i][k])
-                        margin = min(k - first, last - k)
-                        seen = best[owner[i]].get(span)
-                        if seen is None or margin > seen[0]:
-                            tag = self.id2label[int(label[row, k])]
-                            best[owner[i]][span] = (margin, tag, float(conf[row, k]))
+                    tags = [self.id2label[int(x)] for x in label[row, : len(ids[i])]]
+                    keep_best(best[owner[i]], offsets[i], tags, conf[row].tolist())
                 if progress:
                     progress(min(b + BATCH, len(order)), len(order))
         return [
