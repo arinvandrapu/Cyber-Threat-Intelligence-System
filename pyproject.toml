@@ -33,6 +33,14 @@ ml = [
     "numpy>=2.1",
     "scikit-learn>=1.6",
 ]
+# SecureBERT 2.0 (cti models / ner / ner-eval / embed / attack-eval --methods biencoder).
+# Heavy (torch), so CI does not install it; its lock is audited instead.
+nlp = [
+    "torch>=2.9,<3",
+    "transformers>=4.48,<6",  # ModernBERT needs 4.48; v6 may change tokenizers/pipelines
+    "safetensors>=0.4",
+    "huggingface-hub>=0.26",
+]
 dev = [
     "pytest>=8.3",
     "respx>=0.22",

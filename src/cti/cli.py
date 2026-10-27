@@ -284,7 +284,7 @@ def cmd_extract_eval(args, settings: Settings) -> int:
     return 0
 
 
-ATTACK_METHODS = ("tfidf",)
+ATTACK_METHODS = ("tfidf", "biencoder")
 
 
 def cmd_attack_eval(args, settings: Settings) -> int:
@@ -292,9 +292,13 @@ def cmd_attack_eval(args, settings: Settings) -> int:
         raise ConfigError("ATT&CK grading needs the ml extra: pip install -e '.[ml]'")
     from cti.nlp import attack_catalog, attack_eval
 
-    wanted = args.methods or list(ATTACK_METHODS)
+    # default: every method whose extra is installed (the output records which ran)
+    has_torch = importlib.util.find_spec("torch") is not None
+    wanted = args.methods or [m for m in ATTACK_METHODS if m != "biencoder" or has_torch]
     if unknown := sorted(set(wanted) - set(ATTACK_METHODS)):
         raise ConfigError(f"unknown methods {unknown}; choose from {ATTACK_METHODS}")
+    if "biencoder" in wanted and importlib.util.find_spec("torch") is None:
+        raise ConfigError("the biencoder method needs the nlp extra: pip install -e '.[nlp]'")
     date.fromisoformat(args.date)
     processed = settings.data_dir / "processed" / args.date
     if missing := [
@@ -310,7 +314,11 @@ def cmd_attack_eval(args, settings: Settings) -> int:
     texts = attack_eval.cve_texts(processed, set(gold_set))
     rankers = {}
     if "tfidf" in wanted:
-        rankers["tfidf"] = attack_eval.TfidfRanker(techniques).rank
+        rankers["tfidf"] = attack_eval.TfidfRanker(techniques).scores
+    if "biencoder" in wanted:
+        from cti.nlp import embed
+
+        rankers["biencoder"] = embed.BiencoderRanker(techniques, embed.Encoder()).scores
     result = attack_eval.evaluate(gold_set, texts, techniques, rankers)
     result |= {
         "ctid": {
@@ -324,7 +332,6 @@ def cmd_attack_eval(args, settings: Settings) -> int:
             "techniques": len(techniques),
             "parents": len({attack_catalog.parent(t.id) for t in techniques}),
         },
-        "methods": ["majority", *rankers],
     }
     out = settings.data_dir / "eval" / args.date / "attack-eval.json"
     write_json(out, result)
@@ -336,6 +343,96 @@ def cmd_attack_eval(args, settings: Settings) -> int:
             f"hit@5 {cell['hit@5']['value']} {cell['hit@5']['ci95']}  mrr {cell['mrr']['value']}"
         )
     print(f"  wrote {out}")
+    return 0
+
+
+def _need_nlp() -> None:
+    if (
+        importlib.util.find_spec("torch") is None
+        or importlib.util.find_spec("transformers") is None
+    ):
+        raise ConfigError("this command needs the nlp extra: pip install -e '.[nlp]'")
+
+
+def _progress(label: str):
+    def report(done: int, total: int) -> None:
+        if done == total or done % 2000 < 32:
+            print(f"  {label:<22} {done:,}/{total:,}", flush=True)
+
+    return report
+
+
+def cmd_models(args, settings: Settings) -> int:
+    _need_nlp()
+    from cti.nlp import models
+
+    for name, spec in models.MODELS.items():
+        if args.action == "fetch":
+            path = models.fetch(spec)
+        else:
+            path = models.local_path(spec)
+            models.verify(spec, path)
+        print(f"  {name:<10} {spec.repo}@{spec.revision[:7]}  verified  {path}")
+    return 0
+
+
+def cmd_ner(args, settings: Settings) -> int:
+    _need_nlp()
+    from cti.nlp import ner, semantic
+
+    processed, enriched = _extract_inputs(settings, args.date)
+    tagger = ner.Tagger()
+    rows, summary = semantic.build_entities(
+        enriched, tagger, extract.alias_index(processed), progress=_progress("ner windows")
+    )
+    path = _write_enriched(settings.data_dir / "extracted" / args.date, "entities", rows, summary)
+    print(f"  entities               {summary['entities']}  -> {path}")
+    return 0
+
+
+def cmd_ner_eval(args, settings: Settings) -> int:
+    _need_nlp()
+    from cti.nlp import ner, semantic
+
+    date.fromisoformat(args.date)
+    gold_path = settings.data_dir / "gold" / "gold.jsonl.gz"
+    records = gold.load_gold(gold_path)
+    tagger = ner.Tagger()
+    result = {
+        "model": {"repo": tagger.spec.repo, "revision": tagger.spec.revision},
+        "all_spans": semantic.ner_gold_eval(records, tagger),
+        "text_derived_spans": semantic.ner_gold_eval(records, tagger, text_only=True),
+    }
+    out = settings.data_dir / "eval" / args.date / "ner-eval.json"
+    write_json(out, result)
+    for label, m in result["text_derived_spans"]["overlap"].items():
+        print(f"  {label:<14} overlap P {m['precision']}  R {m['recall']}  F1 {m['f1']}")
+    print(f"  wrote {out}")
+    return 0
+
+
+def cmd_embed(args, settings: Settings) -> int:
+    _need_nlp()
+    import numpy as np
+
+    from cti.nlp import embed, semantic
+
+    date.fromisoformat(args.date)
+    processed = settings.data_dir / "processed" / args.date
+    if not (processed / "nvd.jsonl.gz").exists():
+        raise ConfigError("missing parsed nvd; run `cti parse` first")
+    vectors, index, summary = semantic.build_embeddings(
+        processed, embed.Encoder(), progress=_progress("embedded")
+    )
+    out_dir = settings.data_dir / "extracted" / args.date
+    out_dir.mkdir(parents=True, exist_ok=True)
+    npy = out_dir / "nvd-embeddings.npy"
+    tmp = npy.with_name(f".{npy.name}.tmp")
+    with tmp.open("wb") as fh:
+        np.save(fh, vectors)
+    tmp.replace(npy)
+    path = _write_enriched(out_dir, "nvd-embeddings-index", index, summary)
+    print(f"  embeddings             {summary['rows']:,} x {summary['dim']}  -> {npy}, {path}")
     return 0
 
 
@@ -443,6 +540,22 @@ def build_parser() -> argparse.ArgumentParser:
         "its SHA-256 must match",
     )
     p.set_defaults(func=cmd_attack_eval)
+
+    p = sub.add_parser("models", help="SecureBERT 2.0 models: one-time fetch, or verify")
+    p.add_argument("action", choices=("fetch", "verify"))
+    p.set_defaults(func=cmd_models)
+
+    p = sub.add_parser("ner", help="SecureBERT NER over the reference corpus")
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_ner)
+
+    p = sub.add_parser("ner-eval", help="score SecureBERT NER against the gold set")
+    p.add_argument("--date", required=True, help="where to write the result (data/eval/<date>/)")
+    p.set_defaults(func=cmd_ner_eval)
+
+    p = sub.add_parser("embed", help="SecureBERT bi-encoder embeddings of NVD descriptions")
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_embed)
 
     p = sub.add_parser("upload", help="copy a finished snapshot and/or the gold set to S3")
     p.add_argument("--date", help="snapshot to upload")

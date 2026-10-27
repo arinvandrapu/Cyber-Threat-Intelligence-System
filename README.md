@@ -28,7 +28,7 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   vectors) from advisory and threat-report text with validated, defang-aware regexes, and
   normalizes threat-actor and malware names (APT28 = Fancy Bear = Sednit) to MITRE ATT&CK
   IDs (alias matching is not yet evaluated).
-- *(planned)* **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
+- **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - *(planned)* **Prioritizes** vulnerabilities with a risk score validated against real-world
   exploitation, so the top tier is small and meaningful.
@@ -50,8 +50,8 @@ flowchart LR
 ```
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
-IOC/alias extraction, and an ATT&CK mapping grading harness with baselines are built;
-SecureBERT NER and embeddings, and risk scoring, are *planned*.
+IOC/alias extraction, SecureBERT 2.0 NER and embeddings, and graded ATT&CK mapping are
+built; risk scoring and the dashboard are *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -89,23 +89,49 @@ How to read this:
   each record's own ID) and domains 132/140 (spans from an older regex). It is not an
   accuracy claim; see [`vault/ioc-extraction.md`](vault/ioc-extraction.md).
 
-### CVE → ATT&CK technique mapping (baselines)
+### CVE → ATT&CK technique mapping
 
 Graded against MITRE CTID's expert mappings of KEV CVEs to ATT&CK (ATT&CK 16.1,
 remapped to v20). The split is by time: test = the 135 mapped CVEs in our NVD data
-(published 2024+), dev = the 284 older ones. Test is graded on how each CVE
-is exploited (`exploitation_technique`, 132 CVEs). Each ranks 227 parent techniques
-from the CVE's NVD description. From `cti attack-eval`:
+(published 2024+), dev = the 284 older ones. Test is graded on how each CVE is exploited
+(`exploitation_technique`, 132 CVEs). Each method ranks 227 parent techniques from the
+CVE's NVD description. From `cti attack-eval`:
 
-| Method | hit@5 (95% CI) | MRR |
+| Method | hit@5 (95% CI) | vs majority, paired (95% CI) |
 |---|---|---|
-| Majority (most common labels on the 284 dev CVEs) | 0.41 (0.33–0.50) | 0.37 |
-| TF-IDF text similarity | 0.14 (0.08–0.20) | 0.11 |
+| Majority (most common labels on dev) | 0.41 (0.33–0.50) | — |
+| TF-IDF similarity | 0.14 (0.08–0.20) | −0.27 |
+| SecureBERT 2.0 bi-encoder similarity | 0.20 (0.13–0.27) | −0.21 |
+| Label prior + TF-IDF | 0.43 (0.35–0.52) | +0.02 (0.00–0.05) |
+| **Label prior + SecureBERT 2.0 bi-encoder** | **0.57 (0.48–0.65)** | **+0.16 (0.10–0.23)** |
 
-Keyword matching loses to the trivial baseline: CVE text describes the bug, technique
-text describes attacker behaviour. SecureBERT 2.0 embeddings are next (*planned*).
-Every graded CVE is in KEV, so the scores don't generalize to all CVEs; see
-[`vault/attack-mapping.md`](vault/attack-mapping.md).
+- **Similarity alone loses to the trivial baseline.** CVE text describes the bug,
+  while technique text describes attacker behaviour, and two techniques (T1190, T1068)
+  account for half the test CVEs.
+- **What the combination fixes.** The gain comes almost entirely from one shift over time.
+  T1068 (privilege escalation) is rare among older KEV CVEs (8 of 300 dev labels) but
+  common in 2024+ ones (32 of 160). Text similarity pulls it into the top 5 when a
+  description says so: 17 of the 22 CVEs the combination wins over majority (it loses 1).
+- **Limits.** There is no gain at rank 1 (hit@1 0.26, the same as majority). On dev the
+  combination only matches majority (+0.01, CI −0.01 to 0.04).
+- **β sensitivity.** The prior weight β was chosen on dev, which cannot separate the
+  values 0.1–1.0. On test, β = 0.5 or 1.0 would give no gain, and TF-IDF at β = 0.02
+  would match the bi-encoder (0.58). So the robust finding is "label prior + text
+  similarity corrects a time-shifted prior", not "SecureBERT beats keywords".
+- **Disclosures.** The combined method and its β grid were written after the
+  similarity-only test results were seen. β is picked on KEV text and applied to NVD
+  text. Every graded CVE is in KEV, so the scores don't generalize to all CVEs. These
+  diagnostics are written by `cti attack-eval` (`diagnostics` in its output); details in
+  [`vault/attack-mapping.md`](vault/attack-mapping.md).
+
+### SecureBERT 2.0 NER (sanity check)
+
+`cti ner` tags 1,280 reference pages (10 min on CPU). On the rule-generated gold set
+(`cti ner-eval`, text-derived spans), overlap recall is Indicator 1.00, Malware 0.78,
+Organization 0.29, System 0.26. Precision is only a lower bound there, because the gold
+set labels a fraction of what is in each text. On scraped pages (code, tables, logs) the
+model is noisy, so displays use spans scoring ≥ 0.9 or linked to an ATT&CK/ThreatFox name.
+See [`vault/nlp-design.md`](vault/nlp-design.md).
 
 ## Security skills and tools
 
@@ -115,7 +141,8 @@ Every graded CVE is in KEV, so the scores don't generalize to all CVEs; see
 | Vulnerability management | Risk-based prioritization, forward-looking evaluation | Python, pandas, scikit-learn |
 | Secure engineering | SSRF defense, secrets management, least-privilege IAM, threat modeling (STRIDE) | httpx, pydantic, GitHub Actions, pip-audit, secret scanning |
 | Cloud security | Private, encrypted, TLS-only storage; cost guardrails | AWS S3, IAM, AWS Budgets |
-| NLP / ML | Security-domain NER and embeddings, risk modeling, baselines and ablations, boilerplate removal on untrusted HTML | SecureBERT 2.0, Hugging Face Transformers, scikit-learn, trafilatura, lxml |
+| NLP / ML | Security-domain NER and embeddings, supervised-prior + embedding ranking, baselines, paired bootstrap evaluation, leakage control, boilerplate removal on untrusted HTML | SecureBERT 2.0 (ModernBERT), PyTorch, Hugging Face Transformers, scikit-learn, NumPy, trafilatura, lxml |
+| ML supply chain | Model pinning by commit and weight hash, safetensors only, no remote code, offline inference | Hugging Face Hub, safetensors |
 | Visualization | Analyst dashboard | Next.js, TypeScript, Tailwind CSS |
 
 ## Design principles
@@ -143,6 +170,15 @@ pytest                 # offline: no network or AWS access needed
 ruff check .
 ```
 
+SecureBERT 2.0 (CPU, ~1.2 GB of weights) runs in a separate environment so torch never
+enters the main lock:
+
+```bash
+python3 -m venv .venv-nlp
+.venv-nlp/bin/pip install -c requirements-nlp.lock -e '.[dev,enrich,ml,nlp]'
+.venv-nlp/bin/cti models fetch   # one-time download at pinned revisions; then offline
+```
+
 ## Usage
 
 ```bash
@@ -155,7 +191,11 @@ cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>
 cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
 cti extract --date 2026-10-25   # offline: regex IOCs + alias mentions -> data/extracted/<date>/
 cti extract-eval --date 2026-10-25 --labels data/reference/ioc-review-2026-10-26.csv  # precision
+cti models verify                   # weights match their pinned SHA-256 (nlp env)
 cti attack-eval --date 2026-10-25   # grade CVE -> ATT&CK ranking on MITRE CTID's KEV mappings
+cti ner --date 2026-10-25           # SecureBERT NER over the reference pages (~10 min CPU)
+cti ner-eval --date 2026-10-25      # NER sanity check on the gold set
+cti embed --date 2026-10-25         # bi-encoder embeddings of NVD descriptions (~50 min CPU)
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -181,7 +221,8 @@ src/cti/
   enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup;
                      reference-page cleaning (boilerplate removal, JS-shell detection)
   nlp/               regex IOC extraction, alias normalizer, extraction evaluation,
-                     ATT&CK technique ranking graded on MITRE CTID mappings
+                     ATT&CK technique ranking graded on MITRE CTID mappings,
+                     pinned SecureBERT 2.0 models (NER, bi-encoder embeddings)
   defang.py          make IOCs non-clickable (hxxp, [.]) and undo common defang forms
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set

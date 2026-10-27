@@ -153,7 +153,7 @@ def test_evaluate_splits_and_compares_with_majority():
         },
         "kev": {c: "a vulnerability" for c in gold},
     }
-    result = ae.evaluate(gold, texts, TECHNIQUES, {"tfidf": ae.TfidfRanker(TECHNIQUES).rank})
+    result = ae.evaluate(gold, texts, TECHNIQUES, {"tfidf": ae.TfidfRanker(TECHNIQUES).scores})
     assert result["splits"] == {"dev": 1, "test": 2}
     cell = result["results"]["test"]["nvd"]
     assert cell["tfidf"]["exploitation_technique"]["hit@1"]["value"] == 1.0
@@ -161,6 +161,58 @@ def test_evaluate_splits_and_compares_with_majority():
     assert cell["tfidf"]["exploitation_technique"]["vs_majority"]["difference"] == 0.0  # hit@5
     assert "nvd" not in result["results"]["dev"]  # dev CVEs have no NVD text
     assert cell["tfidf"]["primary_impact"]["cves"] == 0
+    assert result["methods"] == ["majority", "tfidf", "prior+tfidf"]
+    assert result["prior_weight"]["tfidf"]["beta"] in ae.BETAS
+    assert "prior+tfidf" in cell
+
+
+def test_prior_weight_is_chosen_without_test_labels():
+    texts = {
+        "nvd": {"CVE-2024-0001": "kernel driver elevate privileges", "CVE-2024-0002": "web"},
+        "kev": {
+            "CVE-2024-0001": "a",
+            "CVE-2024-0002": "b",
+            "CVE-2020-0001": "internet facing web server exploit",
+            "CVE-2020-0002": "kernel driver elevate privileges",
+        },
+    }
+    dev = {
+        "CVE-2020-0001": {"exploitation_technique": {"T1190"}},
+        "CVE-2020-0002": {"exploitation_technique": {"T1068"}},
+    }
+    scorers = {"tfidf": ae.TfidfRanker(TECHNIQUES).scores}
+    weights = []
+    for test_labels in ({"T1068"}, {"T1059"}):  # flip the test labels; beta must not move
+        gold = {
+            **dev,
+            "CVE-2024-0001": {"exploitation_technique": test_labels},
+            "CVE-2024-0002": {"exploitation_technique": test_labels},
+        }
+        weights.append(ae.evaluate(gold, texts, TECHNIQUES, scorers)["prior_weight"])
+    assert weights[0] == weights[1]
+
+
+def test_log_prior_smooths_and_leaves_one_out():
+    from collections import Counter
+
+    parents = ["T1", "T2"]
+    full = ae.log_prior(Counter({"T1": 3}), parents)
+    assert np.allclose(np.exp(full), [4 / 5, 1 / 5])  # add-one smoothing
+    loo = ae.log_prior(Counter({"T1": 3}), parents, exclude={"T1"})
+    assert np.allclose(np.exp(loo), [3 / 4, 1 / 4])
+
+
+def test_dev_majority_is_leave_one_out():
+    # one dev CVE: with its own label left out, the dev prior is uniform, so the
+    # (alphabetically first) T1059 ranks first and the dev CVE's T1190 is not at rank 1
+    gold = {
+        "CVE-2024-0001": {"exploitation_technique": {"T1190"}},
+        "CVE-2020-0001": {"exploitation_technique": {"T1190"}},
+    }
+    texts = {"nvd": {"CVE-2024-0001": "x"}, "kev": {c: "y" for c in gold}}
+    result = ae.evaluate(gold, texts, TECHNIQUES, {})["results"]
+    assert result["dev"]["kev"]["majority"]["exploitation_technique"]["hit@1"]["value"] == 0.0
+    assert result["test"]["nvd"]["majority"]["exploitation_technique"]["hit@1"]["value"] == 1.0
 
 
 def test_cli_attack_eval(tmp_path, monkeypatch, capsys):
@@ -193,12 +245,13 @@ def test_cli_attack_eval(tmp_path, monkeypatch, capsys):
             mapping("CVE-2020-1", "exploitation_technique", "T1190"),
         ],
     )
-    assert main(["attack-eval", "--date", DAY, "--ctid", str(ctid)]) == 2  # unpinned hash
+    run = ["attack-eval", "--date", DAY, "--ctid", str(ctid), "--methods", "tfidf"]
+    assert main(run) == 2  # unpinned hash
     monkeypatch.setattr(ae, "CTID_SHA256", hashlib.sha256(ctid.read_bytes()).hexdigest())
     monkeypatch.setattr(ae.load_ctid, "__defaults__", (ae.CTID_SHA256,))
-    assert main(["attack-eval", "--date", DAY, "--ctid", str(ctid)]) == 0
+    assert main(run) == 0
     result = json.loads((tmp_path / "eval" / DAY / "attack-eval.json").read_text())
-    assert result["methods"] == ["majority", "tfidf"]
+    assert result["methods"] == ["majority", "tfidf", "prior+tfidf"]
     assert result["ctid"]["cves"] == 2 and result["splits"] == {"dev": 1, "test": 1}
     assert "tfidf" in capsys.readouterr().out
     assert main(["attack-eval", "--date", DAY, "--methods", "nope"]) == 2

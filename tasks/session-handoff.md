@@ -13,8 +13,9 @@
 | 3. AWS setup + the one ingest | ✅ done 2026-10-26 | #9, #11 |
 | 4. Enrichment (CVE joins, reference cleaning) | ✅ merged | #14, #15 |
 | 5a. Regex IOCs + aliases (`cti extract`) | ✅ merged | #17 |
-| 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ PR open | — |
-| **5b-2. SecureBERT NER + embeddings** | **⏭ next** | — |
+| 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ merged | #18 |
+| 5b-2. SecureBERT NER + embeddings + prior+bi-encoder | ✅ PR open | — |
+| **6. Classification + evaluation** | **⏭ next** | — |
 | 6–9 | not started | — |
 
 `main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
@@ -60,16 +61,27 @@
   context is `data/eval/2026-10-26/ioc-review-sample-seed20261027.csv` (local).
 - Vault corrected: NVD description text is snapshot-time (KEV language), not a safe feature.
 
-## Pick up here: Phase 5b (SecureBERT NER + ATT&CK mapping)
+## Phase 5b result (2026-10-27)
 
-- Plan is in `tasks/todo.md` (5b), audited 2026-10-27. Owner approved the one-time model
-  download (NER `cisco-ai/SecureBERT2.0-NER@792db5b`, bi-encoder
-  `cisco-ai/SecureBERT2.0-biencoder@b42d43a`) and committing the CTID KEV mapping file
-  (attack-16.1, Apache-2.0) under `data/reference/` with a NOTICE and a pinned SHA-256.
-- Grading: dev = 284 CTID CVEs outside the corpus, test = 135 in it. Primary metric is
-  hit@5/recall@5 on `exploitation_technique`. Baselines: majority (from dev) and TF-IDF.
-- `ml` extra (numpy, sklearn) in CI; `nlp` extra (torch, transformers <6) not in CI, its
-  lock audited with `pip-audit --no-deps`.
+- `cti attack-eval` (CTID KEV, test 2024+ n=132, exploitation): majority hit@5 0.41;
+  bi-encoder alone 0.20; **prior + bi-encoder 0.57, +0.16 vs majority (0.10–0.23)**.
+  β = 0.2 picked on dev only. Disclosed: the hybrid was designed after the zero-shot test
+  results were seen. Details: `vault/attack-mapping.md`.
+- `cti ner` (≈10 min) → `data/extracted/2026-10-26/entities.jsonl.gz`; noisy on code and
+  tables, so displays use score ≥ 0.9 or alias-linked spans (`vault/nlp-design.md`).
+- `cti embed` (≈47 min) → `nvd-embeddings.npy` (168,393 × 768 float16) + index with a
+  `kev_language` flag (181 rows) for Phase 7.
+- SecureBERT runs in `.venv-nlp/` (`requirements-nlp.lock`); weights are in the HF cache,
+  pinned and re-hashed on load (`cti models verify`).
+
+## Pick up here: Phase 6 (classification + evaluation)
+
+- Plan first: SecureBERT-embedding classifier vs text rules vs baselines (majority,
+  source-only, TF-IDF + LR) on the rule-generated gold set (a sanity check; see
+  `vault/gold-set-provenance.md`). Reuse `nlp/embed.Encoder` and the paired-bootstrap
+  helpers in `nlp/attack_eval.py`.
+- Owner context: may present this project at a MITRE final-round interview, so keep every
+  choice defensible and disclosed.
 
 ## Local state that is NOT in git
 
@@ -89,7 +101,7 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 333 passed
+.venv/bin/pytest -q          # expect 347 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 

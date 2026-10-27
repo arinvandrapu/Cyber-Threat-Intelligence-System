@@ -33,6 +33,8 @@ jobs:
         run: pytest
       - name: Audit dependencies
         run: pip-audit --skip-editable
+      - name: Audit the nlp lock (torch, transformers; not installed in CI)
+        run: pip-audit -r requirements-nlp.lock --no-deps --disable-pip
 
   secrets:
     runs-on: ubuntu-latest

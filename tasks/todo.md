@@ -76,7 +76,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       first), `cti parse` to validate, then `cti upload` to S3.
 - [x] **4. Enrichment** — *(4a per-CVE join #14; 4b reference cleaning #15)* reference-link classifier, content cleaner, CWE lookup,
       KEV/EPSS/ExploitDB joins onto CVEs.
-- [ ] **5. NLP extraction** — regex for structured IOCs (correct IPv4 boundaries, strict
+- [x] **5. NLP extraction** — regex for structured IOCs (correct IPv4 boundaries, strict
       CVSS patterns); **SecureBERT 2.0 NER** (`cisco-ai/SecureBERT2.0-NER`, local CPU
       batch) for malware, products, and organizations; alias normalizer; ATT&CK
       technique mapping via SecureBERT embeddings, graded against MITRE CTID
@@ -92,8 +92,8 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         out of headline counts. Eval: a seeded, stratified 200-IOC precision sample; gold P/R
         for `cve_id`/`domain` only (gold CVSS spans counted as label errors); no alias P/R
         on gold (circular).
-  - [ ] **5b. SecureBERT + ATT&CK** *(5b-1 grading harness + `ml` extra + majority/TF-IDF
-        baselines: 2026-10-27, `vault/attack-mapping.md`; 5b-2 SecureBERT models next)* — `ml` extra (numpy, sklearn; in CI) and `nlp` extra
+  - [x] **5b. SecureBERT + ATT&CK** *(5b-1 grading harness #18; 5b-2 SecureBERT NER,
+        embeddings, prior+bi-encoder mapping 2026-10-27; `vault/attack-mapping.md`)* — `ml` extra (numpy, sklearn; in CI) and `nlp` extra
         (torch, transformers `<6`; not in CI, lock audited with `pip-audit --no-deps`).
         `cti models fetch` (pinned revisions, safetensors only, no `trust_remote_code`).
         NER on the reference corpus + CTID subset (pipeline stride, fragment merge).

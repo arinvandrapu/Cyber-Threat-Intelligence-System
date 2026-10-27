@@ -18,6 +18,9 @@ thresholds that were never validated.
   description ([[nlp-design]]) are **snapshot-time, not safe**: CNAs add "exploited in the
   wild" wording after KEV listing (35/549 KEV CVEs vs 46/~168k others, 2026-10-26).
   Phase 5 flags these descriptions; Phase 7 reports the ablation with and without them.
+  `cti embed` (2026-10-27, ≈47 min CPU): 168,393 NVD descriptions → 768-d float16
+  bi-encoder vectors (`data/extracted/<date>/nvd-embeddings.npy` + index); 181 rows carry
+  `kev_language` (34 of 549 KEV CVEs vs 147 others). These are the Phase 7 text features.
 - **Snapshot-time, ablation only:** CVSS and CWE class live in `context_snapshot` and are
   label-biased (below). `cvss_cna` is the least biased, but a CNA can rescore later too.
 - **Model:** scikit-learn (logistic regression or gradient boosting); explainable per CVE.

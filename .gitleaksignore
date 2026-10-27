@@ -1,0 +1,9 @@
+# False positives, reviewed 2026-10-27: SHA-256 pins of public Hugging Face model files
+# (tokenizer.json, tokenizer_config.json, special_tokens_map.json) in src/cti/nlp/models.py.
+# The generic-api-key rule matches "token" + 64 hex chars. Later commits mark these lines
+# with inline gitleaks:allow; these entries cover the one commit before that.
+81565a9129f82baec1f4d4b6f7c4614084aa1f6d:src/cti/nlp/models.py:generic-api-key:32
+81565a9129f82baec1f4d4b6f7c4614084aa1f6d:src/cti/nlp/models.py:generic-api-key:40
+81565a9129f82baec1f4d4b6f7c4614084aa1f6d:src/cti/nlp/models.py:generic-api-key:41
+81565a9129f82baec1f4d4b6f7c4614084aa1f6d:src/cti/nlp/models.py:generic-api-key:51
+81565a9129f82baec1f4d4b6f7c4614084aa1f6d:src/cti/nlp/models.py:generic-api-key:52
