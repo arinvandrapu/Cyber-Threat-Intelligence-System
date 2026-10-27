@@ -15,7 +15,8 @@
 | 5a. Regex IOCs + aliases (`cti extract`) | ✅ merged | #17 |
 | 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ merged | #18 |
 | 5b-2. SecureBERT NER + embeddings + prior+bi-encoder | ✅ merged | #19 |
-| **6. Classification + evaluation** | **⏭ next** | — |
+| 6a. CWE label provenance | ✅ PR open | — |
+| **6b. `cti cwe-eval` (CWE classification)** | **⏭ next** | — |
 | 6–9 | not started | — |
 
 `main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
@@ -74,14 +75,13 @@
 - SecureBERT runs in `.venv-nlp/` (`requirements-nlp.lock`); weights are in the HF cache,
   pinned and re-hashed on load (`cti models verify`).
 
-## Pick up here: Phase 6 (classification + evaluation)
+## Pick up here: Phase 6b (`cti cwe-eval`)
 
-- Plan first: SecureBERT-embedding classifier vs text rules vs baselines (majority,
-  source-only, TF-IDF + LR) on the rule-generated gold set (a sanity check; see
-  `vault/gold-set-provenance.md`). Reuse `nlp/embed.Encoder` and the paired-bootstrap
-  helpers in `nlp/attack_eval.py`.
-- Owner context: may present this project at a MITRE final-round interview, so keep every
-  choice defensible and disclosed.
+- Re-scoped (owner, 2026-10-27): main eval = CWE classification of NVD descriptions; gold
+  set kept as one circular row. Plan in `tasks/todo.md` (6b); facts in
+  `vault/cwe-classification.md`.
+- First commit the pre-registered config (every choice), then run on dev, then test once.
+- Owner context: may present at a MITRE final-round interview; keep choices defensible.
 
 ## Local state that is NOT in git
 

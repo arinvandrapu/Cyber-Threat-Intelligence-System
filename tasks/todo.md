@@ -103,10 +103,17 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         test set = 135 in-corpus CVEs; primary metric hit@5/recall@5 on
         `exploitation_technique` at technique level, with bootstrap CIs vs majority and
         TF-IDF baselines; selection bias and pretraining contamination disclosed.
-- [ ] **6. Classification + evaluation** — SecureBERT-embedding classifier vs
-      text-only rules vs baselines (majority, source-only, TF-IDF + logistic regression),
-      evaluation script. Gold set is rule-generated, so its result is reported as a
-      sanity check next to the source-only baseline, with that limitation disclosed.
+- [ ] **6. Classification + evaluation** — *re-scoped 2026-10-27 (owner): the gold set's
+      primary label equals its source feed for 298/299 docs, so the main evaluation is CWE
+      classification of NVD descriptions (human labels); see `vault/cwe-classification.md`.*
+  - [x] **6a. Label provenance** — parser keeps who assigned each CWE by role (nvd/cna/cisa_adp/other_adp,
+        Primary/Secondary); CWE catalog keeps MITRE's mapping `Usage`.
+  - [ ] **6b. `cti cwe-eval`** — choices committed before test scoring; labels NVD > CNA >
+        CISA-ADP, single-label; time split (train 2024–25, dev to the 2026-04-29 cutoff, test
+        after); 118 classes (≥50 train) + other; headline = macro-F1 on the name-absent test
+        stratum; majority / TF-IDF+LR / SecureBERT+LR / nearest centroid; C on dev, refit
+        train+dev; bootstrap + paired CIs; breakdowns by label source and assigner. Gold set:
+        one circular sanity row (source-only vs TF-IDF).
 - [ ] **7. Risk scoring** — scikit-learn model over CVSS, EPSS, SSVC, exploit
       availability (ExploitDB, Metasploit, Nuclei), recency, and SecureBERT text features;
       ablation with vs without the text features.

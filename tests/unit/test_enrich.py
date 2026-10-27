@@ -27,7 +27,9 @@ CWE_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
  <Related_Weaknesses>
   <Related_Weakness Nature="ChildOf" CWE_ID="20" View_ID="1003" Ordinal="Primary"/>
   <Related_Weakness Nature="ChildOf" CWE_ID="118" View_ID="1000" Ordinal="Primary"/>
- </Related_Weaknesses></Weakness>
+ </Related_Weaknesses>
+ <Mapping_Notes><Usage>Discouraged</Usage><Rationale>Too broad.</Rationale></Mapping_Notes>
+</Weakness>
 <Weakness ID="132" Name="DEPRECATED: Old" Abstraction="Base" Status="Deprecated"/>
 <Weakness ID="900" Name="Loop A" Abstraction="Base" Status="Draft">
  <Related_Weaknesses>
@@ -38,7 +40,8 @@ CWE_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
   <Related_Weakness Nature="ChildOf" CWE_ID="900" View_ID="1000" Ordinal="Primary"/>
  </Related_Weaknesses></Weakness>
 </Weaknesses><Categories>
-<Category ID="264" Name="Permissions" Status="Obsolete"/>
+<Category ID="264" Name="Permissions" Status="Obsolete">
+ <Mapping_Notes><Usage>Prohibited</Usage></Mapping_Notes></Category>
 </Categories></Weakness_Catalog>"""
 
 
@@ -53,7 +56,10 @@ def test_cwe_catalog_kinds_and_pillars(catalog):
         "name": "Buffer",
         "kind": "weakness",
         "pillar": "CWE-664",  # Base -> Class -> Pillar, ignoring the view-1003 parent
+        "usage": "Discouraged",  # MITRE's mapping guidance
     }
+    assert describe(catalog, "CWE-264")["usage"] == "Prohibited"
+    assert describe(catalog, "CWE-118")["usage"] is None  # no Mapping_Notes
     assert describe(catalog, "CWE-664")["pillar"] == "CWE-664"
     assert describe(catalog, "CWE-264")["kind"] == "category"
     assert describe(catalog, "CWE-132")["kind"] == "deprecated"
@@ -63,6 +69,7 @@ def test_cwe_catalog_kinds_and_pillars(catalog):
         "name": None,
         "kind": "unknown",
         "pillar": None,
+        "usage": None,
     }
 
 

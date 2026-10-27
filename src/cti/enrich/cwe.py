@@ -3,7 +3,9 @@
 The ``cwe`` parser emits only current Weaknesses (the NLP corpus). NVD also cites
 categories (e.g. CWE-264) and deprecated IDs, so the join re-reads the raw catalog and keeps
 everything, plus each weakness's primary ``ChildOf`` parent in the Research Concepts view
-(1000), which leads up to one of its ten Pillars: a coarse, stable weakness class.
+(1000), which leads up to one of its ten Pillars: a coarse, stable weakness class. Each entry
+also keeps its ``Mapping_Notes/Usage``: MITRE's guidance on whether vulnerabilities may be
+mapped to it.
 """
 
 from __future__ import annotations
@@ -25,6 +27,9 @@ class CweEntry:
     kind: str  # weakness | category | view | deprecated
     abstraction: str | None = None
     parent: str | None = None  # primary ChildOf in view 1000
+    # MITRE's guidance for mapping vulnerabilities to this entry:
+    # Allowed | Allowed-with-Review | Discouraged | Prohibited
+    usage: str | None = None
 
 
 def load_catalog(fh: IO[bytes]) -> dict[str, CweEntry]:
@@ -43,11 +48,13 @@ def load_catalog(fh: IO[bytes]) -> dict[str, CweEntry]:
             ),
             None,
         )
+        usage = elem.find(f"{NS}Mapping_Notes/{NS}Usage")
         catalog[f"CWE-{elem.get('ID')}"] = CweEntry(
             name=elem.get("Name", ""),
             kind="deprecated" if elem.get("Status") == "Deprecated" else kind,
             abstraction=elem.get("Abstraction"),
             parent=f"CWE-{parent}" if parent else None,
+            usage=usage.text.strip() if usage is not None and usage.text else None,
         )
         elem.clear()
     return catalog
@@ -71,5 +78,11 @@ def pillar(catalog: dict[str, CweEntry], cwe_id: str) -> str | None:
 def describe(catalog: dict[str, CweEntry], cwe_id: str) -> dict:
     entry = catalog.get(cwe_id)
     if entry is None:
-        return {"id": cwe_id, "name": None, "kind": "unknown", "pillar": None}
-    return {"id": cwe_id, "name": entry.name, "kind": entry.kind, "pillar": pillar(catalog, cwe_id)}
+        return {"id": cwe_id, "name": None, "kind": "unknown", "pillar": None, "usage": None}
+    return {
+        "id": cwe_id,
+        "name": entry.name,
+        "kind": entry.kind,
+        "pillar": pillar(catalog, cwe_id),
+        "usage": entry.usage,
+    }
