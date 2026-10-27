@@ -50,8 +50,8 @@ flowchart LR
 ```
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
-and IOC/alias extraction are built; SecureBERT NER, ATT&CK mapping, and scoring are
-*planned*.
+IOC/alias extraction, and an ATT&CK mapping grading harness with baselines are built;
+SecureBERT NER and embeddings, and risk scoring, are *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -92,7 +92,8 @@ How to read this:
 ### CVE → ATT&CK technique mapping (baselines)
 
 Graded against MITRE CTID's expert mappings of KEV CVEs to ATT&CK (ATT&CK 16.1,
-remapped to v20). Test = the 135 mapped CVEs in our NVD data, graded on how each CVE
+remapped to v20). The split is by time: test = the 135 mapped CVEs in our NVD data
+(published 2024+), dev = the 284 older ones. Test is graded on how each CVE
 is exploited (`exploitation_technique`, 132 CVEs). Each ranks 227 parent techniques
 from the CVE's NVD description. From `cti attack-eval`:
 

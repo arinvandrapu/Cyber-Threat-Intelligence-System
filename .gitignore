@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv-*/
 venv/
 build/
 dist/
@@ -19,6 +20,9 @@ dist/
 /data/*
 # small reference files that are safe to publish (evaluation labels, no feed content)
 !/data/reference/
+/data/reference/*
+!/data/reference/ctid/
+!/data/reference/*.csv
 
 # Node (dashboard)
 node_modules/

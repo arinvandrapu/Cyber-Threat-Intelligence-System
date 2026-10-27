@@ -438,7 +438,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", required=True)
     p.add_argument("--methods", type=lambda s: s.split(","), help=f"subset of {ATTACK_METHODS}")
     p.add_argument(
-        "--ctid", help="CTID mapping file (default: the pinned copy in data/reference/ctid/)"
+        "--ctid",
+        help="a relocated copy of the pinned CTID file (default: <data_dir>/reference/ctid/); "
+        "its SHA-256 must match",
     )
     p.set_defaults(func=cmd_attack_eval)
 

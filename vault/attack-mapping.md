@@ -16,13 +16,13 @@ Design context: [[nlp-design]]; feature rules: [[risk-scoring-design]].
 - 419 CVEs, 1,183 rows. Only `capability_id`, `mapping_type` and `attack_object_id` are
   read. `comments` holds the labellers' rationale and `capability_group` their category,
   so both would leak the label.
-- 6 rows use techniques revoked by v20 (T1562 → T1685, etc.). They are remapped through
-  the bundle's `revoked-by` relationships.
+- 6 rows (`revoked_rows_remapped` counts rows) use techniques revoked by v20 (T1562 →
+  T1685, etc.). They are remapped through the bundle's `revoked-by` relationships.
 
 ## Design
 
-- Splits: test = 135 CVEs in our NVD corpus; dev = 284 others (majority prior and any
-  choice made before scoring test). Grading is per `mapping_type`; the primary type is
+- Splits are by time: test = 135 CVEs in our NVD corpus (published 2024+); dev = 284
+  older CVEs (majority prior and any choice made before scoring test). Grading is per `mapping_type`; the primary type is
   `exploitation_technique`.
 - Technique level: sub-techniques roll up, and a parent scores the max of itself and its
   sub-techniques. 706 candidates, 227 parents.
@@ -41,6 +41,8 @@ Design context: [[nlp-design]]; feature rules: [[risk-scoring-design]].
 - TF-IDF is far below majority on every split and type. Technique text describes attacker
   behaviour ("Valid Accounts"), while CVE text describes the bug ("authentication
   bypass"), so the words barely overlap. That is the gap embeddings must close.
-- Shift: majority hit@5 is 0.77 on dev but 0.41 on test. Test (published 2024+) has many
-  T1068 privilege-escalation labels; dev is mostly T1190/T1204/T1078.
+- Dev vs test: majority hit@5 is 0.77 on dev, but that is in-sample (fitted and scored on
+  dev), against 0.41 on test. Part of the gap is a real time shift: test (published 2024+)
+  has many T1068 privilege-escalation labels, while dev (older CVE IDs) is mostly
+  T1190/T1204/T1078.
 - KEV-only selection: the scores don't generalize to non-KEV CVEs.

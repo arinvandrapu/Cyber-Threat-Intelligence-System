@@ -119,6 +119,21 @@ def test_majority_is_fit_on_dev_only():
     assert ranker.rank(["anything"])[0][0] == "T1068"
 
 
+def test_evaluate_never_fits_majority_on_test_labels():
+    # two test CVEs labelled T1068 would flip the prior if test labels leaked into it
+    gold = {
+        "CVE-2024-0001": {"exploitation_technique": {"T1068"}},
+        "CVE-2024-0002": {"exploitation_technique": {"T1068"}},
+        "CVE-2020-0001": {"exploitation_technique": {"T1190"}},
+    }
+    texts = {
+        "nvd": {"CVE-2024-0001": "x", "CVE-2024-0002": "y"},
+        "kev": {c: "z" for c in gold},
+    }
+    cell = ae.evaluate(gold, texts, TECHNIQUES, {})["results"]["test"]["nvd"]["majority"]
+    assert cell["exploitation_technique"]["hit@1"]["value"] == 0.0  # prior says T1190
+
+
 def test_tfidf_ranks_by_text():
     ranker = ae.TfidfRanker(TECHNIQUES)
     [ranked] = ranker.rank(["a kernel driver flaw lets a local user elevate privileges"])
