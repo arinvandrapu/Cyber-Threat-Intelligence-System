@@ -50,8 +50,9 @@ flowchart LR
 ```
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
-IOC/alias extraction, SecureBERT 2.0 NER and embeddings, and graded ATT&CK mapping are
-built; risk scoring and the dashboard are *planned*.
+IOC/alias extraction, SecureBERT 2.0 NER and embeddings, graded ATT&CK mapping, and a
+pre-registered CWE classification evaluation are built; risk scoring and the dashboard
+are *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -123,6 +124,37 @@ CVE's NVD description. From `cti attack-eval`:
   text. Every graded CVE is in KEV, so the scores don't generalize to all CVEs. These
   diagnostics are written by `cti attack-eval` (`diagnostics` in its output); details in
   [`vault/attack-mapping.md`](vault/attack-mapping.md).
+
+### CWE classification of CVE descriptions
+
+Each 2024+ CVE description is classified into one of 118 CWE weakness classes. Labels
+are the human-assigned CWEs (from NVD, else the CVE's CNA, else CISA's Vulnrichment). The
+split is by time: train on 2024–2025, choose settings on dev (2026-01-01 to 2026-04-29),
+and test once on the 51,243 later CVEs. Every choice was committed before any test score
+existed (`src/cti/nlp/cwe_config.py`). The headline uses the test CVEs whose description
+does **not** contain the CWE's name, because about a quarter do. From `cti cwe-eval`:
+
+| Method (test, name absent, n = 37,794) | macro-F1 (95% CI) | top-1 | top-5 |
+|---|---|---|---|
+| Majority class | 0.002 | 0.10 | 0.29 |
+| **TF-IDF + logistic regression** | **0.394 (0.382–0.402)** | 0.56 | 0.84 |
+| SecureBERT 2.0 embeddings + logistic regression | 0.265 (0.257–0.272) | 0.44 | 0.75 |
+| Nearest centroid on the embeddings | 0.137 | 0.20 | 0.46 |
+
+- **Frozen SecureBERT sentence embeddings lose to TF-IDF** by 0.13 macro-F1 (paired 95% CI
+  −0.14 to −0.12). The bi-encoder is trained for similarity search, and mean pooling drops
+  the specific bug terms a linear model on words keeps. Fine-tuning a transformer (what
+  published work does) was out of scope for CPU-only compute.
+- **Name leakage is real.** When the description names the CWE, TF-IDF scores 0.91.
+- **Both chosen regularization values sit at an edge of their pre-registered grids**, so
+  slightly better settings may exist. They were not explored after the fact.
+- **Scores sit below published results** (70–88% top-1) because of the time split, a
+  test set labelled mostly by CNAs, and macro-averaging over 118 classes.
+- **The gold set is circular.** On the rule-generated gold set, predicting from the
+  source feed alone scores 0.997, the same as TF-IDF, because its labels were generated
+  from the source.
+
+Details: [`vault/cwe-classification.md`](vault/cwe-classification.md).
 
 ### SecureBERT 2.0 NER (sanity check)
 
@@ -196,6 +228,8 @@ cti attack-eval --date 2026-10-25   # grade CVE -> ATT&CK ranking on MITRE CTID'
 cti ner --date 2026-10-25           # SecureBERT NER over the reference pages (~10 min CPU)
 cti ner-eval --date 2026-10-25      # NER sanity check on the gold set
 cti embed --date 2026-10-25         # bi-encoder embeddings of NVD descriptions (~50 min CPU)
+cti embed --date 2026-10-25 --cwe-id-masked   # re-embed descriptions with literal CWE IDs masked
+cti cwe-eval --date 2026-10-25      # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```

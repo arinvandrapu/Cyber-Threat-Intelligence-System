@@ -18,7 +18,7 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
 | Entity extraction | Regex for structured IOCs; `cisco-ai/SecureBERT2.0-NER` (labels: Indicator, Malware, Organization, System, Vulnerability) |
 | ATT&CK technique mapping | `cisco-ai/SecureBERT2.0-biencoder` embeddings (the base model is MLM-only), similarity to technique descriptions |
 | Text risk signals | Description-derived features only, KEV-language flagged ([[risk-scoring-design]]) |
-| Category classification | Gold-set sanity check only; see [[gold-set-provenance]] |
+| Category classification | CWE classification of NVD descriptions ([[cwe-classification]]); gold set = one circular row |
 
 ## Reference-page corpus (Phase 4, `data/enriched/<date>/references.jsonl.gz`)
 
@@ -47,8 +47,8 @@ NLP works on free text: CVE descriptions, scraped reference pages, ATT&CK techni
   419 CVEs, Apache-2.0). Dev = 284 CVEs outside the corpus; test = 135 in the corpus
   (82 with corpus pages). Primary: hit@5/recall@5 on `exploitation_technique`, technique
   level, vs majority and TF-IDF baselines. KEV-only, so results don't generalize to all CVEs.
-- Classification: SecureBERT vs TF-IDF vs the source-only baseline, disclosed as a
-  sanity check.
+- Classification: CWE classes, pre-registered; TF-IDF + LR beats frozen SecureBERT
+  embeddings + LR ([[cwe-classification]]).
 
 ## SecureBERT 2.0 in practice (5b-2, 2026-10-27)
 

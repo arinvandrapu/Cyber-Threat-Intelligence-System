@@ -154,3 +154,16 @@ link), AlienVault OTX (overlaps abuse.ch; cut for scope).
 
 **Why.** Fewer, maintained sources with clear terms beat a long list of stale ones, and
 publishing ransomware victim names is not something this project does.
+
+## 10. Evaluate classification on CWE labels, with choices fixed before scoring
+
+**Decision.** Phase 6 classifies NVD CVE descriptions into CWE classes (human-assigned
+labels, with their assigner kept) rather than relying on the gold set. Every choice (split
+dates, label chain, class threshold, masking, method settings, the headline metric) is
+in `src/cti/nlp/cwe_config.py`, committed before any test score existed.
+
+**Why.** The gold set's primary label equals its source feed for 298 of 299 documents
+(decision 8), so it can't show much. CWE labels are real, plentiful, and MITRE's own.
+About a quarter of descriptions contain their CWE's name, so the headline is computed on
+the rest. The Phase 5 ATT&CK result taught that a method designed after seeing test
+numbers is fragile, so this evaluation was pre-registered.
