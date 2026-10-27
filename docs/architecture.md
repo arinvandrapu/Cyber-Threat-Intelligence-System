@@ -18,13 +18,14 @@ flowchart LR
         PARSE[cti parse<br/>offline]
         PROC[(Parsed records<br/>data/processed/DATE/)]
         ENR[(Per-CVE join · cleaned pages<br/>data/enriched/DATE/)]
-        DOWN[NLP → Risk scoring<br/>planned]
+        EXT[(Regex IOCs · aliases<br/>data/extracted/DATE/)]
+        DOWN[SecureBERT NLP → Risk scoring<br/>planned]
         OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>planned]
     end
     S3[(Private S3 bucket<br/>write-once archive)]
 
     SRC -->|HTTPS, rate-limited,<br/>SSRF-safe scraper| ING --> SNAP
-    SNAP --> PARSE --> PROC -->|cti enrich| ENR --> DOWN --> OUT
+    SNAP --> PARSE --> PROC -->|cti enrich| ENR -->|cti extract| EXT --> DOWN --> OUT
     SNAP -->|cti upload<br/>after parse validates| S3
 ```
 
@@ -47,7 +48,8 @@ Three properties shape everything:
 | Parse | `cti parse` → `sources/*.parse` | no | Raw snapshot → `Document` / `CveSignal` records (`.jsonl.gz`) |
 | Upload | `cti upload` → `upload.py` | S3 only | Raw snapshot + gold set → S3, write-once |
 | Enrich | Phase 4 | no | `cti enrich`: one record per CVE joining KEV, EPSS, ExploitDB, Metasploit, Nuclei, Vulnrichment, CWE names and pillars, and reference-link types; point-in-time features kept apart from snapshot-time context. Cleans reference pages (trafilatura boilerplate removal; pages with no content without JavaScript or a login, and PDFs, flagged and kept out of the corpus) |
-| NLP *(planned)* | Phase 5 | no | Regex IOCs, SecureBERT 2.0 NER, ATT&CK mapping |
+| Extract | `cti extract` → `nlp/` | no | Cleaned pages + NVD descriptions → regex IOCs (offsets, defanged values, `origin` tag) and alias mentions normalized to ATT&CK IDs; `cti extract-eval` scores precision on a labelled review sample and recall on the gold set |
+| NLP *(planned)* | Phase 5b | no | SecureBERT 2.0 NER, embeddings, ATT&CK mapping |
 | Classify + evaluate *(planned)* | Phase 6 | no | Category classifier vs baselines on the gold set |
 | Risk scoring *(planned)* | Phase 7 | no | scikit-learn model, forward-looking KEV evaluation |
 | Present *(planned)* | Phases 8–9 | no | Static Next.js dashboard on 127.0.0.1, STIX 2.1 export |
@@ -63,6 +65,9 @@ by re-running `cti parse`, never by re-downloading.
 | `data/snapshots/<date>/` (local) | Raw source responses, gzip'd, plus `manifest.json` | Write-once; only the manifest is rewritten |
 | `data/processed/<date>/` (local) | Parsed records, one `.jsonl.gz` per source | Regenerated freely from the snapshot |
 | `data/enriched/<date>/` (local) | `cves.jsonl.gz`, `references.jsonl.gz`, and a `*-summary.json` for each | Regenerated freely (cves from processed records, references from the raw snapshot); never uploaded |
+| `data/extracted/<date>/` (local) | `iocs.jsonl.gz`, `aliases.jsonl.gz`, and a `*-summary.json` for each; IOC values defanged | Regenerated freely; never uploaded |
+| `data/eval/<date>/` (local) | Evaluation outputs (aggregates) and review sheets (defanged context) | Regenerated freely; never uploaded |
+| `data/reference/` (in git) | Review labels: document ID, span, y/n; no feed content | Committed |
 | `data/gold/gold.jsonl.gz` (local) | Frozen evaluation gold set | Frozen; SHA-256 committed in `cti/gold.py` |
 | S3 `snapshots/<date>/…` | Copy of the raw snapshot | Write-once, enforced by code **and** IAM |
 | S3 `gold/` | Copy of the gold set | Write-once |

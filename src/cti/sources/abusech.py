@@ -57,7 +57,8 @@ def defang_ioc(value: str, ioc_type: str) -> str:
         return defang_url(value)
     if ioc_type == "ip:port":
         ip, _, port = value.rpartition(":")
-        return f"{defang_ip(ip)}:{port}"
+        ip = ip.strip("[]")
+        return f"[{defang_ip(ip)}]:{port}" if ":" in ip else f"{defang_ip(ip)}:{port}"
     if ioc_type == "domain":
         return defang_host(value)
     return value  # hashes are inert

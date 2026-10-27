@@ -33,4 +33,8 @@ is reused from an earlier prototype **as-is**, by owner decision.
   baselines, with this limitation stated in the README. They are never presented as
   accuracy on real-world text.
 
+- Label errors found in Phase 5a: of 103 `cvss_score` spans, 35 label the vector version
+  ("3.1" in `CVSS:3.1/`) and 33 label sub-scores. Domains are labelled only in ThreatFox
+  records. IOC extraction is scored around this ([[ioc-extraction]]).
+
 Related: [[data-sources]], [[risk-scoring-design]] (the stronger evaluation in this project).

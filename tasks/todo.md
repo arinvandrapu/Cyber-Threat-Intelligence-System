@@ -81,6 +81,27 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       batch) for malware, products, and organizations; alias normalizer; ATT&CK
       technique mapping via SecureBERT embeddings, graded against MITRE CTID
       CVE→ATT&CK mappings (verify availability). Tests for all.
+      *Plan (audited 2026-10-27; owner decisions: CTID file committed under
+      `data/reference/`, one-time model download approved, IOC sample labelled by an AI
+      assistant and disclosed):*
+  - [x] **5a. `cti extract`** *(2026-10-27; see `vault/ioc-extraction.md`)* — regex IOCs on original-text offsets (strict IPv4,
+        IPv6 via `ipaddress`, defanged forms, domains via tldextract's bundled PSL with no
+        network plus a code-extension denylist, URLs, hashes, CVE IDs, CVSS v3.x/v4.0 grammar);
+        `refang` extended, with an invariant test; alias normalizer (ATT&CK v20 + ThreatFox,
+        ambiguous aliases return every candidate). Rows tagged `origin`; NVD-origin IOCs kept
+        out of headline counts. Eval: a seeded, stratified 200-IOC precision sample; gold P/R
+        for `cve_id`/`domain` only (gold CVSS spans counted as label errors); no alias P/R
+        on gold (circular).
+  - [ ] **5b. SecureBERT + ATT&CK** — `ml` extra (numpy, sklearn; in CI) and `nlp` extra
+        (torch, transformers `<6`; not in CI, lock audited with `pip-audit --no-deps`).
+        `cti models fetch` (pinned revisions, safetensors only, no `trust_remote_code`).
+        NER on the reference corpus + CTID subset (pipeline stride, fragment merge).
+        Bi-encoder embeddings for all NVD descriptions and active v20 techniques.
+        KEV-language leakage flag on descriptions (35/549 KEV vs 46/~168k non-KEV).
+        ATT&CK mapping graded on CTID KEV attack-16.1: dev set = 284 out-of-corpus CVEs,
+        test set = 135 in-corpus CVEs; primary metric hit@5/recall@5 on
+        `exploitation_technique` at technique level, with bootstrap CIs vs majority and
+        TF-IDF baselines; selection bias and pretraining contamination disclosed.
 - [ ] **6. Classification + evaluation** — SecureBERT-embedding classifier vs
       text-only rules vs baselines (majority, source-only, TF-IDF + logistic regression),
       evaluation script. Gold set is rule-generated, so its result is reported as a

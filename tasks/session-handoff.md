@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-10-26. **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-10-27. **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -12,7 +12,8 @@
 | 2b. Reference scraper, frozen gold set, data contract | ✅ merged | #7 |
 | 3. AWS setup + the one ingest | ✅ done 2026-10-26 | #9, #11 |
 | 4. Enrichment (CVE joins, reference cleaning) | ✅ merged | #14, #15 |
-| **5. NLP extraction** | **⏭ next** | — |
+| 5a. Regex IOCs + aliases (`cti extract`) | ✅ PR open | see PR list |
+| **5b. SecureBERT NER + ATT&CK mapping** | **⏭ next** | — |
 | 6–9 | not started | — |
 
 `main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
@@ -48,15 +49,26 @@
   skipped; the Phase 7 "17 positives" question is **deferred** (join already supports
   more `as_of` cutoffs).
 
-## Pick up here: Phase 5 (NLP extraction, offline)
+## Phase 5a result (2026-10-27)
 
-- Start with `plan phase 5`: staged pipeline (external + internal due diligence, plan
-  audit), then PRs. Input corpus: rows with `in_corpus=true` in
-  `data/enriched/2026-10-26/references.jsonl.gz`, plus NVD/advisory text in `processed/`.
-- Scope (from `tasks/todo.md`): regex IOCs (strict IPv4 boundaries, CVSS patterns, defang),
-  SecureBERT 2.0 NER (local CPU batch), alias normalizer, ATT&CK mapping graded against
-  MITRE CTID CVE→ATT&CK mappings. Page text is never a Phase 7 risk feature
-  (snapshot-time + KEV-biased scrape selection).
+- `cti extract --date 2026-10-26` (≈1 min) → `data/extracted/2026-10-26/iocs.jsonl.gz`,
+  `aliases.jsonl.gz` + summaries. `cti extract-eval` → `data/eval/2026-10-26/extract-eval.json`.
+- Precision (200-item review sample, labels in `data/reference/`): pages 98.5%, NVD 89.1%.
+  Weak spot: NVD IPv4 (version lists). Details and disclosures: `vault/ioc-extraction.md`.
+- **Owner to do:** spot-check the assistant's labels. The review sheet with defanged
+  context is `data/eval/2026-10-26/ioc-review-sample-seed20261027.csv` (local).
+- Vault corrected: NVD description text is snapshot-time (KEV language), not a safe feature.
+
+## Pick up here: Phase 5b (SecureBERT NER + ATT&CK mapping)
+
+- Plan is in `tasks/todo.md` (5b), audited 2026-10-27. Owner approved the one-time model
+  download (NER `cisco-ai/SecureBERT2.0-NER@792db5b`, bi-encoder
+  `cisco-ai/SecureBERT2.0-biencoder@b42d43a`) and committing the CTID KEV mapping file
+  (attack-16.1, Apache-2.0) under `data/reference/` with a NOTICE and a pinned SHA-256.
+- Grading: dev = 284 CTID CVEs outside the corpus, test = 135 in it. Primary metric is
+  hit@5/recall@5 on `exploitation_technique`. Baselines: majority (from dev) and TF-IDF.
+- `ml` extra (numpy, sklearn) in CI; `nlp` extra (torch, transformers <6) not in CI, its
+  lock audited with `pip-audit --no-deps`.
 
 ## Local state that is NOT in git
 
@@ -76,18 +88,17 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 226 passed
+.venv/bin/pytest -q          # expect 322 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 
 ## Open items for later phases
 
-- Phase 5: confirm the SecureBERT 2.0 **base** model ID for embeddings
-  (`cisco-ai/SecureBERT2.0-NER` is confirmed); confirm MITRE CTID CVE→ATT&CK mapping
-  coverage for grading.
 - Phase 7: features via `features_at(record, "cutoff")` only; decide whether 17 forward
   positives is enough or add more cutoffs (EPSS history is the main extra cost); EPSS model
   differs between cutoff and snapshot. See `vault/risk-scoring-design.md`.
+- Phase 7: NVD descriptions are snapshot-time (35/549 KEV vs 46/~168k others carry
+  "exploited in the wild" wording); report the text ablation with and without them.
 
 ## Working agreements (from the owner)
 

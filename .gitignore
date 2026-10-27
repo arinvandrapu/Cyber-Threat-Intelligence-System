@@ -16,7 +16,9 @@ dist/
 !.env.example
 
 # Data: raw feed data is never committed (licensing); snapshots live in S3
-/data/
+/data/*
+# small reference files that are safe to publish (evaluation labels, no feed content)
+!/data/reference/
 
 # Node (dashboard)
 node_modules/

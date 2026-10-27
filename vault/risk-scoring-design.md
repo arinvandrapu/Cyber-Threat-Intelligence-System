@@ -15,7 +15,9 @@ thresholds that were never validated.
 - **Inputs (point-in-time):** `features_at(record, "cutoff")`: EPSS, CISA SSVC
   (Vulnrichment), exploit availability (ExploitDB, Metasploit, Nuclei); recency from
   `record["published"]` (safe: fixed at publication). Text features from the NVD
-  description ([[nlp-design]]).
+  description ([[nlp-design]]) are **snapshot-time, not safe**: CNAs add "exploited in the
+  wild" wording after KEV listing (35/549 KEV CVEs vs 46/~168k others, 2026-10-26).
+  Phase 5 flags these descriptions; Phase 7 reports the ablation with and without them.
 - **Snapshot-time, ablation only:** CVSS and CWE class live in `context_snapshot` and are
   label-biased (below). `cvss_cna` is the least biased, but a CNA can rescore later too.
 - **Model:** scikit-learn (logistic regression or gradient boosting); explainable per CVE.
@@ -52,6 +54,10 @@ thresholds that were never validated.
   the threat metric (`E:` set) are skipped for an older version (the score includes E).
 - Scraped reference pages reflect snapshot-time knowledge, so they are **not** risk-eval
   features (used for NER/ATT&CK/dashboard only).
+- Phase 5 extraction (`data/extracted/`): `reference_page` rows are never features.
+  `nvd_description` rows are allowed only in the labelled snapshot-time ablation, like
+  description text. Alias matches are snapshot-time too: the index is built from ATT&CK
+  v20 and ThreatFox as of the snapshot.
 
 ## Caveats
 
