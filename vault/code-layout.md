@@ -30,6 +30,8 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 - Tests are offline: `respx` mocks HTTP, `moto` mocks S3. `testpaths = ["tests"]`.
 - CI: ruff lint + format, pytest on 3.12 and 3.14, pip-audit, gitleaks. Actions pinned
   by commit SHA.
+  A newer push to a PR cancels that PR's older run (`concurrency`); runs on `main` always
+  finish.
 - Dependencies: ranges in `pyproject.toml`, exact pins in `requirements.lock`.
 - gitleaks: a 64-hex hash next to a key containing "token" trips `generic-api-key`. Mark the
   line `# gitleaks:allow` (see `nlp/models.py`); for a commit already pushed, add its
