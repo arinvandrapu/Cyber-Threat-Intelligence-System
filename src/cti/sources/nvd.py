@@ -33,12 +33,16 @@ CISA_ADP_SOURCE = "134c704f-9b21-4f2e-91b3-4a467353bcc0"  # CISA-ADP (Vulnrichme
 NO_CWE = ("NVD-CWE-noinfo", "NVD-CWE-Other")
 
 
-def _source_kind(source: str | None) -> str:
+def _source_kind(source: str | None, cna: str | None) -> str:
+    """Who assigned a CWE, by role: NVD, the CVE's own CNA (its ``sourceIdentifier``), CISA's
+    ADP (Vulnrichment), or another ADP (e.g. ``0b0ca135-…``, never a CNA of record)."""
     if source == NVD_SOURCE:
         return "nvd"
+    if source is not None and source == cna:
+        return "cna"
     if source == CISA_ADP_SOURCE:
-        return "adp"
-    return "cna"  # the assigning CNA (an email or a UUID, depending on the record)
+        return "cisa_adp"
+    return "other_adp"
 
 
 CVSS_PREFERENCE = ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2")
@@ -131,15 +135,16 @@ class NVDSource(Source):
             }
         )
         # who assigned each CWE: CWE labels are graded per source in Phase 6
+        cna = cve.get("sourceIdentifier")
         assignments = sorted(
             {
-                (_source_kind(w.get("source")), w.get("type") or "", d["value"])
+                (_source_kind(w.get("source"), cna), w.get("type") or "", d["value"])
                 for w in weaknesses
                 for d in w.get("description", [])
                 if d["value"].startswith("CWE-") or d["value"] in NO_CWE
             }
         )
-        metrics, cna = cve.get("metrics", {}), cve.get("sourceIdentifier")
+        metrics = cve.get("metrics", {})
         yield Document(
             id=Document.make_id("nvd", cve["id"]),
             source="nvd",

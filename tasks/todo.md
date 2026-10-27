@@ -106,10 +106,10 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
 - [ ] **6. Classification + evaluation** — *re-scoped 2026-10-27 (owner): the gold set's
       primary label equals its source feed for 298/299 docs, so the main evaluation is CWE
       classification of NVD descriptions (human labels); see `vault/cwe-classification.md`.*
-  - [x] **6a. Label provenance** — parser keeps who assigned each CWE (nvd/cna/adp,
+  - [x] **6a. Label provenance** — parser keeps who assigned each CWE by role (nvd/cna/cisa_adp/other_adp,
         Primary/Secondary); CWE catalog keeps MITRE's mapping `Usage`.
   - [ ] **6b. `cti cwe-eval`** — choices committed before test scoring; labels NVD > CNA >
-        ADP, single-label; time split (train 2024–25, dev to the 2026-04-29 cutoff, test
+        CISA-ADP, single-label; time split (train 2024–25, dev to the 2026-04-29 cutoff, test
         after); 118 classes (≥50 train) + other; headline = macro-F1 on the name-absent test
         stratum; majority / TF-IDF+LR / SecureBERT+LR / nearest centroid; C on dev, refit
         train+dev; bootstrap + paired CIs; breakdowns by label source and assigner. Gold set:

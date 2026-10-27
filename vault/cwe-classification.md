@@ -11,23 +11,31 @@ label = source feed for 298/299 docs). Design context: [[nlp-design]].
 ## Label provenance (6a)
 
 - `nvd.py` keeps `cwe_assignments: [{source_kind, type, id}]` next to the old flat `cwes`
-  (unchanged). `source_kind`: `nvd` (nvd@nist.gov), `adp` (CISA-ADP UUID `134c704f-…`,
-  Vulnrichment), `cna` (anything else: emails or UUIDs). `NVD-CWE-noinfo`/`Other` are kept
-  in assignments, never in `cwes`.
-- 2026-10-26: 141,979 CNA, 33,075 NVD, 31,430 ADP assignments. Re-parse content and enrich
-  output byte-identical across runs; only the new fields changed.
-- CWE catalog keeps `Mapping_Notes/Usage` (MITRE's mapping guidance). Over CVE CWE
-  mentions: Allowed 110k, Allowed-with-Review 41k, Discouraged 31k (17%), Prohibited 502.
-  All categories/views are Prohibited, all pillars Discouraged; CWE-20/119/200/74 are
-  Discouraged.
+  (unchanged). `source_kind` is by role: `nvd` (nvd@nist.gov), `cna` (equals the CVE's
+  `sourceIdentifier`), `cisa_adp` (`134c704f-…`, Vulnrichment), `other_adp` (any other
+  source, e.g. `0b0ca135-…`, which is never a CNA of record). Classifying by a fixed UUID
+  once mislabelled that second ADP as `cna` (1,120 blocks, mostly 2026: the audit caught it).
+- 2026-10-26 assignments: CNA 141,338; NVD 33,075 (23,089 real CWEs + 9,986
+  noinfo/Other); CISA-ADP 31,430; other ADP 1,120. Output deterministic; `cwes` unchanged.
+- CWE catalog keeps `Mapping_Notes/Usage`. Over CVE CWE mentions: Allowed 110k,
+  Allowed-with-Review 41k, Discouraged 31k (17%), Prohibited 502. All categories, views and
+  deprecated IDs are Prohibited; all pillars are Discouraged; CWE-20/119/200/74 are Discouraged.
 
-## Facts that shape 6b (plan audit, 2026-10-27)
+## Facts that shape 6b (recomputed 2026-10-27 after the fix)
 
-- The label source shifts with time. NVD labels are 23% of train but 3% of test; CNA
-  dominates test. Top assigners: train Patchstack/MITRE; test VulnCheck/GitHub/Microsoft.
-- Where NVD and the CNA both labelled a CVE, they agree on 53% overall, but only 30% in the
-  test months (90/298): a label-noise ceiling.
-- **Name leakage:** ~28% of single-label descriptions contain the CWE's full name ("Missing
-  Authorization vulnerability in…", templated CNAs). Literal `CWE-\d+` IDs are only 1,314
-  CVEs. Hence the headline is on the name-absent stratum.
-- Discouraged share of single labels: ~9% train, ~18% test (CWE-284 rises from 1.8% to 6%).
+Split by publication date: train 2024–2025, dev 2026-01-01..04-29, test after.
+Label chain NVD > CNA > CISA-ADP (other ADPs not used).
+
+| | train | dev | test |
+|---|---|---|---|
+| labelled CVEs | 79,471 | 19,046 | 58,973 |
+| label from NVD | 24% | 10% | 3% |
+| NVD & CNA share ≥1 CWE (both labelled) | 74% (10,983) | 63% (941) | 35% (228) |
+| single-label, CWE name in text | 29.9% | 28.4% | 26.2% |
+
+- The name-in-text matcher: the CWE's catalog name, or its part before "(", lowercased
+  substring. It is templated CNA wording ("Missing Authorization vulnerability in…"),
+  hence the headline on the name-absent stratum. Literal `CWE-\d+` IDs: only 1,314 CVEs.
+- Label source and assigners shift: test is CNA-labelled (VulnCheck, GitHub, Microsoft);
+  train has more NVD and Patchstack/MITRE. Discouraged share of single labels ~9% train vs
+  ~18% test (CWE-284 1.8% → 6%).
