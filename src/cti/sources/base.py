@@ -21,11 +21,25 @@ from pydantic import BaseModel
 
 from cti.config import Settings
 from cti.http.client import RETRY_STATUS, get_with_retry
+from cti.models import AsOf
 from cti.snapshot import Snapshot
 
 MAX_DOWNLOAD_BYTES = 2 * 1024**3  # hard ceiling for any single download (2 GiB)
 ARCHIVE_TIMEOUT = httpx.Timeout(30.0, read=300.0)  # archives can be slow to start
 log = logging.getLogger(__name__)
+
+
+def cutoff_label(k: int) -> str:
+    """The as_of label of the k-th cutoff back from the snapshot (k = 1 is "cutoff")."""
+    return "cutoff" if k == 1 else f"cutoff{k}"
+
+
+def as_of_from_name(name: str) -> AsOf:
+    """The as_of label in a raw file name such as ``ssvc-cutoff2.jsonl.gz``."""
+    label = name.rsplit("-", 1)[-1].split(".", 1)[0]
+    if label != "snapshot" and not label.startswith("cutoff"):
+        raise ValueError(f"no as_of label in raw file name {name!r}")
+    return label
 
 
 @dataclass
@@ -35,10 +49,22 @@ class FetchContext:
     settings: Settings
     snapshot_date: date
     secrets: list[str] = field(default_factory=list)  # redacted from URLs we record
+    skip_as_of: set[str] = field(default_factory=set)  # dates carried over, not refetched
 
     @property
     def cutoff_date(self) -> date:
         return self.snapshot_date - timedelta(days=self.settings.cutoff_days)
+
+    @property
+    def as_of_days(self) -> list[tuple[str, date]]:
+        """Every pinned date still to fetch, oldest first: extra cutoffs, cutoff, snapshot."""
+        step = timedelta(days=self.settings.cutoff_days)
+        cutoffs = [
+            (cutoff_label(k), self.snapshot_date - k * step)
+            for k in range(self.settings.extra_cutoffs + 1, 0, -1)
+        ]
+        days = [*cutoffs, ("snapshot", self.snapshot_date)]
+        return [(label, day) for label, day in days if label not in self.skip_as_of]
 
     def redact(self, text: str) -> str:
         for secret in self.secrets:

@@ -1,4 +1,4 @@
-"""ProjectDiscovery Nuclei CVE templates at the cutoff and snapshot dates (MIT).
+"""ProjectDiscovery Nuclei CVE templates at each cutoff and the snapshot date (MIT).
 
 ``cves.json`` is JSON Lines with one row per CVE template. Template files also carry
 ``kev`` tags and EPSS scores; those are not read (they would leak later knowledge).
@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 
-from cti.models import AsOf, CveSignal
+from cti.models import CveSignal
 from cti.snapshot import Snapshot
 from cti.sources import github
-from cti.sources.base import FetchContext, Source, gunzip_stream, gz
+from cti.sources.base import FetchContext, Source, as_of_from_name, gunzip_stream, gz
 
 REPO = "projectdiscovery/nuclei-templates"
 BRANCH = "main"
@@ -26,14 +26,14 @@ class NucleiSource(Source):
         return f"{github.API}/repos/{REPO}/commits?sha={BRANCH}&path={PATH}&per_page=1"
 
     def fetch(self, ctx: FetchContext) -> None:
-        for as_of, day in (("cutoff", ctx.cutoff_date), ("snapshot", ctx.snapshot_date)):
+        for as_of, day in ctx.as_of_days:
             sha, _ = github.head_at(github.repo_url(REPO), BRANCH, day)
             url = github.raw_url(REPO, sha, PATH)
             ctx.write(self.name, f"cves-{as_of}.jsonl.gz", gz(ctx.download(url)), url, sha)
 
     def parse(self, snapshot: Snapshot) -> Iterator[CveSignal]:
         for entry in snapshot.entries(self.name):
-            as_of: AsOf = "cutoff" if "cutoff" in entry.name else "snapshot"
+            as_of = as_of_from_name(entry.name)
             for line in gunzip_stream(snapshot.read_raw(entry)):
                 if not line.strip():
                     continue

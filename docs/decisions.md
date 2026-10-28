@@ -101,6 +101,12 @@ and Vulnrichment, and fields that leak KEV status (NVD `cisa*`, Vulnrichment ADP
 Nuclei `kev`/`epss` tags) are dropped at parse time. KEV additions are rare, so counts
 and intervals are reported with the metrics.
 
+**Update (Phase 7a).** One cutoff gave only 17 positives and no clean training set. Four
+cutoffs 180 days apart (2024-11-05 → 2026-04-29) give a rolling-origin evaluation: train
+on earlier windows, test on the next. That's 68 test positives. The extra dates were added
+by a logged refetch that copied the existing files byte for byte and fetched only the new
+dates, so earlier results are unchanged.
+
 ## 5. Pin git-hosted feeds by first-parent history
 
 **Decision.** For Vulnrichment, Metasploit, and Nuclei, the cutoff state is the branch

@@ -27,8 +27,25 @@ thresholds that were never validated.
 - **Evaluation is forward-looking:** score every CVE using only data as of a cutoff date
   (snapshot − 180 days). Population: `eligible["cutoff"]` (published on or before the
   cutoff day, not in KEV by then; KEV `dateAdded <= cutoff` counts as known). Ground
-  truth: **added to KEV strictly after the cutoff**. 2026-10-26 snapshot: 102,772
-  eligible, **17 positives** (evaluation design still open; more cutoffs possible).
+  truth: **added to KEV strictly after the cutoff**, within the next 180 days.
+- **Rolling-origin cutoffs (owner decision 2026-10-28):** `cutoff4..cutoff` =
+  snapshot − k·180 d; each label window ends at the next cutoff, so train on earlier
+  windows, test on the next. 2026-10-26 snapshot:
+
+  | Label | Date | Eligible | Positives (next 180 d) | EPSS model |
+  |---|---|---|---|---|
+  | `cutoff4` | 2024-11-05 | 31,308 | 20 | v2023.03.01 (EPSS v3) |
+  | `cutoff3` | 2025-05-04 | 53,248 | 21 | v2025.03.14 |
+  | `cutoff2` | 2025-10-31 | 75,284 | 30 | v2025.03.14 |
+  | `cutoff` | 2026-04-29 | 102,772 | 17 | v2025.03.14 |
+
+  Rolling test windows: 21 + 30 + 17 = **68 positives**. Populations differ by fold (the
+  NVD window starts 2024-01-01). Most KEV additions in a window are CVEs published inside
+  it (141/171 for the last window), so they can't be scored at the cutoff.
+- **EPSS:** each cutoff's own file only; use the percentile (comparable across v3/v4) and
+  report the model version per fold.
+- **Text:** never in the headline model; labelled ablation with and without the
+  `kev_language` rows. Descriptions are snapshot-time, which is staler for older folds.
 - **Metrics:** precision@50/100 and PR-AUC against EPSS-only and CVSS-only baselines (the
   CVSS baseline is snapshot-biased; report it as such).
 - **Missing EPSS at the cutoff:** 85 eligible CVEs have none (mostly published later on

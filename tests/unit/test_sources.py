@@ -7,6 +7,7 @@ import respx
 
 from cti.models import CveSignal, Document
 from cti.sources import abusech, attack, cwe, epss, exploitdb, kev, nvd
+from cti.sources.base import as_of_from_name
 from cti.sources.metasploit import MetasploitSource
 from cti.sources.nuclei import NucleiSource
 from cti.sources.vulnrichment import VulnrichmentSource
@@ -522,3 +523,55 @@ def test_key_redacted_from_http_errors(ctx):
         ctx.download(url)
     message = ctx.redact(str(exc.value))
     assert "K%2BEY" not in message and "<redacted>" in message
+
+
+def test_as_of_days_extra_cutoffs_oldest_first(ctx):
+    ctx.settings = ctx.settings.model_copy(update={"extra_cutoffs": 2})
+    assert ctx.as_of_days == [
+        ("cutoff3", date(2025, 5, 3)),
+        ("cutoff2", date(2025, 10, 30)),
+        ("cutoff", date(2026, 4, 28)),
+        ("snapshot", date(2026, 10, 25)),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("name", "label"),
+    [
+        ("epss-cutoff.csv.gz", "cutoff"),
+        ("epss-cutoff2.csv.gz", "cutoff2"),
+        ("files_exploits-cutoff3.csv.gz", "cutoff3"),
+        ("ssvc-snapshot.jsonl.gz", "snapshot"),
+    ],
+)
+def test_as_of_from_name(name, label):
+    assert as_of_from_name(name) == label
+
+
+def test_as_of_from_name_rejects_unlabelled():
+    with pytest.raises(ValueError, match="no as_of label"):
+        as_of_from_name("modules_metadata_base.json.gz")
+
+
+def test_signal_rejects_unknown_as_of():
+    with pytest.raises(ValueError):
+        CveSignal(cve="CVE-2026-1111", source="epss", as_of="cutoff1")
+    assert CveSignal(cve="CVE-2026-1111", source="epss", as_of="cutoff12").as_of == "cutoff12"
+
+
+@respx.mock
+def test_nuclei_pins_every_extra_cutoff(ctx, settings, snapshot, monkeypatch):
+    from cti.sources import github
+
+    ctx.settings = settings.model_copy(update={"extra_cutoffs": 1})
+    shas = {date(2025, 10, 30): "c2", date(2026, 4, 28): "c1", date(2026, 10, 25): "s"}
+    monkeypatch.setattr(github, "head_at", lambda url, br, on: (shas[on], on.isoformat()))
+    row = {"ID": "CVE-2026-1111", "Info": {"Severity": "high"}, "file_path": "x.yaml"}
+    for sha in shas.values():
+        respx.get(
+            f"https://raw.githubusercontent.com/projectdiscovery/nuclei-templates/{sha}/cves.json"
+        ).mock(return_value=httpx.Response(200, content=jsonl([{**row, "sha": sha}])))
+    source = NucleiSource(settings)
+    source.fetch(ctx)
+    by_as_of = {s.as_of: s.values["commit"] for s in source.parse(snapshot)}
+    assert by_as_of == {"cutoff2": "c2", "cutoff": "c1", "snapshot": "s"}

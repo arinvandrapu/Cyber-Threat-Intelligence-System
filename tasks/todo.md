@@ -120,6 +120,17 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       Forward-looking evaluation: score with cutoff-date data only, measure which CVEs
       were added to KEV after the cutoff; precision@k and PR-AUC vs CVSS-only and
       EPSS-only baselines. Tier thresholds set from these results.
+      *Owner decisions 2026-10-28: rolling-origin evaluation over four 180-day cutoffs;
+      EPSS features from each cutoff's file only (percentile, model version recorded and
+      disclosed); text features only in a labelled ablation (with and without the 181
+      `kev_language` rows), never in the headline model.*
+  - [x] **7a. Extra cutoffs** *(2026-10-28: fetched; 20/21/30/17 positives)* — pin EPSS, ExploitDB, Metasploit, Nuclei, Vulnrichment at
+        `cutoff2..4` = snapshot − k·180 d (2025-10-31, 2025-05-04, 2024-11-05) via a logged
+        refetch of those five sources (new attempt re-downloads every date; existing dates
+        must reproduce attempt-1 SHA-256s); `cti parse` + `cti enrich`. Expected forward
+        KEV positives: 20 / 21 / 30 / 17 (68 in rolling test windows).
+  - [ ] **7b. Pre-registered risk evaluation** — plan + plan audit, committed config, then
+        `cti risk-eval`.
 - [ ] **8. Dashboard** — Next.js 16 static export served on 127.0.0.1, reading
       pipeline-exported JSON; ~4 views (overview, prioritized CVEs, IOCs, evaluation);
       defanged IOCs; no hardcoded metrics.

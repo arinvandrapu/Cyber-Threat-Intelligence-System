@@ -58,3 +58,19 @@ def test_first_parent_head_excludes_late_merged_feature(tmp_path):
 def test_rejects_odd_branch_names():
     with pytest.raises(ValueError):
         head_at("file:///nonexistent", "main; rm -rf /", date(2026, 1, 1))
+
+
+def test_widens_history_when_a_merge_hides_older_first_parents(tmp_path):
+    """--shallow-since cuts by commit date: a merge whose first parent is older than the
+    60-day margin ends the shallow first-parent walk. head_at must widen and retry."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git(repo, "init", "-q", "-b", "main")
+    old = commit(repo, "old", "2025-06-01")
+    git(repo, "checkout", "-q", "-b", "side")
+    commit(repo, "side", "2026-04-20")
+    git(repo, "checkout", "-q", "main")
+    git(repo, "merge", "-q", "--no-ff", "side", "-m", "merge", when="2026-05-10")
+
+    sha, _ = head_at(f"file://{repo}", "main", date(2026, 4, 28))
+    assert sha == old

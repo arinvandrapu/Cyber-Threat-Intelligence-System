@@ -18,19 +18,17 @@
 | 6a. CWE label provenance | ✅ merged | #21 |
 | 6b. `cti cwe-eval` (CWE classification) | ✅ merged | #22 |
 | CI: cancel superseded PR runs | ✅ merged | #20 |
-| **7. Risk scoring** | **⏭ next** | — |
+| 7a. Extra cutoffs (rolling-origin data) | ✅ fetched 2026-10-28 | this PR |
+| **7b. Risk scoring evaluation** | **⏭ next** | — |
 | 8–9 | not started | — |
 
-`main` is green (358 offline tests, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+`main` is green (358 offline tests; 376 on this branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
 1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`.
-2. Start Phase 7 with `plan phase 7`: staged pipeline (external + internal due diligence,
-   plan audit) and **pre-registration** like Phase 6 (a committed config before any test
-   score). Open questions: 17 forward KEV positives at the 2026-04-29 cutoff (add more
-   cutoffs? EPSS history is the main extra cost); EPSS model differs between cutoff and
-   snapshot; NVD-description text features are snapshot-time (`kev_language` ablation).
+2. Start Phase 7b: plan + plan audit, then a committed pre-registration config before
+   any test score. The three Phase 7 design questions are decided (see Phase 7a result).
 3. Owner context: may present this project at a MITRE final-round interview. Offer mock
    Q&A on the ATT&CK and CWE results when asked.
 
@@ -71,8 +69,8 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
   `aliases.jsonl.gz` + summaries. `cti extract-eval` → `data/eval/2026-10-26/extract-eval.json`.
 - Precision (200-item review sample, labels in `data/reference/`): pages 98.5%, NVD 89.1%.
   Weak spot: NVD IPv4 (version lists). Details and disclosures: `vault/ioc-extraction.md`.
-- **Owner to do:** spot-check the assistant's labels. The review sheet with defanged
-  context is `data/eval/2026-10-26/ioc-review-sample-seed20261027.csv` (local).
+- Owner spot-checked the assistant's labels (2026-10-28): fine. Review sheet:
+  `data/eval/2026-10-26/ioc-review-sample-seed20261027.csv` (local).
 - Vault corrected: NVD description text is snapshot-time (KEV language), not a safe feature.
 
 ## Phase 5b result (2026-10-27)
@@ -92,15 +90,29 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 - `cti cwe-eval` (≈8 min, `ml` extra): headline test name-absent macro-F1 TF-IDF + LR
   0.394, SecureBERT embeddings + LR 0.265 (paired −0.13), centroid 0.14, majority 0.002.
-  Pre-registered in `nlp/cwe_config.py` (`2e69e14`). Both chosen C values sit at a grid
-  edge (disclosed). Details: `vault/cwe-classification.md`.
+  Pre-registered in `nlp/cwe_config.py` (`2e69e14`). Both ch## Phase 7a result (2026-10-28)
 
-## Pick up here: Phase 7 (risk scoring)
+- Owner decisions: rolling-origin evaluation over four 180-day cutoffs; EPSS from each
+  cutoff's file only (percentile, model version per fold, disclosed); text features only
+  in a labelled ablation (with/without the 181 `kev_language` rows). IOC review labels
+  spot-checked by the owner: fine.
+- Refetch (`--refetch <src> --new-dates-only`, attempt 2 for epss/exploitdb/metasploit/
+  nuclei/vulnrichment): attempt-1 dated files copied byte-identical; `cutoff2..4` fetched.
+  `cti parse` + `cti enrich --only cves` rerun; existing cutoff/snapshot numbers unchanged.
+- Forward KEV positives: cutoff4 (2024-11-05) 20, cutoff3 (2025-05-04) 21, cutoff2
+  (2025-10-31) 30, cutoff (2026-04-29) 17 → **68 in rolling test windows**. Table:
+  `vault/risk-scoring-design.md`. cutoff4 uses EPSS v3 (v2023.03.01).
+- New data is **local only**; not uploaded to S3 (key stays Inactive). Upload later with
+  owner approval if wanted (≈30 MB, cost ≈ $0).
 
-- Plan first (staged pipeline). Features only via `features_at(record, "cutoff")`; text
-  features = NVD-description embeddings (`nvd-embeddings.npy`), with and without the
-  181 `kev_language` rows (`vault/risk-scoring-design.md`). 17 forward KEV positives at the
-  2026-04-29 cutoff: decide whether to add cutoffs. Pre-register like Phase 6.
+## Pick up here: Phase 7b (risk scoring evaluation)
+
+- Plan first (staged pipeline, plan audit), then **pre-register** a config (folds,
+  features, model, metrics, baselines, tier rule) before any test score, like
+  `nlp/cwe_config.py`. Features only via `features_at(record, <label>)`.
+- Owner context: may present this project at a MITRE final-round interview.
+
+ke Phase 6.
 - Owner context: may present this project at a MITRE final-round interview.
 
 ## Local state that is NOT in git
@@ -129,11 +141,9 @@ git checkout main && git pull
 
 ## Open items for later phases
 
-- Phase 7: features via `features_at(record, "cutoff")` only; decide whether 17 forward
-  positives is enough or add more cutoffs (EPSS history is the main extra cost); EPSS model
-  differs between cutoff and snapshot. See `vault/risk-scoring-design.md`.
-- Phase 7: NVD descriptions are snapshot-time (35/549 KEV vs 46/~168k others carry
-  "exploited in the wild" wording); report the text ablation with and without them.
+- Phase 7b: rolling-origin folds over `cutoff4..cutoff`; EPSS percentile per fold (model
+  version differs: v3 at cutoff4); text only as a labelled ablation. Populations differ by
+  fold (NVD window starts 2024-01-01). See `vault/risk-scoring-design.md`.
 
 ## Working agreements (from the owner)
 

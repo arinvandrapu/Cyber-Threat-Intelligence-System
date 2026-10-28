@@ -82,6 +82,8 @@ def _report(result: IngestResult) -> int:
 
 def cmd_ingest(args, settings: Settings) -> int:
     sources = select(settings, args.only)
+    if args.new_dates_only and not args.refetch:
+        raise ConfigError("--new-dates-only needs --refetch")
     if not args.refetch:
         _check_requirements(sources, settings)
     today = date.today()
@@ -101,7 +103,13 @@ def cmd_ingest(args, settings: Settings) -> int:
             [source] = select(settings, [args.refetch])
             _check_requirements([source], settings)
             result = refetch(
-                storage, settings, snapshot_date.isoformat(), source, args.reason, client
+                storage,
+                settings,
+                snapshot_date.isoformat(),
+                source,
+                args.reason,
+                client,
+                new_dates_only=args.new_dates_only,
             )
         else:
             result = ingest(storage, settings, snapshot_date, sources, client, resume=args.resume)
@@ -143,26 +151,25 @@ def cmd_parse(args, settings: Settings) -> int:
 
 
 def _as_of_dates(snap: Snapshot, processed: Path, settings: Settings) -> dict[str, str]:
-    """Dates of the as_of labels. The cutoff comes from the data itself (the EPSS cutoff
-    file's score date) and must match the configured cutoff, so labels can never be
-    paired with a different cutoff than the one the snapshot was pinned at."""
-    expected = (snap.date - timedelta(days=settings.cutoff_days)).isoformat()
-    pinned = next(
-        (
-            (r["values"].get("score_date") or "")[:10]
-            for r in read_jsonl(processed / "epss.jsonl.gz")
-            if r.get("as_of") == "cutoff"
-        ),
-        None,
-    )
-    if not pinned:
+    """Dates of the as_of labels. Each cutoff date comes from the data itself (that EPSS
+    file's score date) and must match snapshot - k * CTI_CUTOFF_DAYS, so labels can never
+    be paired with a different cutoff than the one the snapshot was pinned at."""
+    pinned: dict[str, str] = {}
+    for r in read_jsonl(processed / "epss.jsonl.gz"):
+        label = r.get("as_of", "")
+        if label.startswith("cutoff") and label not in pinned:
+            pinned[label] = (r["values"].get("score_date") or "")[:10]
+    if not pinned.get("cutoff"):
         raise ConfigError("no dated EPSS cutoff rows; the cutoff date can't be determined")
-    if pinned != expected:
-        raise ConfigError(
-            f"snapshot cutoff is {pinned}, but CTI_CUTOFF_DAYS={settings.cutoff_days} "
-            f"gives {expected}"
-        )
-    return {"cutoff": pinned, "snapshot": snap.id}
+    for label, day in pinned.items():
+        k = int(label.removeprefix("cutoff") or 1)
+        expected = (snap.date - k * timedelta(days=settings.cutoff_days)).isoformat()
+        if day != expected:
+            raise ConfigError(
+                f"snapshot {label} is {day or 'undated'}, but "
+                f"CTI_CUTOFF_DAYS={settings.cutoff_days} gives {expected}"
+            )
+    return {**dict(sorted(pinned.items(), key=lambda kv: kv[1])), "snapshot": snap.id}
 
 
 ENRICH_STEPS = ("cves", "references")
@@ -190,6 +197,8 @@ def cmd_enrich(args, settings: Settings) -> int:
         needed = ["nvd", "kev", "references", *cve_join.SIGNAL_SOURCES]
         if missing := [n for n in needed if not (processed / f"{n}.jsonl.gz").exists()]:
             raise ConfigError(f"missing parsed sources {missing}; run `cti parse` first")
+        if incomplete := [n for n in cve_join.SIGNAL_SOURCES if not snap.is_complete(n)]:
+            raise ConfigError(f"sources {incomplete} are incomplete in the snapshot; refetch them")
         with CWESource(settings).open_xml(snap) as fh:
             catalog = load_catalog(fh)
         as_of_dates = _as_of_dates(snap, processed, settings)
@@ -558,6 +567,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--resume", action="store_true", help="continue a failed run")
     p.add_argument("--refetch", metavar="SOURCE", help="re-download one completed source")
     p.add_argument("--reason", help="why a refetch is needed (required with --refetch)")
+    p.add_argument(
+        "--new-dates-only",
+        action="store_true",
+        help="with --refetch: keep the dated files already held, fetch only missing dates",
+    )
     p.add_argument(
         "--allow-date-mismatch",
         action="store_true",

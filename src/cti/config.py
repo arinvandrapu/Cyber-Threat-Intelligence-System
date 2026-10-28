@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     # Data contract (see tasks/todo.md)
     nvd_window_start: date = date(2024, 1, 1)
     cutoff_days: int = 180
+    # Earlier cutoffs, each a further cutoff_days back, for rolling-origin evaluation
+    extra_cutoffs: int = Field(3, ge=0, le=98)
     attack_version: str = "20.0"
     cwe_version: str = "4.20"
     scrape_max_pages: int = 2000

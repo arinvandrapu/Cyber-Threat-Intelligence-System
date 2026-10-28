@@ -93,8 +93,9 @@ Snapshot key layout (same locally and in S3):
 ## Point-in-time data
 
 Risk scoring is evaluated forward-looking: score CVEs with data known at a **cutoff**
-(snapshot − 180 days), then check which were added to CISA KEV after it. So the single
-ingest captures two copies of time-sensitive sources:
+(snapshot − 180 days), then check which were added to CISA KEV after it. Three earlier
+cutoffs (each a further 180 days back) support a rolling-origin evaluation. So the
+snapshot holds a copy of each time-sensitive source per cutoff, plus the snapshot copy:
 
 | Source | Cutoff copy | Snapshot copy |
 |---|---|---|
@@ -107,7 +108,7 @@ Leakage rules (fields that would reveal KEV status) are enforced at parse time. 
 enriched per-CVE record then keeps point-in-time `signals[<as_of>]` apart from
 `context_snapshot` (NVD status, scores, CWEs, reference lists as known at the snapshot).
 NVD analyzes KEV-listed CVEs first, so those NVD fields are biased toward the label: all
-17 forward positives are "Analyzed" vs about half of other CVEs. Details:
+17 forward positives at the latest cutoff are "Analyzed" vs about half of other CVEs. Details:
 `vault/point-in-time-pinning.md`, `vault/risk-scoring-design.md`.
 
 ## Security boundaries
