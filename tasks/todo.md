@@ -250,6 +250,9 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
 Stretch (only if time allows): relation extraction,
 detection-rule generation, a small hand-labeled evaluation set.
 
+Post-Phase-9 extensions (not started): better CVE → ATT&CK mapping (E1) and ThreatFox
+threat categories (E2), in [future-extensions.md](future-extensions.md).
+
 ## Review
 
 _(filled in as phases complete)_
