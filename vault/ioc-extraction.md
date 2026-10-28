@@ -26,6 +26,10 @@ ablation): [[risk-scoring-design]].
 - **Hashes:** reject commit-ID context (`commit`, `before`, `up to`, `@`, `#`) and digit-only runs.
 - **CVSS:** v3.x any order, all 8 base metrics once; v4.0 fixed order, case-sensitive.
 - `defang_ip` for IPv6 now brackets colons (`2001[:]db8…`). `[…]` would read as a URL host.
+- 2026-10-28: `defang_url` also defangs `ftp`/`sftp` → `fxp`/`sfxp` (`defang_scheme`;
+  `refang` undoes both). It had only handled http(s). The current extraction holds 3
+  `ftp://` URLs (of ~3.9k); `cti export` normalizes them, and its per-type check refuses
+  any live scheme. A re-extract would change `iocs_sha256`.
 
 ## Aliases
 

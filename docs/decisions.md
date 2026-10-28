@@ -17,6 +17,8 @@ pipeline (a university capstone), referred to below as *the prototype*.
 7. [SecureBERT 2.0 for text, scikit-learn for tabular risk](#7-securebert-20-for-text-scikit-learn-for-tabular-risk)
 8. [Report the gold set as a sanity check, not accuracy](#8-report-the-gold-set-as-a-sanity-check-not-accuracy)
 9. [Drop sources that are stale, closed, or ethically problematic](#9-drop-sources-that-are-stale-closed-or-ethically-problematic)
+10. [Evaluate classification on CWE labels, with choices fixed before scoring](#10-evaluate-classification-on-cwe-labels-with-choices-fixed-before-scoring)
+11. [A local dashboard: Vite + React, served by Python with a strict CSP](#11-a-local-dashboard-vite--react-served-by-python-with-a-strict-csp)
 
 ---
 
@@ -176,3 +178,18 @@ in `src/cti/nlp/cwe_config.py`, committed before any test score existed.
 (decision 8), so it can't show much. CWE labels are real, plentiful, and MITRE's own.
 26–30% of descriptions contain their CWE's name, so the headline is computed on the rest. The Phase 5 ATT&CK result taught that a method designed after seeing test
 numbers is fragile, so this evaluation was pre-registered.
+
+## 11. A local dashboard: Vite + React, served by Python with a strict CSP
+
+**Decision.** The dashboard is a Vite + React + TypeScript app that reads JSON written by
+`cti export` and is served by `cti serve`, a small standard-library server bound to
+127.0.0.1. The original plan was a Next.js static export.
+
+**Why.** Next.js puts inline scripts in every exported page, so a strict
+Content-Security-Policy would need `'unsafe-inline'` or a hashing step after each build.
+Vite emits only external scripts, so `script-src 'self'` works as is, and it pulls in
+about half the npm packages. Serving from Python sends the CSP as a real HTTP header (a
+`<meta>` tag can't carry `frame-ancestors`), checks the Host header against DNS
+rebinding, and serves only a fixed allowlist of files built at startup, so path tricks
+and directory listings can't happen. The dashboard shows rank and tier, never a
+probability, and labels tier hit rates as historical results from the evaluation folds.

@@ -133,9 +133,116 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         changes applied), config committed (`nlp/risk_config.py`) before any test score,
         then `cti risk-eval` + tests + implementation audit, run, document. See
         `vault/risk-eval.md`.
-- [ ] **8. Dashboard** — Next.js 16 static export served on 127.0.0.1, reading
-      pipeline-exported JSON; ~4 views (overview, prioritized CVEs, IOCs, evaluation);
-      defanged IOCs; no hardcoded metrics.
+- [ ] **8. Dashboard** — local, read-only dashboard over pipeline-exported JSON; 4 views
+      (overview, prioritized CVEs, IOCs, evaluation); defanged IOCs; no hardcoded metrics.
+      *Stack changed 2026-10-28 (owner approved): Vite + React instead of a Next.js static
+      export, because Next's inline scripts rule out a strict CSP without a post-build
+      hashing step; Vite also pulls about half the npm packages.*
+  - [x] **8a. `cti export --date`** *(2026-10-28, PR 1)* → `data/export/<date>/` (gitignored, never committed;
+        it holds abuse.ch-derived aggregates). Deterministic JSON, `write_json`, validated
+        by pydantic models before writing; every number comes from pipeline outputs.
+        Refuses to run if `risk_config.py`'s SHA-256 differs from `risk-eval.json`
+        `provenance.config_sha256`.
+        - `meta.json`: snapshot date, as_of dates, KEV catalog version, EPSS model version
+          per as_of, git state, input SHA-256s, config SHA-256.
+        - `risk.json`: the pre-registered logistic model **refit on all four labelled
+          windows** (cutoff4..cutoff, 88 positives; `risk_config.py` unchanged), scored
+          on `eligible["snapshot"]` (≈167.8k CVEs published 2024-01-01 onward, not in
+          KEV) via `featurize(r, "snapshot", date)`. Tiers by rank fraction through a
+          shared `assign_tiers` helper that `tiers()` also uses (post-scoring refactor,
+          logged in `vault/risk-eval.md`; regression test rebuilds `tiers_logistic`
+          numbers from fixed arrays). Rows for critical/high/elevated (≈8.4k, cumulative
+          5%); baseline as a count. Per row: rank, tier, EPSS probability + percentile,
+          SSVC inputs, exploit flags, age, per-feature contribution in log-odds vs the
+          training mean (intercept excluded; imputed values flagged). **No model
+          probability is shown** (fit at ~0.03% prevalence, newer EPSS version): rank
+          and tier only. Display-only context, labelled never used by the model: CVSS
+          (NVD/CNA), CWE IDs, published, assigner, NVD description (URL/IP/domain spans
+          from `iocs.extract` defanged, then truncated on a word boundary). Plus refit
+          coefficients next to the last-fold ones from `risk-eval.json`, iterations,
+          positives per window.
+          Disclosures carried in the JSON: only CVEs published from 2024-01-01 are
+          ranked; snapshot EPSS is v2026.06.15 (training saw v2023.03.01/v2025.03.14);
+          the snapshot ranking itself is not evaluated; tier hit rates are "historical
+          rate for this procedure's tier over the next 180 days, evaluation folds"
+          (`risk-eval.json`), e.g. ≈97% of critical-tier CVEs did not enter KEV within
+          180 days; logistic (not boosting) because it was the pre-registered headline
+          and is explainable.
+        - `iocs.json`: reference-page "indicator-type strings from CVE references (not
+          vetted as malicious)": unique (type, value) with CVE list and count; `cve`/
+          `cvss` types excluded; IPv4/IPv6 carry `public`; NVD-origin as counts only.
+          abuse.ch feeds as aggregates only (by type, threat type, malware family top
+          25, month); no feed IOC values. Fail-closed per-type defang check naming the
+          bad value: url = scheme not http(s) and no bare `.` in the host; domain = no
+          bare `.`; ipv4 contains `[.]`; ipv6 contains `[:]`.
+        - `graphs.json`: weakness graph (pillar → CWE → tiered CVE, from
+          `context_snapshot.cwes`, display only); ATT&CK graph (KEV CVE → technique →
+          tactic from the pinned CTID mappings in `data/reference/ctid/`, by mapping
+          type); shared-host graph (reference-page url/domain hosts shared by ≥2 CVEs,
+          capped at the top hosts, values defanged). Node/edge counts capped so the file
+          stays small.
+        - `eval.json`: headline numbers copied by explicit key path from the five
+          `data/eval/<date>/*-eval.json` files (no recomputation) + their SHA-256s.
+  - [x] **8b. `cti serve [--date] [--port]`** *(2026-10-28, PR 1)* — `BaseHTTPRequestHandler` (not
+        `SimpleHTTPRequestHandler`) on 127.0.0.1 only. At startup it builds an allowlist
+        dict URL → file from resolved `web/dist/` and `data/export/<date>/` (symlinks
+        out of those roots rejected); requests are exact lookups, so traversal,
+        encoded dots, NUL bytes and directory listings can't happen. Explicit MIME map.
+        Host must be exactly `127.0.0.1:<port>`/`localhost:<port>` (missing → 400).
+        GET/HEAD only (else 405 + `Allow`). Fixed plain-text error bodies (never echo
+        the path). Handler timeout. Security headers in `end_headers()` so errors get
+        them too: CSP `default-src 'none'; script-src 'self'; style-src 'self';
+        img-src 'self' data:; font-src 'none'; connect-src 'self'; base-uri 'none';
+        form-action 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'`,
+        `nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP same-origin,
+        `Permissions-Policy` (clipboard-write=self, rest off), `no-store` on `/data/`.
+        Missing export/dist → clear "run `cti export` / `npm run build`" error; `--date`
+        validated, default newest export.
+  - [ ] **8c. `web/`** — Vite 8.3.4, React/ReactDOM 19.3.1, TypeScript 7.0.2,
+        @vitejs/plugin-react 6.1.2 (exact pins, all ≥14 days old); no UI kit, chart or
+        table library, no router (hash routes), system fonts, no remote resources, no
+        favicon fetch. `.npmrc`: `save-exact=true`, `ignore-scripts=true`,
+        `min-release-age=14`; lockfile generated from a clean tree (check it lists the
+        linux native binaries). Fetches `/data/*.json` at runtime; TS types mirror the
+        pydantic models. Dark theme (design canvas "CTI Dashboard Design", 2026-10-28):
+        neutral black surfaces; tiers one ordinal pink→cherry ramp (baseline #f6b8c4, elevated #f07c92, high #e8405a, critical #d90f33); model blue / EPSS aqua; ATT&CK-graph KEV CVE dots orange #f59a23; validated for CVD; brand "CTI Console".
+        Seven views:
+        1. Overview: headline tiles, tier ladder with historical rates + "≈97% did not
+           enter KEV", top of queue, data sources/versions/hashes, disclosures.
+        2. Risk queue: sortable, paginated 100/page, tier filter, search, detail panel
+           with contribution bars; EPSS as "p% (Nth pct)" + model version; context
+           columns greyed and labelled.
+        3. Risk landscape: model rank vs EPSS percentile scatter (by tier), coefficient
+           bars (refit next to evaluated last fold), signal-coverage heatmap by tier,
+           critical+high by publication month.
+        4. Weakness graph: CWE pillar → CWE → critical/high CVEs (layered, click to trace).
+        5. ATT&CK graph: KEV CVE → technique → tactic from CTID mappings (radial; toggle
+           exploitation / primary / secondary impact).
+        6. Indicators: warning title, type tiles, shared-host graph (CVEs linked by a
+           common reference host, single-CVE hosts hidden), abuse.ch aggregates,
+           searchable table (non-public IPs hidden by default, copy defanged value).
+        7. Evaluation: decision-rule banner, recall@100 / top-1% dot+CI chart with
+           random baseline, per-fold table, AP/base rate/power, tier hit rates (log),
+           ATT&CK/CWE/IOC/NER headlines, limitations.
+        Graphs are hand-rolled SVG with deterministic layouts computed in the export or
+        the client (layered/radial), no graph library.
+  - [ ] **8d. Tests + CI** — pytest: export (synthetic records → schema-valid,
+        deterministic, defang refusal per type, no snapshot labels, refit uses only
+        cutoff windows, config-SHA guard), `assign_tiers` parity, serve (bind refusal,
+        Host check, headers on errors, traversal/encoded/symlink, 404/405, HEAD).
+        Committed fixture `web/fixtures/` (synthetic; pytest validates it against the
+        pydantic models and that every network value is RFC 5737/3849/2606
+        documentation space). `web/scripts/check.mjs` (`node --test`): dist has no
+        inline scripts/styles/`on*=`, no external URLs; no `dangerouslySetInnerHTML`/
+        `innerHTML` in `src/`. CI job `web`: setup-node pinned by SHA with npm cache,
+        `npm ci`, `npm audit signatures`, `npm audit --audit-level=high`, `tsc
+        --noEmit`, `vite build` against the fixture, checks. Drop stale `.next/`/`out/`
+        from `.gitignore`.
+  - [ ] **8e. Docs** — README dashboard section + run commands + skills; vault
+        `dashboard.md` (+ index, code-layout, risk-eval refactor note);
+        `docs/architecture.md`, `docs/decisions.md` (stack change); handoff. Phase 9
+        note: screenshots from real data with the abuse.ch panel cropped (no
+        abuse.ch-derived content committed); the fixture is for CI only.
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
       limitations section, final README.

@@ -62,3 +62,16 @@ Label: KEV `date_added` in (cutoff, min(next cutoff, 2026-10-23)]. Population: `
 - With 68 positives, 1 hit ≈ 1.5 points of recall: report estimates with CIs.
 
 Deviations after test scoring must be listed here.
+
+## After scoring (2026-10-28, Phase 8; no config change)
+
+- Refactor: tier assignment moved into `assign_tiers()`, shared by `tiers()` and
+  `cti export`. An in-memory rerun of the whole evaluation reproduced `risk-eval.json`
+  exactly (provenance aside), so no reported number changed.
+- Provenance bug: `_git_state()` ran git from `src/cti/` with pathspec `src`, so `dirty`
+  was always `false`. Fixed with `:(top)src` and a test. The 7b run still holds:
+  `risk-eval.json` was written 30 s after `1ff8527`, and `src/` is identical between
+  `1ff8527` and the results commit `5c519e4`.
+- Refit for the dashboard ([[dashboard]]): same config on all four windows (262,612
+  rows, 88 positives). Standardized weights shift from the last fold: EPSS 0.63 → 0.22,
+  SSVC total impact 0.64 → 0.45, recency −0.70 → −0.57, Nuclei 0.16 → 0.27.

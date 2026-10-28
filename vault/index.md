@@ -24,6 +24,8 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   offline PSL, alias matching guards, review-sample and gold-set evaluation
 - [[risk-eval]] — Phase 7b `cti risk-eval`: rolling-origin folds, pre-registered features,
   models, metrics and tiers (`nlp/risk_config.py`)
+- [[dashboard]] — Phase 8 (planned): Vite + React over `cti export` JSON, `cti serve`
+  on 127.0.0.1 with strict CSP, seven views incl. three relationship graphs
 - [[cwe-classification]] — Phase 6 main eval: CWE label provenance (nvd/cna/adp), mapping
   Usage, label-source shift and name leakage that shape the evaluation; 6b `cti cwe-eval`
   pre-registered in `nlp/cwe_config.py`
