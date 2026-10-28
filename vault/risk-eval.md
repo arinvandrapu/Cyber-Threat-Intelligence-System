@@ -4,12 +4,9 @@ tags: [evaluation, risk, pre-registration]
 
 # Risk Evaluation (Phase 7b, `cti risk-eval`)
 
-Status 2026-10-28: **pre-registered** in `src/cti/nlp/risk_config.py` after a plan audit,
-committed before any test fold was scored. Results: not yet run.
-
-- 2026-10-28: `cti risk-eval` implemented (`nlp/risk_eval.py`, CLI, 9 unit tests; suite
-  385 passing). Feasibility on training data only: LR converges (16 iterations), each
-  fit < 1 s. Implementation audit running; real run after its fixes. Not yet merged.
+Status 2026-10-28: pre-registered (`c528d07`), implemented (`1ff8527`, clean tree), run
+once (`data/eval/2026-10-26/risk-eval.json`, ≈30 s). README section: "Forward-looking risk
+scoring".
 
 ## Question
 
@@ -42,11 +39,19 @@ Label: KEV `date_added` in (cutoff, min(next cutoff, 2026-10-23)]. Population: `
 - Reported too: per-fold hits, CVE IDs caught by model/EPSS, AP, ROC-AUC, tiers
   (0.1% / 1% / 5% / rest, Wilson CIs, monotonic check).
 
-## Plan audit changes (before commit)
+## Results (2026-10-28, 3 folds pooled, 68 positives)
 
-Tie-break, logit EPSS, exploit-flag absence = 0, decision rule + power, named
-population, age cap, KEV last date, per-fold + case lists, no-EPSS ablation, duplicate
-CVSS ablation cut, Wilson everywhere.
+- Hits in top 100 per fold, pooled (expected values under ties): logistic 6, boosting 8,
+  EPSS 2, SSVC rule 2, CVSS 1.2, random 0.1. **Decision rule: logistic beats EPSS**, +4
+  (paired 95% CI +1 to +8). Per fold 2025-05/2025-10/2026-04: LR 1/3/2, EPSS 1/1/0.
+- Top 1%: logistic 16, EPSS 15 (+1, CI −6 to +9). Mean AP: EPSS 0.015 > LR 0.011.
+  Boosting vs EPSS +6 (CI +1 to +12, secondary). Tiers monotonic: 2.6% / 0.48% / 0.17% /
+  0.016%.
+- Exploratory (no CIs): no-EPSS 9 @100, AP 0.033 mostly from the latest fold (0.072);
+  no-SSVC 6 @100, 18 @1%; text 20 @500 vs 16; last-fold EPSS ROC-AUC 0.41, median
+  percentile of positives 0.16 (16 scored). Largest last-fold LR weights: recency −0.70,
+  SSVC total impact 0.64, EPSS 0.63.
+- No deviations from the config. Plan-audit changes were applied before the commit.
 
 ## Inputs from due diligence (2026-10-28)
 

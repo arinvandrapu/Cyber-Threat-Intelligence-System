@@ -107,6 +107,10 @@ on earlier windows, test on the next. That's 68 test positives. The extra dates 
 by a logged refetch that copied the existing files byte for byte and fetched only the new
 dates, so earlier results are unchanged.
 
+**Result (Phase 7b).** Pre-registered before scoring. A logistic model on cutoff-time
+signals beats EPSS at a 100-CVE budget (+4 of 68, paired CI +1 to +8), but not at 1%, and
+EPSS keeps the higher average precision. Rank tiers fall monotonically.
+
 ## 5. Pin git-hosted feeds by first-parent history
 
 **Decision.** For Vulnrichment, Metasploit, and Nuclei, the cutoff state is the branch
