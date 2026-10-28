@@ -28,6 +28,13 @@ why-each-source and corpus counts: `docs/data-sources.md`.
 
 Every signal is captured **as of the cutoff date** for [[risk-scoring-design]].
 
+## ThreatFox facts (2026-10-26 snapshot)
+
+- 126,917 IOCs, 481 families (`fk_malware`, Malpedia-style). `threat_type` is
+  infrastructure role only (payload, botnet_cc, payload_delivery, cc_skimming), not a
+  threat category; categories need a reviewed family map (`tasks/future-extensions.md` E2).
+- Only 166 rows (16 CVEs) carry CVE tags; 39,572 have a report `reference` URL.
+
 ## Not used
 
 - **PhishTank**: new registrations disabled.
