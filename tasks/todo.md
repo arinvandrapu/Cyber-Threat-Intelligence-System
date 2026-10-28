@@ -129,8 +129,10 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         refetch of those five sources (new attempt re-downloads every date; existing dates
         must reproduce attempt-1 SHA-256s); `cti parse` + `cti enrich`. Expected forward
         KEV positives: 20 / 21 / 30 / 17 (68 in rolling test windows).
-  - [ ] **7b. Pre-registered risk evaluation** — plan + plan audit, committed config, then
-        `cti risk-eval`.
+  - [ ] **7b. Pre-registered risk evaluation** — plan + plan audit (2026-10-28, 12 required
+        changes applied), config committed (`nlp/risk_config.py`) before any test score,
+        then `cti risk-eval` + tests + implementation audit, run, document. See
+        `vault/risk-eval.md`.
 - [ ] **8. Dashboard** — Next.js 16 static export served on 127.0.0.1, reading
       pipeline-exported JSON; ~4 views (overview, prioritized CVEs, IOCs, evaluation);
       defanged IOCs; no hardcoded metrics.

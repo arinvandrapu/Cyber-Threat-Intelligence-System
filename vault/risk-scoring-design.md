@@ -42,17 +42,17 @@ thresholds that were never validated.
   Rolling test windows: 21 + 30 + 17 = **68 positives**. Populations differ by fold (the
   NVD window starts 2024-01-01). Most KEV additions in a window are CVEs published inside
   it (141/171 for the last window), so they can't be scored at the cutoff.
-- **EPSS:** each cutoff's own file only; use the percentile (comparable across v3/v4) and
-  report the model version per fold.
+- **EPSS:** each cutoff's own file only; the model uses logit(percentile) (comparable
+  across v3/v4, spreads the tail) and reports the model version per fold.
 - **Text:** never in the headline model; labelled ablation with and without the
   `kev_language` rows. Descriptions are snapshot-time, which is staler for older folds.
-- **Metrics:** precision@50/100 and PR-AUC against EPSS-only and CVSS-only baselines (the
-  CVSS baseline is snapshot-biased; report it as such).
-- **Missing EPSS at the cutoff:** 85 eligible CVEs have none (mostly published later on
-  the cutoff day, after EPSS ran at 12:55 UTC). Treat as "not yet scored", never as 0.
-- **Tiers:** thresholds are chosen from the evaluation so each tier has a distinct,
-  monotonic hit rate. Report per-tier counts and hit rates. Don't force a target
-  distribution, because hitting a quota proves nothing.
+- **Metrics, models, decision rule:** pre-registered in `nlp/risk_config.py`; see
+  [[risk-eval]] (headline pooled recall@100 vs EPSS; CVSS baseline snapshot-biased).
+- **Missing EPSS:** 688 / 8 / 57 / 85 eligible CVEs at cutoff4/3/2/cutoff (mostly published
+  later on the cutoff day, after EPSS ran). Treat as "not yet scored", never as 0.
+- **Tiers:** rank-fraction cut points (top 0.1% / 1% / 5% / rest) fixed **before** test
+  scoring (probabilities drift across EPSS versions); the evaluation reports each tier's
+  hit rate and whether they are monotonic. No re-cutting after the fact.
 
 ## Leakage rules (enforced at parse time and in the enriched record)
 
