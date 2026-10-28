@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-10-27. **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-10-27 → 10-28 (Phases 5 and 6). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -16,11 +16,23 @@
 | 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ merged | #18 |
 | 5b-2. SecureBERT NER + embeddings + prior+bi-encoder | ✅ merged | #19 |
 | 6a. CWE label provenance | ✅ merged | #21 |
-| 6b. `cti cwe-eval` (CWE classification) | ✅ PR open | — |
+| 6b. `cti cwe-eval` (CWE classification) | ✅ merged | #22 |
+| CI: cancel superseded PR runs | ✅ merged | #20 |
 | **7. Risk scoring** | **⏭ next** | — |
-| 6–9 | not started | — |
+| 8–9 | not started | — |
 
-`main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
+`main` is green (358 offline tests, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+installed). **The one ingest has run** (snapshot `2026-10-26`).
+
+**Next session, in order:**
+1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`.
+2. Start Phase 7 with `plan phase 7`: staged pipeline (external + internal due diligence,
+   plan audit) and **pre-registration** like Phase 6 (a committed config before any test
+   score). Open questions: 17 forward KEV positives at the 2026-04-29 cutoff (add more
+   cutoffs? EPSS history is the main extra cost); EPSS model differs between cutoff and
+   snapshot; NVD-description text features are snapshot-time (`kev_language` ablation).
+3. Owner context: may present this project at a MITRE final-round interview. Offer mock
+   Q&A on the ATT&CK and CWE results when asked.
 
 ## Phase 3 result (2026-10-26)
 
@@ -99,6 +111,8 @@
 | Gold fixture | `data/gold/gold.jsonl.gz` | SHA-256 `4a612d2f…ceb5` (in `cti/gold.py`); also in S3 `gold/` |
 | **Snapshot, parsed, enriched data** | `data/snapshots/`, `data/processed/`, `data/enriched/` (all `2026-10-26`) | working copy; raw also in S3; parsed/enriched regenerable via `cti parse` / `cti enrich`. **Don't delete `data/`.** |
 | Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev,enrich,ml]'` to rebuild |
+| **Extracted + eval outputs** | `data/extracted/2026-10-26/` (iocs, aliases, entities, `nvd-embeddings.npy` ≈259 MB, masked subset), `data/eval/2026-10-26/` (extract-, attack-, ner-, cwe-eval JSON) | regenerable; `cti embed` takes ≈47 min, so keep the `.npy` |
+| SecureBERT env + models | `.venv-nlp/` (`requirements-nlp.lock`); weights in `~/.cache/huggingface/hub/` (pinned; `cti models verify`) | rebuild: `python3 -m venv .venv-nlp && .venv-nlp/bin/pip install -c requirements-nlp.lock -e '.[dev,enrich,ml,nlp]'` |
 | AWS CLI | `default` = owner's admin IAM user, us-east-1; `cti` = pipeline user | `cti` key in `~/.aws/credentials`, **Inactive** |
 
 The prototype repo used for porting was a temporary clone. If it's needed again:
