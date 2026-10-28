@@ -90,12 +90,19 @@ def build(
             }
 
     signal_counts: Counter[tuple[str, str]] = Counter()
+    seen: set[tuple[str, str]] = set()
     for row in _signals(processed):
         if row["as_of"] not in as_of_dates:
             raise ValueError(f"no date for as_of label {row['as_of']!r}")
+        seen.add((row["as_of"], row["source"]))
         if record := records.get(row["cve"]):
             record["signals"].setdefault(row["as_of"], {})[row["source"]] = row["values"]
             signal_counts[row["as_of"], row["source"]] += 1
+
+    # A source with no rows at a date was not fetched for it (e.g. a stale parse); its
+    # absence would read as "no exploit / no SSVC", so refuse instead.
+    if missing := [(a, s) for a in as_of_dates for s in SIGNAL_SOURCES if (a, s) not in seen]:
+        raise ValueError(f"no signal rows for (as_of, source) {missing}")
 
     for doc in read_jsonl(processed / "references.jsonl.gz"):
         for cve in doc["cves"]:

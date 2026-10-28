@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 class Document(BaseModel):
@@ -29,14 +29,17 @@ class Document(BaseModel):
         return f"{source}:{source_id}"
 
 
-AsOf = Literal["cutoff", "snapshot"]
+# "snapshot", "cutoff" (snapshot - cutoff_days), and earlier cutoffs "cutoff2", "cutoff3", ...
+# (snapshot - k * cutoff_days), used for rolling-origin evaluation.
+AsOf = Annotated[str, StringConstraints(pattern=r"^(snapshot|cutoff([2-9]|[1-9][0-9])?)$")]
 
 
 class CveSignal(BaseModel):
     """A per-CVE signal (EPSS score, SSVC decision, exploit module, ...) at a point in time.
 
-    ``as_of="cutoff"`` values are what was known at the evaluation cutoff date and are the
-    only ones allowed as features in the forward-looking risk evaluation.
+    ``as_of="cutoff"`` (or an earlier ``"cutoffK"``) values are what was known at that
+    cutoff date and are the only ones allowed as features in the forward-looking risk
+    evaluation.
     """
 
     model_config = ConfigDict(frozen=True)

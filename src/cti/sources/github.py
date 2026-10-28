@@ -16,7 +16,9 @@ import tempfile
 from datetime import UTC, date, datetime, time, timedelta
 
 API = "https://api.github.com"
-HISTORY_MARGIN = timedelta(days=60)  # shallow history kept before the requested date
+# Shallow history kept before the requested date, widened on a miss: --shallow-since cuts by
+# commit date, and a merge whose first parent is older than the margin ends the walk early.
+HISTORY_MARGINS = (timedelta(days=60), timedelta(days=365), timedelta(days=1095))
 
 
 def repo_url(repo: str) -> str:
@@ -46,7 +48,16 @@ def head_at(url: str, branch: str, on: date) -> tuple[str, str]:
     if not branch.replace("-", "").replace("_", "").replace("/", "").isalnum():
         raise ValueError(f"suspicious branch name: {branch!r}")
     end = datetime.combine(on, time(23, 59, 59), tzinfo=UTC)
-    since = (end - HISTORY_MARGIN).date().isoformat()
+    for margin in HISTORY_MARGINS:
+        if out := _first_parent_head(url, branch, end, (end - margin).date()):
+            break
+    if not out:
+        raise LookupError(f"no commit on {branch} at or before {on} in {url}")
+    sha, committed = out.split()
+    return sha, committed
+
+
+def _first_parent_head(url: str, branch: str, end: datetime, since: date) -> str:
     with tempfile.TemporaryDirectory() as tmp:
         _git(
             "clone",
@@ -56,11 +67,11 @@ def head_at(url: str, branch: str, on: date) -> tuple[str, str]:
             "--branch",
             branch,
             "--filter=tree:0",
-            f"--shallow-since={since}",
+            f"--shallow-since={since.isoformat()}",
             url,
             tmp,
         )
-        out = _git(
+        return _git(
             "rev-list",
             "-1",
             "--first-parent",
@@ -70,7 +81,3 @@ def head_at(url: str, branch: str, on: date) -> tuple[str, str]:
             branch,
             cwd=tmp,
         )
-    if not out:
-        raise LookupError(f"no commit on {branch} at or before {on} in {url}")
-    sha, committed = out.split()
-    return sha, committed

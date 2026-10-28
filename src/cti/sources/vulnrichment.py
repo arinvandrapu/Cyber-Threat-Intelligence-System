@@ -1,4 +1,4 @@
-"""CISA Vulnrichment SSVC decisions at the cutoff and snapshot dates (CC0).
+"""CISA Vulnrichment SSVC decisions at each cutoff and the snapshot date (CC0).
 
 The repo's per-record timestamps are overwritten when CISA rescores, so the only honest
 point-in-time view is the repo as of a commit. For each date we stream the commit's
@@ -13,10 +13,10 @@ import json
 import tarfile
 from collections.abc import Iterator
 
-from cti.models import AsOf, CveSignal
+from cti.models import CveSignal
 from cti.snapshot import Snapshot
 from cti.sources import github
-from cti.sources.base import FetchContext, Source, gunzip_stream, gz
+from cti.sources.base import FetchContext, Source, as_of_from_name, gunzip_stream, gz
 
 REPO = "cisagov/vulnrichment"
 BRANCH = "develop"
@@ -59,7 +59,7 @@ class VulnrichmentSource(Source):
         return f"{github.API}/repos/{REPO}/commits?sha={BRANCH}&per_page=1"
 
     def fetch(self, ctx: FetchContext) -> None:
-        for as_of, day in (("cutoff", ctx.cutoff_date), ("snapshot", ctx.snapshot_date)):
+        for as_of, day in ctx.as_of_days:
             sha, _ = github.head_at(github.repo_url(REPO), BRANCH, day)
             url = github.archive_url(REPO, sha)
             with ctx.download_to_file(url) as path:
@@ -87,7 +87,7 @@ class VulnrichmentSource(Source):
 
     def parse(self, snapshot: Snapshot) -> Iterator[CveSignal]:
         for entry in snapshot.entries(self.name):
-            as_of: AsOf = "cutoff" if "cutoff" in entry.name else "snapshot"
+            as_of = as_of_from_name(entry.name)
             for line in gunzip_stream(snapshot.read_raw(entry)):
                 row = json.loads(line)
                 cve = row.pop("cve")

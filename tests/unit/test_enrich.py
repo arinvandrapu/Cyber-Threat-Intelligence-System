@@ -91,10 +91,24 @@ def signal(cve, source, as_of, **values):
     return {"cve": cve, "source": source, "as_of": as_of, "values": values}
 
 
-def write_processed(path, rows_by_source):
+FILLER_CVE = "CVE-1999-0001"  # outside the NVD window: shows a source was fetched at a date
+
+
+def write_processed(path, rows_by_source, labels=("cutoff", "snapshot")):
     path.mkdir(parents=True, exist_ok=True)
     for source in ("nvd", "kev", "references", *SIGNAL_SOURCES):
-        (path / f"{source}.jsonl.gz").write_bytes(gzip_bytes(jsonl(rows_by_source.get(source, []))))
+        rows = list(rows_by_source.get(source, []))
+        if source in SIGNAL_SOURCES:
+            rows += [signal(FILLER_CVE, source, label) for label in labels]
+        (path / f"{source}.jsonl.gz").write_bytes(gzip_bytes(jsonl(rows)))
+
+
+def add_date(processed, label, score_date=None):
+    """Signal rows for every source at a new as_of label (EPSS carries the score date)."""
+    for source in SIGNAL_SOURCES:
+        path = processed / f"{source}.jsonl.gz"
+        values = {"score_date": score_date} if source == "epss" and score_date else {}
+        write_jsonl(path, [*read_jsonl(path), signal(FILLER_CVE, source, label, **values)])
 
 
 @pytest.fixture
@@ -194,6 +208,9 @@ def test_join_is_generic_over_as_of_labels(processed, catalog):
     epss.write_bytes(gzip_bytes(jsonl(rows)))
     with pytest.raises(ValueError, match="no date for as_of label"):
         build(processed, catalog, DATES)
+    with pytest.raises(ValueError, match="no signal rows"):  # only EPSS has that date
+        build(processed, catalog, {**DATES, "cutoff-2026-07": "2026-07-29"})
+    add_date(processed, "cutoff-2026-07")
     rows, summary = build(processed, catalog, {**DATES, "cutoff-2026-07": "2026-07-29"})
     [record] = [r for r in rows if r["cve"] == "CVE-2026-9999"]
     assert features_at(record, "cutoff-2026-07") == {"epss": {"epss": 0.5}}
@@ -215,6 +232,8 @@ def data_dir(tmp_path, processed, monkeypatch):
     """A data dir with a snapshot holding only the CWE catalog, and the processed files."""
     snap = Snapshot.create(LocalStorage(tmp_path / "snapshots"), SNAPSHOT)
     snap.write_raw("cwe", "cwec.xml.zip", zip_bytes({"cwec.xml": CWE_XML}))
+    for source in SIGNAL_SOURCES:
+        snap.mark_complete(source)
     target = tmp_path / "processed" / SNAPSHOT
     target.parent.mkdir(parents=True)
     processed.rename(target)
@@ -263,3 +282,37 @@ def test_cli_summary_records_data_hash(data_dir):
     assert (
         summary["cves_sha256"] == hashlib.sha256((out / "cves.jsonl.gz").read_bytes()).hexdigest()
     )
+
+
+def test_cli_enrich_dates_extra_cutoffs_from_data(data_dir):
+    root, processed = data_dir
+    add_date(processed, "cutoff3", "2025-05-04")
+    add_date(processed, "cutoff2", "2025-10-31")
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 0
+    summary = json.loads((root / "enriched" / SNAPSHOT / "cves-summary.json").read_text())
+    assert summary["as_of_dates"] == {
+        "cutoff3": "2025-05-04",
+        "cutoff2": "2025-10-31",
+        "cutoff": CUTOFF,
+        "snapshot": SNAPSHOT,
+    }
+    assert "cutoff3->cutoff2" in summary["kev_positives"]
+
+
+def test_cli_enrich_rejects_extra_cutoff_off_by_a_day(data_dir, capsys):
+    """An EPSS fallback to an earlier day would silently shift the window: refuse it."""
+    _, processed = data_dir
+    add_date(processed, "cutoff2", "2025-10-30")
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 2
+    assert "snapshot cutoff2 is 2025-10-30, but CTI_CUTOFF_DAYS=180 gives 2025-10-31" in (
+        capsys.readouterr().err
+    )
+
+
+def test_cli_enrich_refuses_incomplete_source(data_dir, capsys):
+    root, _ = data_dir
+    snap = Snapshot.open(LocalStorage(root / "snapshots"), SNAPSHOT)
+    snap.manifest.completed.pop("nuclei")
+    snap.save()
+    assert main(["enrich", "--date", SNAPSHOT, "--only", "cves"]) == 2
+    assert "['nuclei'] are incomplete" in capsys.readouterr().err

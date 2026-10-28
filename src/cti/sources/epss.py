@@ -1,4 +1,4 @@
-"""FIRST EPSS scores at the evaluation cutoff and at the snapshot date.
+"""FIRST EPSS scores at each evaluation cutoff and at the snapshot date.
 
 Bulk daily CSVs (``epss_scores-YYYY-MM-DD.csv.gz``). The first line records the EPSS
 model version and score date, which are kept with every signal: the model changed
@@ -14,9 +14,9 @@ from datetime import date, timedelta
 
 import httpx
 
-from cti.models import AsOf, CveSignal
+from cti.models import CveSignal
 from cti.snapshot import Snapshot
-from cti.sources.base import FetchContext, Source, gunzip_stream
+from cti.sources.base import FetchContext, Source, as_of_from_name, gunzip_stream
 
 BASE = "https://epss.empiricalsecurity.com"
 
@@ -36,7 +36,7 @@ class EPSSSource(Source):
         return f"{BASE}/epss_scores-current.csv.gz"
 
     def fetch(self, ctx: FetchContext) -> None:
-        for as_of, day in (("cutoff", ctx.cutoff_date), ("snapshot", ctx.snapshot_date)):
+        for as_of, day in ctx.as_of_days:
             # Today's file may not be published yet; fall back up to 3 days.
             for back in range(4):
                 url = url_for(day - timedelta(days=back))
@@ -51,7 +51,7 @@ class EPSSSource(Source):
 
     def parse(self, snapshot: Snapshot) -> Iterator[CveSignal]:
         for entry in snapshot.entries(self.name):
-            as_of: AsOf = "cutoff" if entry.name.startswith("epss-cutoff") else "snapshot"
+            as_of = as_of_from_name(entry.name)
             text = io.TextIOWrapper(
                 gunzip_stream(snapshot.read_raw(entry)), encoding="utf-8", newline=""
             )

@@ -20,7 +20,9 @@ KEY = "TESTKEY123"
 
 @pytest.fixture
 def settings():
-    return Settings(_env_file=None, contact="test@example.com", abusech_auth_key=KEY)
+    return Settings(
+        _env_file=None, contact="test@example.com", abusech_auth_key=KEY, extra_cutoffs=0
+    )
 
 
 @pytest.fixture

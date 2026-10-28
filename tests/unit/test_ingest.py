@@ -147,3 +147,86 @@ def test_resume_after_crash_before_manifest_save(storage, settings, client):
     [entry] = snap.entries("crashy")
     assert entry.attempt == 2
     assert snap.read_raw(entry) == b"new upstream bytes"
+
+
+class DatedSource(FakeSource):
+    """Writes one file per pinned date, with content that differs on every fetch."""
+
+    name = "dated"
+    fetches = 0
+
+    def fetch(self, ctx):
+        DatedSource.fetches += 1
+        for as_of, _ in ctx.as_of_days:
+            ctx.write(self.name, f"x-{as_of}.gz", f"{as_of}#{self.fetches}".encode(), None)
+
+
+def test_refetch_new_dates_only_keeps_held_files_byte_for_byte(storage, settings, client):
+    run(storage, settings, [DatedSource(settings)], client)
+    day = SNAPSHOT_DAY.isoformat()
+    before = {e.name: e for e in Snapshot.open(storage, day).entries("dated")}
+    wider = settings.model_copy(update={"extra_cutoffs": 2})
+    result = refetch(
+        storage, wider, day, DatedSource(wider), "add cutoffs", client, new_dates_only=True
+    )
+    assert result.ok
+    snap = Snapshot.open(storage, day)
+    after = {e.name: e for e in snap.entries("dated")}
+    assert sorted(after) == sorted(["x-cutoff3.gz", "x-cutoff2.gz", "x-cutoff.gz", "x-snapshot.gz"])
+    for name, entry in before.items():  # carried over, not re-pinned
+        assert after[name].attempt == 2
+        assert (after[name].sha256, after[name].url, after[name].source_version) == (
+            entry.sha256,
+            entry.url,
+            entry.source_version,
+        )
+    assert snap.read_raw(after["x-cutoff2.gz"]) == b"cutoff2#2"
+    assert snap.manifest.refetches[-1].reason == "add cutoffs"
+
+
+def test_refetch_new_dates_only_needs_held_files(storage, settings, client):
+    run(storage, settings, [FakeSource(settings)], client)
+    with pytest.raises(ValueError, match="no earlier files"):
+        refetch(
+            storage,
+            settings,
+            SNAPSHOT_DAY.isoformat(),
+            OtherSource(settings),
+            "x",
+            client,
+            new_dates_only=True,
+        )
+
+
+def test_extra_cutoffs_cannot_be_negative():
+    from pydantic import ValidationError
+
+    from cti.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, extra_cutoffs=-1)
+
+
+def test_refetch_new_dates_only_refuses_undated_source_without_changes(storage, settings, client):
+    run(storage, settings, [FakeSource(settings)], client)
+    day = SNAPSHOT_DAY.isoformat()
+    with pytest.raises(ValueError, match="no as_of label"):
+        refetch(storage, settings, day, FakeSource(settings), "x", client, new_dates_only=True)
+    snap = Snapshot.open(storage, day)
+    assert snap.is_complete("fake") and not snap.manifest.refetches  # nothing changed
+
+
+def test_refetch_new_dates_only_refuses_incomplete_source(storage, settings, client):
+    run(storage, settings, [DatedSource(settings)], client)
+    day = SNAPSHOT_DAY.isoformat()
+    snap = Snapshot.open(storage, day)
+    snap.manifest.completed.pop("dated")
+    snap.save()
+    with pytest.raises(ValueError, match="incomplete"):
+        refetch(storage, settings, day, DatedSource(settings), "x", client, new_dates_only=True)
+    assert not Snapshot.open(storage, day).manifest.refetches
+
+
+def test_cli_new_dates_only_needs_refetch(capsys):
+    assert cli.main(["ingest", "--new-dates-only"]) == 2
+    assert "--new-dates-only needs --refetch" in capsys.readouterr().err
