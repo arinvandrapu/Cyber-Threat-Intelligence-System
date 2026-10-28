@@ -18,19 +18,20 @@
 | 6a. CWE label provenance | ✅ merged | #21 |
 | 6b. `cti cwe-eval` (CWE classification) | ✅ merged | #22 |
 | CI: cancel superseded PR runs | ✅ merged | #20 |
-| 7a. Extra cutoffs (rolling-origin data) | ✅ fetched 2026-10-28 | this PR |
-| **7b. Risk scoring evaluation** | **⏭ next** | — |
-| 8–9 | not started | — |
+| 7a. Extra cutoffs (rolling-origin data) | ✅ merged | #24, #25 |
+| 7b. Risk scoring evaluation (`cti risk-eval`) | ✅ PR open | #26 |
+| **8. Dashboard** | **⏭ next** | — |
+| 9 | not started | — |
 
-`main` is green (358 offline tests; 376 on this branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+`main` is green (388 offline tests on the 7b branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
 1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`.
-2. Start Phase 7b: plan + plan audit, then a committed pre-registration config before
-   any test score. The three Phase 7 design questions are decided (see Phase 7a result).
+2. Start Phase 8 (dashboard) with the staged pipeline. It reads pipeline-exported JSON
+   only; it needs a scoring export (current-snapshot scores + tiers) designed first.
 3. Owner context: may present this project at a MITRE final-round interview. Offer mock
-   Q&A on the ATT&CK and CWE results when asked.
+   Q&A on the ATT&CK, CWE and risk results when asked.
 
 ## Phase 3 result (2026-10-26)
 
@@ -106,14 +107,21 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
   present; remote manifest SHA-256 matches local (63 objects, ≈335 MB). `cti` key is
   **Inactive** again.
 
-## Pick up here: Phase 7b (risk scoring evaluation)
+## Phase 7b result (2026-10-28)
 
-- Plan first (staged pipeline, plan audit), then **pre-register** a config (folds,
-  features, model, metrics, baselines, tier rule) before any test score, like
-  `nlp/cwe_config.py`. Features only via `features_at(record, <label>)`.
-- Owner context: may present this project at a MITRE final-round interview.
+- Pre-registered `nlp/risk_config.py` (`c528d07`, pushed before scoring) after external +
+  internal due diligence and a plan audit (12 required changes applied). Implementation
+  `1ff8527` (clean tree) after an implementation audit; run once, ≈30 s.
+- Pooled over 3 folds (68 positives), hits in top 100: logistic 6, boosting 8, EPSS 2.
+  Decision rule met: +4 (CI +1 to +8). Not at 1% (+1, CI −6 to +9); EPSS higher mean AP.
+  Tiers monotonic (critical 2.6%). No-EPSS ablation catches 9. Details:
+  `vault/risk-eval.md`, README section.
 
-ke Phase 6.
+## Pick up here: Phase 8 (dashboard)
+
+- Next.js static export on 127.0.0.1 reading pipeline-exported JSON (`tasks/todo.md`).
+  First design a `cti export` step: current-snapshot risk scores + tiers (model refit on
+  all windows; EPSS v2026.06.15 at the snapshot differs: disclose), IOCs, eval summaries.
 - Owner context: may present this project at a MITRE final-round interview.
 
 ## Local state that is NOT in git
@@ -142,9 +150,8 @@ git checkout main && git pull
 
 ## Open items for later phases
 
-- Phase 7b: rolling-origin folds over `cutoff4..cutoff`; EPSS percentile per fold (model
-  version differs: v3 at cutoff4); text only as a labelled ablation. Populations differ by
-  fold (NVD window starts 2024-01-01). See `vault/risk-scoring-design.md`.
+- Phase 8: scoring the live snapshot uses EPSS v2026.06.15, unseen in training; tiers are
+  rank fractions, so they transfer, but say so on the dashboard.
 
 ## Working agreements (from the owner)
 

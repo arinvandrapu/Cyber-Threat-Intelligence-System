@@ -30,8 +30,8 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   IDs (alias matching is not yet evaluated).
 - **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
-- *(planned)* **Prioritizes** vulnerabilities with a risk score validated against real-world
-  exploitation, so the top tier is small and meaningful.
+- **Prioritizes** vulnerabilities with a risk score evaluated forward in time against CISA
+  KEV additions, with rank-based tiers whose hit rates fall monotonically.
 - *(planned)* **Presents** the results in a localhost Next.js dashboard and as STIX 2.1 output.
 
 ## Architecture
@@ -51,8 +51,8 @@ flowchart LR
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
 IOC/alias extraction, SecureBERT 2.0 NER and embeddings, graded ATT&CK mapping, and a
-pre-registered CWE classification evaluation are built; risk scoring and the dashboard
-are *planned*.
+pre-registered CWE classification and risk-scoring evaluations are built; the dashboard
+is *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -163,6 +163,54 @@ CVEs. Every choice was committed before any test score existed
 
 Details: [`vault/cwe-classification.md`](vault/cwe-classification.md).
 
+### Forward-looking risk scoring (predicting CISA KEV additions)
+
+Can data known on a given day predict which CVEs CISA will add to its Known Exploited
+Vulnerabilities catalog in the next 180 days? Each CVE is scored only with what was known
+at a cutoff: EPSS that day, CISA's SSVC decision at that day's commit, ExploitDB /
+Metasploit / Nuclei at that day's commit, and age. Four cutoffs 180 days apart give three
+rolling test folds (2025-05-04, 2025-10-31, 2026-04-29), each trained only on earlier
+windows: 231,304 CVE-fold rows, **68 KEV additions**. Population: CVEs published from
+2024-01-01 and not yet in KEV. Every choice, including the decision rule, was committed
+before any test score (`src/cti/nlp/risk_config.py`, commit `c528d07`). From
+`cti risk-eval`:
+
+| Method (3 test folds pooled, 68 positives) | Caught in top 100 per fold | Top 1% per fold | Mean AP |
+|---|---|---|---|
+| Random (expected) | 0.1 | 0.7 | — |
+| CNA CVSS *(snapshot-time, biased; illustration)* | 1.2 | 7.1 | 0.002 |
+| SSVC rule (active > poc > none, then EPSS) | 2 | 14 | 0.009 |
+| EPSS at the cutoff | 2 | 15 | 0.015 |
+| **Logistic regression (pre-registered headline)** | **6** (recall 0.09, 95% CI 0.04–0.18) | 16 | 0.011 |
+| Gradient boosting (challenger) | 8 | 15 | 0.012 |
+
+- **Pre-registered verdict (pooled over the 3 folds): the model beats EPSS at a 100-CVE
+  budget**, +4 hits (paired bootstrap 95% CI +1 to +8). Per fold (2025-05 / 2025-10 /
+  2026-04): logistic 1 / 3 / 2, EPSS 1 / 1 / 0, so the margin comes from two folds.
+  It **doesn't hold at the 1% budget** (+1, CI −6 to +9), and EPSS has the higher mean
+  average precision. The boosting challenger: +6 vs EPSS (CI +1 to +12, secondary).
+- **Most additions aren't predictable from these signals.** Each method's top 1% catches
+  14–16 of the 68 (23 if the logistic and EPSS lists are combined).
+- **Tier hit rates fall monotonically.** Top 0.1% ("critical"): 6 of 230 added to KEV
+  (2.6%, 95% CI 1.2–5.6%; about 90× the overall 0.029% rate); then 0.48%, 0.17%, and
+  0.016% for the rest, as pre-registered.
+- **Exploratory, read after scoring (no CIs):**
+  - EPSS ranked the latest fold poorly (ROC-AUC 0.41). Its 17 additions had a median
+    EPSS percentile of 0.16 (16 scored, 1 unscored).
+  - The largest standardized weights (last fold only) are recency (−0.70), SSVC "total"
+    technical impact (0.64) and EPSS (0.63).
+  - Without EPSS the model catches 9 in the top 100; its mean AP of 0.033 comes mostly
+    from the latest fold (0.072). Without SSVC: 6 in the top 100, 18 in the top 1%.
+  - SecureBERT description text adds nothing at 100 and catches 20 vs 16 at 500, the
+    same when CVEs with "exploited in the wild" wording are dropped (246 test rows, 1
+    positive).
+- **Limits.** 68 positives: one hit is 1.5 points of recall. KEV covers only part of real
+  exploitation and leans to enterprise vendors, so this predicts "what CISA lists". The
+  last window is 177 days (it ends at the catalog's 2026-10-23 release). EPSS v3 at
+  cutoff4 (training only); v4 at every test cutoff.
+
+Details: [`vault/risk-eval.md`](vault/risk-eval.md).
+
 ### SecureBERT 2.0 NER (sanity check)
 
 `cti ner` tags 1,280 reference pages (10 min on CPU). On the rule-generated gold set
@@ -225,6 +273,7 @@ cti probe                       # cheap check that every source is reachable / k
 cti ingest --date 2026-10-25    # the one-time fetch into data/snapshots/<date>/
 cti ingest --date 2026-10-25 --resume                       # continue after a failure
 cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
+cti ingest --date 2026-10-25 --refetch epss --new-dates-only --reason "..."  # add cutoffs
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
 cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
@@ -237,6 +286,7 @@ cti ner-eval --date 2026-10-25      # NER sanity check on the gold set
 cti embed --date 2026-10-25         # bi-encoder embeddings of NVD descriptions (~50 min CPU)
 cti embed --date 2026-10-25 --cwe-id-masked   # re-embed descriptions with literal CWE IDs masked
 cti cwe-eval --date 2026-10-25      # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
+cti risk-eval --date 2026-10-25     # forward-looking KEV prediction, rolling-origin folds (~30 s)
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
