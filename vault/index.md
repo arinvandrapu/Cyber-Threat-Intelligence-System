@@ -28,6 +28,10 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   127.0.0.1 with strict CSP, seven views incl. three relationship graphs
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
+- [[threat-layer]] — Phase 10a (planned): family categories (MISP galaxies, STIX
+  malware types), CVE links, priority heuristic; abuse.ch §7.3 no-AI-training rule
+- [[attack-mapping-v2]] — Phase 10b (planned): fresh CTID `attack_to_cve` test,
+  population-shift framing, shared-logistic combiner, CAPEC and CVSS data gaps
 - [[cwe-classification]] — Phase 6 main eval: CWE label provenance (nvd/cna/adp), mapping
   Usage, label-source shift and name leakage that shape the evaluation; 6b `cti cwe-eval`
   pre-registered in `nlp/cwe_config.py`

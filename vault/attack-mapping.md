@@ -75,4 +75,4 @@ Design context: [[nlp-design]]; feature rules: [[risk-scoring-design]].
 - Test split above is burned: a new method needs newer CTID mappings or dev-only CV.
 - ATT&CK v20 has **0 of 706** techniques with CAPEC refs; CWE 4.20 has 1,212
   `Related_Attack_Pattern` links. A CWE → CAPEC → ATT&CK chain needs pinned CAPEC XML.
-- Plan (CVSS-rule baseline, CAPEC chain, combiner): `tasks/future-extensions.md` E1.
+- Plan of record: Phase 10b, [[attack-mapping-v2]].

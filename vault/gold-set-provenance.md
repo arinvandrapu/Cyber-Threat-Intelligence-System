@@ -28,6 +28,8 @@ is reused from an earlier prototype **as-is**, by owner decision.
   documents the circularity.
 - Sources: nvd_ref 50, mitre_attack 50, threatfox 50, phishtank 49, ransomwatch 46,
   exploitdb 45, cisa_kev 9. 27% of entity spans came from record metadata, not text.
+- abuse.ch §7.3 forbids training models on ThreatFox data; `cwe_eval.gold_check()` fits
+  on all 299 incl. 50 ThreatFox rows. Fix (drop them) is Phase 10-0 ([[threat-layer]]).
 - Labeling rules may **not** read the source feed.
 - Phase 6 (2026-10-27): primary label = source for 298/299 docs, so the main Phase 6
   evaluation moved to CWE classification ([[cwe-classification]]); the gold set keeps one row.

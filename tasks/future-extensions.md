@@ -1,5 +1,9 @@
 # Future Extensions (after Phase 8 ships)
 
+> E1 and E2 are now **Phase 10** in [todo.md](todo.md) (approved 2026-10-28), which
+> supersedes the details below. E2 step 3 is dropped: abuse.ch terms §7.3 forbid
+> training AI models on ThreatFox data. E3 follows Phase 10, before Phase 9.
+
 Not started. Pick up only once the dashboard is merged and the current state is stable.
 Each extension gets its own pre-registration commit before any test score, like 6b and 7b.
 
@@ -71,3 +75,12 @@ Facts from the 2026-10-26 snapshot (`raw/threatfox/*/full.csv.zip`, already pars
 - [ ] Split by time (`first_seen_utc`); group by family so no family is in both train and
       test; baselines: majority, keyword rule, TF-IDF + LR; pre-register first.
 - [ ] Licence: abuse.ch content is aggregates-only; report text stays local, never committed.
+
+## E3. Dashboard clarity (owner feedback 2026-10-28)
+
+- [ ] **CVE common name.** The CVE detail shows context but nothing says what the CVE is.
+      Show a one-line name, not a summary: KEV `vulnerabilityName` when present (e.g.
+      "Apache Log4j2 Remote Code Execution Vulnerability"), otherwise a name built from
+      data we hold (CWE name + vendor/product), labelled as derived. Exported by `cti export`.
+- [ ] **Overview page.** Add a description for every tab: what it is, why it's there, and
+      how it's calculated, in plain language. Numbers quoted must come from the export.

@@ -243,6 +243,46 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         `docs/architecture.md`, `docs/decisions.md` (stack change); handoff. Phase 9
         note: screenshots from real data with the abuse.ch panel cropped (no
         abuse.ch-derived content committed); the fixture is for CI only.
+- [ ] **10. Threats + better ATT&CK mapping** *(planned 2026-10-28, owner-approved; runs
+      before Phase 9)* — the system classifies bugs (CWE) but not threats, and the
+      CVE → ATT&CK mapping is weak. Owner decisions: a fresh held-out mapping test;
+      threats are categorised, linked and prioritised, and explain CVEs but **do not feed
+      the CVE risk score**. Notes: [[threat-layer]], [[attack-mapping-v2]]. One PR each:
+  - [ ] **10-0. Licence fix + reference data** — abuse.ch terms §7.3 (2026-10-21) forbid
+        training AI models on ThreatFox/URLhaus data: drop abuse.ch rows from
+        `cwe_eval.gold_check()` (`nlp/cwe_eval.py:453`), re-run the gold row, add a guard
+        test. Commit CTID `attack_to_cve` CSV, CAPEC 3.9 XML, MISP galaxy subset (SHA-256
+        pinned in code, licence/NOTICE). NVD 2002–2022 yearly feeds into a separate
+        gitignored `data/reference-snapshots/<date>/` (existing `Snapshot` manifest,
+        `.meta` SHA check, never uploaded; size checked first).
+  - [ ] **10a. Threat layer** — ThreatFox parse keeps `fk_malware` (logged re-parse);
+        ATT&CK `uses` read from the raw bundle (like `revocations_from_bundle`).
+        `threats/catalog.py`: family → STIX `malware-type-ov` categories (+ infostealer,
+        loader, c2-framework, web-skimmer, fake-update) from MISP galaxies; family →
+        ATT&CK software (`alias_index()`) → techniques/tactics. Owner labels the top 34
+        families **blind**, then compares (per-category agreement with CIs). CVE ↔ threat
+        links with provenance (ThreatFox CVE tags; KEV ransomware use = category only;
+        malware alias mentions), precision from a blind review sample. Threat priority =
+        pre-declared heuristic (linked high-tier CVEs, ransomware, 30-day IOC growth, then
+        volume) with a "why" per row, labelled unvalidated. `cti threats`, deterministic.
+  - [ ] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +
+        git state in output) before any test score; disclose that test label counts were
+        seen while planning. Train: all 419 CTID KEV CVEs. Test: CTID `attack_to_cve`
+        (839 CVEs, 2008–2020) minus 27 overlaps; exploitation primary (~195), impact
+        types secondary and flagged circular; a **CVE-disjoint, non-KEV population-shift
+        test, not a time split**. Unfiltered NVD parse path; keep CVSS v2
+        `userInteractionRequired`/`obtain*Privilege`. Methods (`nlp/attack_eval2.py`,
+        old `attack-eval` untouched): majority; prior+biencoder (β by CV on train);
+        **combiner** = one shared logistic over (CVE, technique) pairs (log prior,
+        bi-encoder, TF-IDF, CAPEC path count, CVSS-flow rule; CV grouped by CVE);
+        capec-chain row; methodology-replay reference row (not a baseline). Decision:
+        combiner vs prior+biencoder, paired bootstrap hit@5 (MDE ≈ 0.08–0.10). Also hit@1,
+        MRR, per technique, per CVSS version, near-duplicate check.
+  - [ ] **10c. Dashboard** — `threats.json` (schema, types, fixture, vite/smoke lists);
+        Threats view (categories, priority table with "why", family detail); "Linked
+        threats" in the CVE detail; predicted techniques only if the combiner passes,
+        labelled "predicted". abuse.ch values stay aggregates.
+
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
       limitations section, final README.
@@ -250,8 +290,8 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
 Stretch (only if time allows): relation extraction,
 detection-rule generation, a small hand-labeled evaluation set.
 
-Post-Phase-9 extensions (not started): better CVE → ATT&CK mapping (E1) and ThreatFox
-threat categories (E2), in [future-extensions.md](future-extensions.md).
+After Phase 10, before Phase 9 screenshots: dashboard clarity (E3: CVE name, Overview tab descriptions) in
+[future-extensions.md](future-extensions.md).
 
 ## Review
 
