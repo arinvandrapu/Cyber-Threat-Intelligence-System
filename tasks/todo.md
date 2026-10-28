@@ -133,7 +133,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         changes applied), config committed (`nlp/risk_config.py`) before any test score,
         then `cti risk-eval` + tests + implementation audit, run, document. See
         `vault/risk-eval.md`.
-- [ ] **8. Dashboard** — local, read-only dashboard over pipeline-exported JSON; 4 views
+- [x] **8. Dashboard** *(2026-10-28: PR 1 #27, PR 2)* — local, read-only dashboard over pipeline-exported JSON; 4 views
       (overview, prioritized CVEs, IOCs, evaluation); defanged IOCs; no hardcoded metrics.
       *Stack changed 2026-10-28 (owner approved): Vite + React instead of a Next.js static
       export, because Next's inline scripts rule out a strict CSP without a post-build
@@ -198,7 +198,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         `Permissions-Policy` (clipboard-write=self, rest off), `no-store` on `/data/`.
         Missing export/dist → clear "run `cti export` / `npm run build`" error; `--date`
         validated, default newest export.
-  - [ ] **8c. `web/`** — Vite 8.3.4, React/ReactDOM 19.3.1, TypeScript 7.0.2,
+  - [x] **8c. `web/`** *(2026-10-28, PR 2)* — Vite 8.3.4, React/ReactDOM 19.3.1, TypeScript 7.0.2,
         @vitejs/plugin-react 6.1.2 (exact pins, all ≥14 days old); no UI kit, chart or
         table library, no router (hash routes), system fonts, no remote resources, no
         favicon fetch. `.npmrc`: `save-exact=true`, `ignore-scripts=true`,
@@ -226,7 +226,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
            ATT&CK/CWE/IOC/NER headlines, limitations.
         Graphs are hand-rolled SVG with deterministic layouts computed in the export or
         the client (layered/radial), no graph library.
-  - [ ] **8d. Tests + CI** — pytest: export (synthetic records → schema-valid,
+  - [x] **8d. Tests + CI** *(2026-10-28)* — pytest: export (synthetic records → schema-valid,
         deterministic, defang refusal per type, no snapshot labels, refit uses only
         cutoff windows, config-SHA guard), `assign_tiers` parity, serve (bind refusal,
         Host check, headers on errors, traversal/encoded/symlink, 404/405, HEAD).
@@ -238,7 +238,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         `npm ci`, `npm audit signatures`, `npm audit --audit-level=high`, `tsc
         --noEmit`, `vite build` against the fixture, checks. Drop stale `.next/`/`out/`
         from `.gitignore`.
-  - [ ] **8e. Docs** — README dashboard section + run commands + skills; vault
+  - [x] **8e. Docs** *(2026-10-28)* — README dashboard section + run commands + skills; vault
         `dashboard.md` (+ index, code-layout, risk-eval refactor note);
         `docs/architecture.md`, `docs/decisions.md` (stack change); handoff. Phase 9
         note: screenshots from real data with the abuse.ch panel cropped (no

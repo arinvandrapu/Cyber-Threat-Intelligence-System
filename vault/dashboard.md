@@ -2,10 +2,10 @@
 tags: [dashboard, design, security, phase-8]
 ---
 
-# Dashboard (Phase 8, planned)
+# Dashboard (Phase 8)
 
-Status 2026-10-28: design canvas made (private artifact "CTI Dashboard Design"); PR 1
-(`cti export`, `cti serve`) built; PR 2 (`web/`) next. Plan of record: `tasks/todo.md` § 8.
+Status 2026-10-28: PR 1 (`cti export`, `cti serve`, #27) merged; PR 2 (`web/`) built, see
+[[dashboard-web]]. Design: private artifact "CTI Dashboard Design". Plan: `tasks/todo.md` § 8.
 
 ## Stack decision (owner approved 2026-10-28)
 
@@ -13,7 +13,8 @@ Status 2026-10-28: design canvas made (private artifact "CTI Dashboard Design");
   inline `self.__next_f.push` scripts in every page: a strict CSP would need
   `'unsafe-inline'` or a post-build hashing step. Vite emits only external module
   scripts, so `script-src 'self'` works as is; about half the npm packages.
-- Pins ≥14 days old: vite 8.3.4, react 19.3.1, typescript 7.0.2, plugin-react 6.1.2.
+- Pins ≥14 days old: vite 8.3.4, react 19.3.0 (19.3.1 was hours short; its fix is RSC-only),
+  typescript 7.0.2, plugin-react 6.1.2.
   `.npmrc`: `save-exact`, `ignore-scripts`, `min-release-age=14`.
 - No UI kit, chart, table or graph library: plain CSS + hand-rolled SVG.
 

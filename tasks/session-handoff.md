@@ -20,11 +20,11 @@
 | CI: cancel superseded PR runs | ✅ merged | #20 |
 | 7a. Extra cutoffs (rolling-origin data) | ✅ merged | #24, #25 |
 | 7b. Risk scoring evaluation (`cti risk-eval`) | ✅ merged | #26 |
-| 8 PR 1. `cti export` + `cti serve` | ✅ PR open | — |
-| **8 PR 2. Dashboard UI (`web/`)** | **⏭ next** | — |
-| 9 | not started | — |
+| 8 PR 1. `cti export` + `cti serve` | ✅ merged | #27 |
+| 8 PR 2. Dashboard UI (`web/`) | ✅ PR open | — |
+| **9. Security deliverables + polish** | **⏭ next** | — |
 
-`main` is green (446 offline tests on the Phase 8 PR 1 branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+`main` is green (offline tests on the Phase 8 PR 2 branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
@@ -118,16 +118,13 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
   Tiers monotonic (critical 2.6%). No-EPSS ablation catches 9. Details:
   `vault/risk-eval.md`, README section.
 
-## Pick up here: Phase 8 PR 2 (dashboard UI)
+## Pick up here: Phase 9 (security deliverables + polish)
 
-- Stack changed to Vite + React (owner approved 2026-10-28; `docs/decisions.md` §11).
-  Design: private canvas "CTI Dashboard Design" (dark, black surfaces, pink→cherry tier
-  ramp, KEV dots orange, brand "CTI Console"); 7 views listed in `tasks/todo.md` 8c and
-  `vault/dashboard.md`.
-- PR 1 done: `cti export --date 2026-10-26` (≈9 s) → `data/export/2026-10-26/`;
-  `cti serve` serves `web/dist` + the export on 127.0.0.1:8000.
-- PR 2: `web/` (pins in 8c), synthetic fixture in `web/fixtures/` validated against
-  `dashboard/schema.py`, `check.mjs`, CI `web` job, README dashboard section.
+- Dashboard done: `cti export --date 2026-10-26`, `(cd web && npm ci && npm run build)`,
+  `cti serve` → http://127.0.0.1:8000/. Fixture: `cti serve --export-dir web/fixtures`.
+  Notes: `vault/dashboard.md`, `vault/dashboard-web.md`.
+- Phase 9 (`tasks/todo.md`): STRIDE threat model, STIX 2.1 export, sample intel report,
+  SBOM, screenshots (real data, abuse.ch panel cropped), limitations, final README.
 - Owner context: may present this project at a MITRE final-round interview.
 
 ## Local state that is NOT in git
@@ -139,6 +136,7 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 | **Snapshot, parsed, enriched data** | `data/snapshots/`, `data/processed/`, `data/enriched/` (all `2026-10-26`) | working copy; raw also in S3; parsed/enriched regenerable via `cti parse` / `cti enrich`. **Don't delete `data/`.** |
 | Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev,enrich,ml]'` to rebuild |
 | **Extracted + eval outputs** | `data/extracted/2026-10-26/` (iocs, aliases, entities, `nvd-embeddings.npy` ≈259 MB, masked subset), `data/eval/2026-10-26/` (extract-, attack-, ner-, cwe-eval JSON) | regenerable; `cti embed` takes ≈47 min, so keep the `.npy` |
+| Dashboard export + build | `data/export/2026-10-26/` (`risk.json` 7.3 MB), `web/node_modules/`, `web/dist/` | regenerable: `cti export` (~9 s), `cd web && npm ci && npm run build` |
 | SecureBERT env + models | `.venv-nlp/` (`requirements-nlp.lock`); weights in `~/.cache/huggingface/hub/` (pinned; `cti models verify`) | rebuild: `python3 -m venv .venv-nlp && .venv-nlp/bin/pip install -c requirements-nlp.lock -e '.[dev,enrich,ml,nlp]'` |
 | AWS CLI | `default` = owner's admin IAM user, us-east-1; `cti` = pipeline user | `cti` key in `~/.aws/credentials`, **Inactive** |
 
