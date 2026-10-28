@@ -27,8 +27,9 @@ Why: the system classified bugs ([[cwe-classification]]), not threats.
 - abuse.ch terms (updated 2026-10-21) forbid using ThreatFox/URLhaus data to train or
   improve AI models without Spamhaus consent. Only Feodo/SSLBL/YARAify are CC0.
 - Allowed here: counting, aggregates, lookup lists (the alias index, [[ioc-extraction]]).
-- Found 2026-10-28: `cwe_eval.gold_check()` fits TF-IDF + LR on the gold set, which holds
-  50 ThreatFox rows ([[gold-set-provenance]]). Fix scheduled as Phase 10-0.
+- Found and fixed 2026-10-28: `cwe_eval.gold_check()` fitted TF-IDF + LR on the gold set,
+  incl. 50 ThreatFox rows ([[gold-set-provenance]]). Now filtered by `gold.trainable()`;
+  `tests/unit/test_licence_guard.py` blocks new feed readers and unfiltered gold fits.
 - Dropped: a classifier over ThreatFox report URLs (it would train on their data).
 
 ## ThreatFox facts (2026-10-26 snapshot)

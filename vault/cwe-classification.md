@@ -74,4 +74,7 @@ Label chain NVD > CNA > CISA-ADP (other ADPs not used).
   views, deprecated IDs), which removes 133 / 29 / 89 CVEs whose only CWEs are Prohibited
   (verified), and moves 5 to a later source in the chain. Name-present shares match to
   within 0.1 point.
-- Gold row (circular): source-only 0.997 = TF-IDF 0.997 = the label-equals-source share.
+- Gold row (circular), on 249 docs (50 ThreatFox dropped, abuse.ch §7.3): source-only
+  0.996 = TF-IDF 0.996 = the label-equals-source share (was 0.997 on all 299).
+- TF-IDF runs are not bit-identical: `saga` has no `random_state`. Re-run 2026-10-28: ±0.002
+  at 4 d.p.; every published (rounded) number and the chosen C unchanged. Seed = config deviation.

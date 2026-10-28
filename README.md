@@ -160,8 +160,9 @@ CVEs. Every choice was committed before any test score existed
 - **How to read the metrics.** Macro-F1 excludes "other"; top-1/top-5 count a correct
   "other" (8.8% of test) as a hit. Intervals are percentile bootstraps over CVEs.
 - **The gold set is circular.** On the rule-generated gold set, predicting from the
-  source feed alone scores 0.997, the same as TF-IDF, because its labels were generated
-  from the source.
+  source feed alone scores 0.996, the same as TF-IDF, because its labels were generated
+  from the source. Its 50 ThreatFox documents are left out, because abuse.ch's terms
+  forbid training models on their data.
 
 Details: [`vault/cwe-classification.md`](vault/cwe-classification.md).
 
