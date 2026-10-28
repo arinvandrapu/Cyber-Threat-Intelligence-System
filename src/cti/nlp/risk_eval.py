@@ -289,13 +289,19 @@ def paired_bootstrap(
     }
 
 
+def assign_tiers(scores: np.ndarray) -> np.ndarray:
+    """Tier name per CVE from its rank fraction (best first; ties share their average rank)."""
+    r = ranks(scores) / len(scores)
+    assigned = np.full(len(r), cfg.TIERS[-1][0], dtype=object)
+    for name, cut in reversed(cfg.TIERS):
+        assigned[r <= cut] = name
+    return assigned
+
+
 def tiers(scores: dict[str, np.ndarray], y: dict[str, np.ndarray]) -> dict:
     counts = {name: [0, 0] for name, _ in cfg.TIERS}
     for f in y:
-        r = ranks(scores[f]) / len(y[f])
-        assigned = np.full(len(r), cfg.TIERS[-1][0], dtype=object)
-        for name, cut in reversed(cfg.TIERS):
-            assigned[r <= cut] = name
+        assigned = assign_tiers(scores[f])
         for name, _ in cfg.TIERS:
             mask = assigned == name
             counts[name][0] += int(mask.sum())

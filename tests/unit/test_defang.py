@@ -10,11 +10,22 @@ from cti.defang import defang_host, defang_ip, defang_url, refang
         ("http://203.0.113.7:8080/x", "hxxp://203[.]0[.]113[.]7:8080/x"),
         ("HTTP://Evil.com", "hxxp://Evil[.]com"),
         ("evil.com/path", "evil[.]com/path"),
+        ("ftp://user:pw@files.example.com/x", "fxp://user:pw@files[.]example[.]com/x"),
+        ("SFTP://files.example", "sfxp://files[.]example"),
     ],
 )
 def test_defang_url(url, expected):
     assert defang_url(url) == expected
     assert refang(defang_url(url)).lower() == url.lower()
+
+
+def test_defang_scheme_is_idempotent():
+    from cti.defang import defang_scheme
+
+    for url in ("https://a.example", "ftp://a.example", "sftp://a.example"):
+        once = defang_scheme(url)
+        assert defang_scheme(once) == once != url
+    assert defang_scheme("hxxps://a[.]example") == "hxxps://a[.]example"
 
 
 def test_defang_ip_and_host():

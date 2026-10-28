@@ -4,8 +4,8 @@ How the Cyber Threat Intelligence System is put together: what runs where, how d
 moves, and where it is stored. The reasoning behind each choice is in
 [decisions.md](decisions.md).
 
-> Phases 0–3 are built (sources, scraper, gold set, snapshot, S3 upload). Stages marked
-> *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
+> Phases 0–7 are built (ingest through the risk evaluation); Phase 8 (dashboard) is in
+> progress. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
 
 ## Overview
 
@@ -19,8 +19,8 @@ flowchart LR
         PROC[(Parsed records<br/>data/processed/DATE/)]
         ENR[(Per-CVE join · cleaned pages<br/>data/enriched/DATE/)]
         EXT[(Regex IOCs · aliases<br/>data/extracted/DATE/)]
-        DOWN[SecureBERT NER · embeddings · ATT&CK<br/>→ Risk scoring planned]
-        OUT[Exports JSON · STIX 2.1<br/>localhost dashboard<br/>planned]
+        DOWN[SecureBERT NER · embeddings · ATT&CK<br/>CWE + risk evaluations]
+        OUT[cti export JSON → cti serve<br/>dashboard on 127.0.0.1<br/>STIX 2.1 planned]
     end
     S3[(Private S3 bucket<br/>write-once archive)]
 
@@ -52,8 +52,11 @@ Three properties shape everything:
 | ATT&CK grading | `cti attack-eval` → `nlp/attack_eval.py` | no | CVE text → ranked ATT&CK techniques, graded on MITRE CTID's KEV mappings (pinned copy in `data/reference/ctid/`); majority, TF-IDF, SecureBERT bi-encoder, and label prior + similarity |
 | NLP | `cti models` / `ner` / `ner-eval` / `embed` → `nlp/models.py`, `ner.py`, `embed.py`, `semantic.py` | `models fetch` only (once) | SecureBERT 2.0 on CPU: NER over reference pages (entities linked to ATT&CK/ThreatFox names), bi-encoder embeddings of every NVD description with a KEV-language flag. Models pinned by commit and weight SHA-256, loaded offline |
 | Classify + evaluate | `cti cwe-eval` → `nlp/cwe_config.py`, `nlp/cwe_eval.py` | no | NVD descriptions → 118 CWE classes (human labels with assigner kept), time split, pre-registered choices; majority, TF-IDF + LR, SecureBERT embeddings + LR, nearest centroid; plus one circular gold-set row |
-| Risk scoring *(planned)* | Phase 7 | no | scikit-learn model, forward-looking KEV evaluation |
-| Present *(planned)* | Phases 8–9 | no | Static Next.js dashboard on 127.0.0.1, STIX 2.1 export |
+| Risk evaluation | `cti risk-eval` → `nlp/risk_config.py`, `nlp/risk_eval.py` | no | Pre-registered rolling-origin KEV prediction: logistic model vs EPSS, SSVC and CVSS baselines, rank-based tiers |
+| Export | `cti export` → `dashboard/export.py`, `dashboard/schema.py` | no | The pre-registered model refit on all labelled windows ranks the snapshot; defanged IOCs, feed aggregates, CWE/ATT&CK/shared-host graphs, evaluation summaries → schema-validated JSON in `data/export/<date>/` |
+| Serve | `cti serve` → `dashboard/serve.py` | loopback only | Built dashboard + export over HTTP on 127.0.0.1: exact-match file allowlist, Host-header check, strict CSP and security headers |
+| Dashboard *(in progress)* | `web/` (Phase 8) | no | Vite + React UI over the exported JSON |
+| STIX *(planned)* | Phase 9 | no | STIX 2.1 export |
 
 Every source module has two halves: `fetch(ctx)` writes raw bytes to the snapshot
 (network), and `parse(snapshot)` turns them into records (offline). A parser bug is fixed

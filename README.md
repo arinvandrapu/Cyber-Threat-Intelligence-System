@@ -32,7 +32,10 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - **Prioritizes** vulnerabilities with a risk score evaluated forward in time against CISA
   KEV additions, with rank-based tiers whose hit rates fall monotonically.
-- *(planned)* **Presents** the results in a localhost Next.js dashboard and as STIX 2.1 output.
+- **Presents** the results locally *(in progress)*: `cti export` writes validated JSON
+  (current-snapshot risk ranking, defanged IOCs, relationship graphs, evaluation
+  summaries) and `cti serve` serves a read-only dashboard on 127.0.0.1 with a strict
+  Content-Security-Policy. STIX 2.1 output is *planned*.
 
 ## Architecture
 
@@ -51,8 +54,8 @@ flowchart LR
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
 IOC/alias extraction, SecureBERT 2.0 NER and embeddings, graded ATT&CK mapping, and a
-pre-registered CWE classification and risk-scoring evaluations are built; the dashboard
-is *planned*.
+pre-registered CWE classification and risk-scoring evaluations, and the dashboard's data
+export and local server are built; the dashboard UI is *in progress*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -230,7 +233,8 @@ See [`vault/nlp-design.md`](vault/nlp-design.md).
 | Cloud security | Private, encrypted, TLS-only storage; cost guardrails | AWS S3, IAM, AWS Budgets |
 | NLP / ML | Security-domain NER and embeddings, supervised-prior + embedding ranking, baselines, paired bootstrap evaluation, leakage control, boilerplate removal on untrusted HTML | SecureBERT 2.0 (ModernBERT), PyTorch, Hugging Face Transformers, scikit-learn, NumPy, trafilatura, lxml |
 | ML supply chain | Model pinning by commit and weight hash, safetensors only, no remote code, offline inference | Hugging Face Hub, safetensors |
-| Visualization | Analyst dashboard | Next.js, TypeScript, Tailwind CSS |
+| Visualization | Analyst dashboard, relationship graphs, honest uncertainty display | Vite, React, TypeScript, hand-rolled SVG |
+| Web security | Strict CSP sent as HTTP headers, DNS-rebinding defense, allowlist static serving, supply-chain hygiene | Python stdlib `http.server`, npm lockfile + signature audit |
 
 ## Design principles
 
@@ -287,6 +291,8 @@ cti embed --date 2026-10-25         # bi-encoder embeddings of NVD descriptions 
 cti embed --date 2026-10-25 --cwe-id-masked   # re-embed descriptions with literal CWE IDs masked
 cti cwe-eval --date 2026-10-25      # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
 cti risk-eval --date 2026-10-25     # forward-looking KEV prediction, rolling-origin folds (~30 s)
+cti export --date 2026-10-25        # dashboard JSON into data/export/<date>/ (~10 s)
+cti serve                           # dashboard at http://127.0.0.1:8000/ (local only)
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -314,7 +320,9 @@ src/cti/
   nlp/               regex IOC extraction, alias normalizer, extraction evaluation,
                      ATT&CK technique ranking graded on MITRE CTID mappings,
                      pinned SecureBERT 2.0 models (NER, bi-encoder embeddings)
-  defang.py          make IOCs non-clickable (hxxp, [.]) and undo common defang forms
+  dashboard/         `cti export` (schema-validated dashboard JSON) and `cti serve`
+                     (allowlist static server on 127.0.0.1, strict security headers)
+  defang.py          make IOCs non-clickable (hxxp, fxp, [.]) and undo common defang forms
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set
 tests/unit/          offline unit tests

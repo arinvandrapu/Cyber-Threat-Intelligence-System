@@ -19,11 +19,12 @@
 | 6b. `cti cwe-eval` (CWE classification) | ✅ merged | #22 |
 | CI: cancel superseded PR runs | ✅ merged | #20 |
 | 7a. Extra cutoffs (rolling-origin data) | ✅ merged | #24, #25 |
-| 7b. Risk scoring evaluation (`cti risk-eval`) | ✅ PR open | #26 |
-| **8. Dashboard** | **⏭ next** | — |
+| 7b. Risk scoring evaluation (`cti risk-eval`) | ✅ merged | #26 |
+| 8 PR 1. `cti export` + `cti serve` | ✅ PR open | — |
+| **8 PR 2. Dashboard UI (`web/`)** | **⏭ next** | — |
 | 9 | not started | — |
 
-`main` is green (388 offline tests on the 7b branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+`main` is green (446 offline tests on the Phase 8 PR 1 branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
@@ -117,11 +118,16 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
   Tiers monotonic (critical 2.6%). No-EPSS ablation catches 9. Details:
   `vault/risk-eval.md`, README section.
 
-## Pick up here: Phase 8 (dashboard)
+## Pick up here: Phase 8 PR 2 (dashboard UI)
 
-- Next.js static export on 127.0.0.1 reading pipeline-exported JSON (`tasks/todo.md`).
-  First design a `cti export` step: current-snapshot risk scores + tiers (model refit on
-  all windows; EPSS v2026.06.15 at the snapshot differs: disclose), IOCs, eval summaries.
+- Stack changed to Vite + React (owner approved 2026-10-28; `docs/decisions.md` §11).
+  Design: private canvas "CTI Dashboard Design" (dark, black surfaces, pink→cherry tier
+  ramp, KEV dots orange, brand "CTI Console"); 7 views listed in `tasks/todo.md` 8c and
+  `vault/dashboard.md`.
+- PR 1 done: `cti export --date 2026-10-26` (≈9 s) → `data/export/2026-10-26/`;
+  `cti serve` serves `web/dist` + the export on 127.0.0.1:8000.
+- PR 2: `web/` (pins in 8c), synthetic fixture in `web/fixtures/` validated against
+  `dashboard/schema.py`, `check.mjs`, CI `web` job, README dashboard section.
 - Owner context: may present this project at a MITRE final-round interview.
 
 ## Local state that is NOT in git

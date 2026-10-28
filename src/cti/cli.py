@@ -412,12 +412,12 @@ def cmd_cwe_eval(args, settings: Settings) -> int:
     return 0
 
 
-def _git_state() -> dict:
-    """The checked-out commit and whether tracked files differ from it (provenance)."""
+def _git_state(here: Path | None = None) -> dict:
+    """The checked-out commit and whether tracked files under src/ differ from it."""
     import shutil
     import subprocess
 
-    here = Path(__file__).parent
+    here = here or Path(__file__).parent
     if (git := shutil.which("git")) is None:
         return {"commit": None, "dirty": None}
 
@@ -429,7 +429,8 @@ def _git_state() -> dict:
     try:
         return {
             "commit": run("rev-parse", "HEAD"),
-            "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", "src")),
+            # ":(top)" anchors the pathspec at the repo root (git runs from src/cti)
+            "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", ":(top)src")),
         }
     except (OSError, subprocess.SubprocessError):
         return {"commit": None, "dirty": None}
@@ -497,6 +498,51 @@ def cmd_risk_eval(args, settings: Settings) -> int:
     d = result["decision"]
     print(f"  decision: {d['verdict']} {d['logistic_minus_epss_hits@100']}")
     print(f"  wrote {out}")
+    return 0
+
+
+def cmd_export(args, settings: Settings) -> int:
+    if importlib.util.find_spec("sklearn") is None:
+        raise ConfigError("the export refits the risk model: pip install -e '.[ml]'")
+    from cti.dashboard import export
+    from cti.nlp import attack_catalog
+
+    date.fromisoformat(args.date)
+    paths = export.inputs(settings.data_dir, args.date)
+    revoked = attack_catalog.revocations(Snapshot.open(_snapshots(settings), args.date))
+    files = export.run(paths, revoked, _git_state())
+    out = settings.data_dir / "export" / args.date
+    for name, size in export.write(out, files).items():
+        print(f"  wrote {out / name} ({size / 1e6:.1f} MB)")
+    return 0
+
+
+def cmd_serve(args, settings: Settings) -> int:
+    from cti.dashboard import serve
+
+    root = settings.data_dir / "export"
+    if args.date:
+        date.fromisoformat(args.date)
+        day = args.date
+    else:
+        days = (
+            sorted(p.name for p in root.glob("????-??-??") if p.is_dir()) if root.exists() else []
+        )
+        if not days:
+            raise ConfigError("no dashboard export; run `cti export --date <snapshot date>`")
+        day = days[-1]
+    export_dir = root / day
+    if not (export_dir / "meta.json").exists():
+        raise ConfigError(f"no export for {day}; run `cti export --date {day}`")
+    server = serve.make_server(Path(args.dist), export_dir, args.port)
+    host, port = server.server_address[:2]
+    print(f"  serving the {day} export at http://{host}:{port}/ (Ctrl-C to stop)", flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
     return 0
 
 
@@ -712,6 +758,16 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("risk-eval", help="forward-looking KEV prediction (Phase 7b)")
     p.add_argument("--date", required=True)
     p.set_defaults(func=cmd_risk_eval)
+
+    p = sub.add_parser("export", help="dashboard data into data/export/<date>/ (Phase 8)")
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_export)
+
+    p = sub.add_parser("serve", help="the dashboard on 127.0.0.1, read-only")
+    p.add_argument("--date", help="export to serve (default: the newest)")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--dist", default="web/dist", help="built dashboard (npm run build)")
+    p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("models", help="SecureBERT 2.0 models: one-time fetch, or verify")
     p.add_argument("action", choices=("fetch", "verify"))
