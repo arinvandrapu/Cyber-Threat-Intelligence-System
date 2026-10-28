@@ -6,6 +6,7 @@ import argparse
 import gzip
 import hashlib
 import importlib.util
+import json
 import logging
 import sys
 from collections import Counter
@@ -411,6 +412,94 @@ def cmd_cwe_eval(args, settings: Settings) -> int:
     return 0
 
 
+def _git_state() -> dict:
+    """The checked-out commit and whether tracked files differ from it (provenance)."""
+    import shutil
+    import subprocess
+
+    here = Path(__file__).parent
+    if (git := shutil.which("git")) is None:
+        return {"commit": None, "dirty": None}
+
+    def run(*args: str) -> str:
+        return subprocess.run(  # noqa: S603 - fixed argv
+            [git, *args], cwd=here, capture_output=True, text=True, check=True, timeout=10
+        ).stdout.strip()
+
+    try:
+        return {
+            "commit": run("rev-parse", "HEAD"),
+            "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", "src")),
+        }
+    except (OSError, subprocess.SubprocessError):
+        return {"commit": None, "dirty": None}
+
+
+def cmd_risk_eval(args, settings: Settings) -> int:
+    if importlib.util.find_spec("sklearn") is None:
+        raise ConfigError("risk evaluation needs the ml extra: pip install -e '.[ml]'")
+    import numpy as np
+
+    from cti.nlp import risk_config, risk_eval
+
+    date.fromisoformat(args.date)
+    enriched = settings.data_dir / "enriched" / args.date
+    extracted = settings.data_dir / "extracted" / args.date
+    needed = [
+        enriched / "cves.jsonl.gz",
+        enriched / "cves-summary.json",
+        extracted / "nvd-embeddings.npy",
+        extracted / "nvd-embeddings-index.jsonl.gz",
+    ]
+    if missing := [str(p) for p in needed if not p.exists()]:
+        raise ConfigError(f"missing {missing}; run `cti enrich` and `cti embed` first")
+    summary = json.loads((enriched / "cves-summary.json").read_text())
+    if absent := [c for c in risk_config.CUTOFFS if c not in summary["as_of_dates"]]:
+        raise ConfigError(f"enriched data has no {absent}; refetch with extra cutoffs")
+    windows = risk_eval.build_windows(
+        read_jsonl(enriched / "cves.jsonl.gz"), summary["as_of_dates"]
+    )
+    index = list(read_jsonl(extracted / "nvd-embeddings-index.jsonl.gz"))
+    rows = {r["cve"]: r["row"] for r in index}
+    kev_language = {r["cve"] for r in index if r["kev_language"]}
+    full = np.load(extracted / "nvd-embeddings.npy", mmap_mode="r")
+
+    def vectors(cves):
+        return np.asarray(full[[rows[c] for c in cves]], dtype=np.float32)
+
+    pooled_positives = sum(int(windows[f].y.sum()) for f in risk_config.FOLDS)
+    if pooled_positives != 68:  # the number named in the pre-registered headline
+        print(f"  WARNING: {pooled_positives} test positives, pre-registration expects 68")
+    result = risk_eval.run(windows, vectors, kev_language, log=print)
+    import sklearn
+
+    config_path = Path(risk_config.__file__)
+    result["provenance"] = {
+        "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        "git": _git_state(),
+        "versions": {"numpy": np.__version__, "scikit-learn": sklearn.__version__},
+        "test_positives_expected": 68,
+        "test_positives_found": pooled_positives,
+        "cves_sha256": summary.get("cves_sha256"),
+        "embeddings_index_sha256": hashlib.sha256(
+            (extracted / "nvd-embeddings-index.jsonl.gz").read_bytes()
+        ).hexdigest(),
+        "kev_catalog_version": risk_config.KEV_CATALOG_VERSION,
+    }
+    out = settings.data_dir / "eval" / args.date / "risk-eval.json"
+    write_json(out, result)
+    for method, cell in result["methods"].items():
+        pooled = cell["pooled"]
+        print(
+            f"  {method:<10} pooled recall@100 {pooled['recall@100']} "
+            f"{pooled['recall@100_wilson95']}  mean AP {pooled['mean_average_precision']}"
+        )
+    d = result["decision"]
+    print(f"  decision: {d['verdict']} {d['logistic_minus_epss_hits@100']}")
+    print(f"  wrote {out}")
+    return 0
+
+
 def _need_nlp() -> None:
     if (
         importlib.util.find_spec("torch") is None
@@ -619,6 +708,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("cwe-eval", help="classify NVD descriptions into CWEs (Phase 6)")
     p.add_argument("--date", required=True)
     p.set_defaults(func=cmd_cwe_eval)
+
+    p = sub.add_parser("risk-eval", help="forward-looking KEV prediction (Phase 7b)")
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_risk_eval)
 
     p = sub.add_parser("models", help="SecureBERT 2.0 models: one-time fetch, or verify")
     p.add_argument("action", choices=("fetch", "verify"))

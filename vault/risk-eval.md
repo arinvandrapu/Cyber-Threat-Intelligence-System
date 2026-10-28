@@ -7,6 +7,10 @@ tags: [evaluation, risk, pre-registration]
 Status 2026-10-28: **pre-registered** in `src/cti/nlp/risk_config.py` after a plan audit,
 committed before any test fold was scored. Results: not yet run.
 
+- 2026-10-28: `cti risk-eval` implemented (`nlp/risk_eval.py`, CLI, 9 unit tests; suite
+  385 passing). Feasibility on training data only: LR converges (16 iterations), each
+  fit < 1 s. Implementation audit running; real run after its fixes. Not yet merged.
+
 ## Question
 
 Using only what was known at a cutoff, does a model rank the CVEs CISA adds to KEV in the
