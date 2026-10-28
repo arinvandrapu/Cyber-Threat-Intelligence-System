@@ -15,8 +15,9 @@
 | 5a. Regex IOCs + aliases (`cti extract`) | ✅ merged | #17 |
 | 5b-1. ATT&CK grading harness + baselines (`cti attack-eval`) | ✅ merged | #18 |
 | 5b-2. SecureBERT NER + embeddings + prior+bi-encoder | ✅ merged | #19 |
-| 6a. CWE label provenance | ✅ PR open | — |
-| **6b. `cti cwe-eval` (CWE classification)** | **⏭ next** | — |
+| 6a. CWE label provenance | ✅ merged | #21 |
+| 6b. `cti cwe-eval` (CWE classification) | ✅ PR open | — |
+| **7. Risk scoring** | **⏭ next** | — |
 | 6–9 | not started | — |
 
 `main` is green (226 offline tests, CI on Python 3.12 + 3.14). **The one ingest has run** (snapshot `2026-10-26`).
@@ -75,13 +76,20 @@
 - SecureBERT runs in `.venv-nlp/` (`requirements-nlp.lock`); weights are in the HF cache,
   pinned and re-hashed on load (`cti models verify`).
 
-## Pick up here: Phase 6b (`cti cwe-eval`)
+## Phase 6 result (2026-10-27)
 
-- Re-scoped (owner, 2026-10-27): main eval = CWE classification of NVD descriptions; gold
-  set kept as one circular row. Plan in `tasks/todo.md` (6b); facts in
-  `vault/cwe-classification.md`.
-- First commit the pre-registered config (every choice), then run on dev, then test once.
-- Owner context: may present at a MITRE final-round interview; keep choices defensible.
+- `cti cwe-eval` (≈8 min, `ml` extra): headline test name-absent macro-F1 TF-IDF + LR
+  0.394, SecureBERT embeddings + LR 0.265 (paired −0.13), centroid 0.14, majority 0.002.
+  Pre-registered in `nlp/cwe_config.py` (`2e69e14`). Both chosen C values sit at a grid
+  edge (disclosed). Details: `vault/cwe-classification.md`.
+
+## Pick up here: Phase 7 (risk scoring)
+
+- Plan first (staged pipeline). Features only via `features_at(record, "cutoff")`; text
+  features = NVD-description embeddings (`nvd-embeddings.npy`), with and without the
+  181 `kev_language` rows (`vault/risk-scoring-design.md`). 17 forward KEV positives at the
+  2026-04-29 cutoff: decide whether to add cutoffs. Pre-register like Phase 6.
+- Owner context: may present this project at a MITRE final-round interview.
 
 ## Local state that is NOT in git
 
@@ -101,7 +109,7 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 349 passed
+.venv/bin/pytest -q          # expect 358 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 

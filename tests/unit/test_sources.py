@@ -101,6 +101,7 @@ def test_nvd_fetch_verifies_checksum_and_parse_filters(ctx, settings, snapshot):
     doc = docs[0]
     assert doc.metadata["cvss_nvd"]["base_score"] == 9.8  # NVD's own (Primary)
     assert doc.metadata["cvss_cna"]["base_score"] == 5.0  # the assigning CNA's
+    assert doc.metadata["assigner"] == "cna@vendor.example"
     assert doc.metadata["cwes"] == ["CWE-20", "CWE-22", "CWE-79", "CWE-89"]  # flat union
     assert doc.metadata["cwe_assignments"] == [  # who assigned what, by role (Phase 6 labels)
         {"source_kind": "cisa_adp", "type": "Secondary", "id": "CWE-79"},

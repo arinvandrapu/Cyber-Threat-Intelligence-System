@@ -23,7 +23,8 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 - [[ioc-extraction]] — Phase 5a `cti extract`: IPv4-vs-version and code-vs-domain rules,
   offline PSL, alias matching guards, review-sample and gold-set evaluation
 - [[cwe-classification]] — Phase 6 main eval: CWE label provenance (nvd/cna/adp), mapping
-  Usage, label-source shift and name leakage that shape the evaluation
+  Usage, label-source shift and name leakage that shape the evaluation; 6b `cti cwe-eval`
+  pre-registered in `nlp/cwe_config.py`
 - [[attack-mapping]] — Phase 5b `cti attack-eval`: CTID KEV ground truth (pinned, leaky
   fields dropped), dev/test split, technique-level metrics, baselines
 

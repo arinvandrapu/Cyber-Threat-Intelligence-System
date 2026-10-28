@@ -166,6 +166,25 @@ def nvd_descriptions(processed: Path) -> Iterable[tuple[str, str]]:
             yield doc["source_id"], doc["text"]
 
 
+def build_masked_embeddings(processed: Path, encoder) -> tuple[np.ndarray, list[dict], dict]:
+    """Embeddings of the ID-masked text, only for descriptions that contain a literal
+    ``CWE-<n>`` (``cti cwe-eval`` masks IDs for every method)."""
+    from cti.nlp.cwe_eval import _CWE_ID, mask_ids
+
+    docs = sorted((c, mask_ids(t)) for c, t in nvd_descriptions(processed) if _CWE_ID.search(t))
+    vectors = encoder.encode([t for _, t in docs]).astype(np.float16)
+    index = [{"row": i, "cve": cve} for i, (cve, _) in enumerate(docs)]
+    summary = {
+        "schema": SCHEMA,
+        "model": {"repo": encoder.spec.repo, "revision": encoder.spec.revision},
+        "rows": len(docs),
+        "dim": int(vectors.shape[1]),
+        "dtype": "float16",
+        "masking": "literal CWE-<n> IDs replaced by CWE-[id]",
+    }
+    return vectors, index, summary
+
+
 def build_embeddings(
     processed: Path, encoder, progress: Callable | None = None
 ) -> tuple[np.ndarray, list[dict], dict]:
