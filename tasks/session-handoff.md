@@ -102,8 +102,9 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 - Forward KEV positives: cutoff4 (2024-11-05) 20, cutoff3 (2025-05-04) 21, cutoff2
   (2025-10-31) 30, cutoff (2026-04-29) 17 → **68 in rolling test windows**. Table:
   `vault/risk-scoring-design.md`. cutoff4 uses EPSS v3 (v2023.03.01).
-- New data is **local only**; not uploaded to S3 (key stays Inactive). Upload later with
-  owner approval if wanted (≈30 MB, cost ≈ $0).
+- Uploaded to S3 2026-10-28 with owner approval: 25 new objects (38.0 MB), 37 already
+  present; remote manifest SHA-256 matches local (63 objects, ≈335 MB). `cti` key is
+  **Inactive** again.
 
 ## Pick up here: Phase 7b (risk scoring evaluation)
 

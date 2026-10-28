@@ -78,4 +78,5 @@ The full data pull runs **exactly once**. Everything downstream reads the snapsh
 - Why not a plain refetch: re-pinning "head at end of 2026-10-26" two days later gives a
   newer commit than the 16:15 UTC ingest saw (Vulnrichment `46b2fff` vs `9b12f55`),
   which would silently change Phase 5/6 inputs.
+- Uploaded to S3 the same day (25 new objects, 38 MB; remote manifest SHA-256 = local).
 - Design and positives: [[risk-scoring-design]]; pinning: [[point-in-time-pinning]].
