@@ -32,10 +32,9 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - **Prioritizes** vulnerabilities with a risk score evaluated forward in time against CISA
   KEV additions, with rank-based tiers whose hit rates fall monotonically.
-- **Presents** the results locally *(in progress)*: `cti export` writes validated JSON
-  (current-snapshot risk ranking, defanged IOCs, relationship graphs, evaluation
-  summaries) and `cti serve` serves a read-only dashboard on 127.0.0.1 with a strict
-  Content-Security-Policy. STIX 2.1 output is *planned*.
+- **Presents** the results in a local, read-only analyst dashboard (seven views, three
+  relationship graphs) served on 127.0.0.1 under a strict Content-Security-Policy.
+  STIX 2.1 output is *planned*.
 
 ## Architecture
 
@@ -54,8 +53,8 @@ flowchart LR
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
 IOC/alias extraction, SecureBERT 2.0 NER and embeddings, graded ATT&CK mapping, and a
-pre-registered CWE classification and risk-scoring evaluations, and the dashboard's data
-export and local server are built; the dashboard UI is *in progress*.
+pre-registered CWE classification and risk-scoring evaluations, and the local dashboard
+are built; STIX 2.1 output is *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -223,6 +222,39 @@ set labels a fraction of what is in each text. On scraped pages (code, tables, l
 model is noisy, so displays use spans scoring ≥ 0.9 or linked to an ATT&CK/ThreatFox name.
 See [`vault/nlp-design.md`](vault/nlp-design.md).
 
+## Analyst dashboard
+
+`cti export` turns the pipeline's outputs into schema-validated JSON, and `cti serve`
+serves a Vite + React dashboard over it on 127.0.0.1 only. Seven views:
+
+| View | What an analyst gets |
+|---|---|
+| Overview | Ranked CVE count, tier sizes with their historical KEV rates (Wilson CIs), top of the queue, data versions and every disclosure |
+| Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank |
+| Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
+| Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
+| ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
+| Indicators | Defanged indicator strings from CVE references, a shared-host graph, abuse.ch aggregates |
+| Evaluation | The pre-registered decision, recall with CIs against EPSS and baselines, per-fold hits, other pipeline results, limitations |
+
+Honest by construction: rank and tier only (no fake probabilities), tier hit rates
+labelled as historical, context fields marked as never used by the model, and every
+result read from the export (only fixed design constants, such as the tier bands, are in
+the code).
+
+Secure by construction:
+- **Server:** loopback only, with an exact-match file allowlist built at startup. Host
+  headers other than `127.0.0.1` or `localhost` are rejected (DNS-rebinding defense).
+- **Browser policy:** a strict CSP sent as an HTTP header (`script-src 'self'`, no inline
+  code, no remote origins, Trusted Types), plus security headers on every response,
+  errors included.
+- **Indicator display:** indicators are defanged in Python and rendered as text, never as
+  links.
+- **Supply chain:** npm packages are pinned exactly and at least 14 days old, installed
+  without install scripts, and signature-verified in CI.
+- **CI:** builds against a synthetic fixture and loads every view in headless Chrome,
+  failing on any CSP violation or console error.
+
 ## Security skills and tools
 
 | Area | Skills | Tools |
@@ -250,8 +282,8 @@ See [`vault/nlp-design.md`](vault/nlp-design.md).
 
 ## Setup
 
-Requirements: Python 3.12+. Later phases add Node.js 20+ (dashboard), an AWS account
-(S3 only), and a free abuse.ch Auth-Key.
+Requirements: Python 3.12+, Node.js 20.19+ (dashboard), an AWS account (S3 only), and a
+free abuse.ch Auth-Key.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -292,7 +324,9 @@ cti embed --date 2026-10-25 --cwe-id-masked   # re-embed descriptions with liter
 cti cwe-eval --date 2026-10-25      # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
 cti risk-eval --date 2026-10-25     # forward-looking KEV prediction, rolling-origin folds (~30 s)
 cti export --date 2026-10-25        # dashboard JSON into data/export/<date>/ (~10 s)
+(cd web && npm ci && npm run build) # build the dashboard once (pinned, no install scripts)
 cti serve                           # dashboard at http://127.0.0.1:8000/ (local only)
+cti serve --export-dir web/fixtures # the same dashboard on synthetic data (no pipeline run)
 cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
 cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
@@ -322,6 +356,8 @@ src/cti/
                      pinned SecureBERT 2.0 models (NER, bi-encoder embeddings)
   dashboard/         `cti export` (schema-validated dashboard JSON) and `cti serve`
                      (allowlist static server on 127.0.0.1, strict security headers)
+web/                 Vite + React + TypeScript dashboard (7 views, hand-rolled SVG charts),
+                     synthetic fixture, static and headless-browser checks
   defang.py          make IOCs non-clickable (hxxp, fxp, [.]) and undo common defang forms
   references/        reference-link classifier, page selection, polite SSRF-safe scraper
   gold.py            frozen, checksummed evaluation gold set

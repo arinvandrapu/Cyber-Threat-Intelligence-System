@@ -4,8 +4,8 @@ How the Cyber Threat Intelligence System is put together: what runs where, how d
 moves, and where it is stored. The reasoning behind each choice is in
 [decisions.md](decisions.md).
 
-> Phases 0–7 are built (ingest through the risk evaluation); Phase 8 (dashboard) is in
-> progress. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
+> Phases 0–8 are built (ingest through the local dashboard); Phase 9 (STIX, threat model,
+> polish) is next. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
 
 ## Overview
 
@@ -55,7 +55,7 @@ Three properties shape everything:
 | Risk evaluation | `cti risk-eval` → `nlp/risk_config.py`, `nlp/risk_eval.py` | no | Pre-registered rolling-origin KEV prediction: logistic model vs EPSS, SSVC and CVSS baselines, rank-based tiers |
 | Export | `cti export` → `dashboard/export.py`, `dashboard/schema.py` | no | The pre-registered model refit on all labelled windows ranks the snapshot; defanged IOCs, feed aggregates, CWE/ATT&CK/shared-host graphs, evaluation summaries → schema-validated JSON in `data/export/<date>/` |
 | Serve | `cti serve` → `dashboard/serve.py` | loopback only | Built dashboard + export over HTTP on 127.0.0.1: exact-match file allowlist, Host-header check, strict CSP and security headers |
-| Dashboard *(in progress)* | `web/` (Phase 8) | no | Vite + React UI over the exported JSON |
+| Dashboard | `web/` (Vite + React + TypeScript) | no | Seven views over the exported JSON, hand-rolled SVG charts and graphs; CI builds it against `web/fixtures/` and loads every view in headless Chrome under the CSP |
 | STIX *(planned)* | Phase 9 | no | STIX 2.1 export |
 
 Every source module has two halves: `fetch(ctx)` writes raw bytes to the snapshot

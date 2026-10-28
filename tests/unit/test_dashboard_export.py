@@ -231,7 +231,8 @@ def test_shared_host_graph():
         doc("CVE-2026-0002", [ioc("url", "hxxp://127[.]0[.]0[.]1/y")]),
         doc("CVE-2026-0003", [ioc("domain", "lonely[.]example")]),
         doc("CVE-2026-0003", [ioc("domain", "cve[.]org")]),  # registry: excluded
-        doc("CVE-2026-0004", [ioc("domain", "cve[.]org")]),
+        doc("CVE-2026-0004", [ioc("domain", "www[.]cve[.]org")]),
+        doc("CVE-2026-0005", [ioc("domain", "www[.]cve[.]org")]),
     ]
     g = export.shared_host_graph(docs, {"CVE-2026-0001": "critical"}, {"CVE-2026-0002"})
     schema.Graph.model_validate(g)

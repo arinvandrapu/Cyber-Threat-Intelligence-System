@@ -521,17 +521,21 @@ def cmd_serve(args, settings: Settings) -> int:
     from cti.dashboard import serve
 
     root = settings.data_dir / "export"
-    if args.date:
+    if args.export_dir and args.date:
+        raise ConfigError("use --date or --export-dir, not both")
+    if args.export_dir:
+        export_dir = Path(args.export_dir)
+    elif args.date:
         date.fromisoformat(args.date)
-        day = args.date
+        export_dir = root / args.date
     else:
         days = (
             sorted(p.name for p in root.glob("????-??-??") if p.is_dir()) if root.exists() else []
         )
         if not days:
             raise ConfigError("no dashboard export; run `cti export --date <snapshot date>`")
-        day = days[-1]
-    export_dir = root / day
+        export_dir = root / days[-1]
+    day = export_dir.name
     if not (export_dir / "meta.json").exists():
         raise ConfigError(f"no export for {day}; run `cti export --date {day}`")
     server = serve.make_server(Path(args.dist), export_dir, args.port)
@@ -767,6 +771,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", help="export to serve (default: the newest)")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--dist", default="web/dist", help="built dashboard (npm run build)")
+    p.add_argument("--export-dir", help="serve this export folder (e.g. web/fixtures)")
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("models", help="SecureBERT 2.0 models: one-time fetch, or verify")

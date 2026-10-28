@@ -486,6 +486,11 @@ def _host(kind: str, value: str) -> str | None:
     return None
 
 
+def _registry(host: str) -> bool:
+    host = host.lower()
+    return host in HOSTS_EXCLUDED or host.removeprefix("www[.]") in HOSTS_EXCLUDED
+
+
 def _local_ip(host: str) -> bool:
     """A loopback, private or otherwise non-global IP literal (not a real shared host)."""
     import ipaddress
@@ -508,7 +513,7 @@ def shared_host_graph(extracted: Iterable[dict], tiers: dict[str, str], in_kev: 
             continue
         for ioc in doc["iocs"]:
             host = _host(ioc["type"], ioc["value"])
-            if host is None or host.lower() in HOSTS_EXCLUDED or _local_ip(host):
+            if host is None or _registry(host) or _local_ip(host):
                 continue
             check_defanged("domain", host)
             hosts[host].add(doc["cve"])
