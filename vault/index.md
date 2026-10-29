@@ -25,7 +25,7 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 - [[risk-eval]] — Phase 7b `cti risk-eval`: rolling-origin folds, pre-registered features,
   models, metrics and tiers (`nlp/risk_config.py`)
 - [[dashboard]] — Phase 8: Vite + React over `cti export` JSON, `cti serve` on
-  127.0.0.1 with strict CSP, seven views incl. three relationship graphs
+  127.0.0.1 with strict CSP, eight views (incl. Threats) and three relationship graphs
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
 - [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts

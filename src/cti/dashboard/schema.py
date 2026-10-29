@@ -178,10 +178,72 @@ class Eval(_Model):
     sources_sha256: dict[str, str]
 
 
+# ---- threats.json ----------------------------------------------------------------------------
+# From `cti threats` (Phase 10a), copied by explicit key. Aggregates only (abuse.ch terms):
+# family names and counts, never an IOC value, URL or evidence document.
+
+
+class TechniqueRef(_Model):
+    id: str
+    name: str
+
+
+class ThreatLink(_Model):
+    cve: str
+    via: Literal["threatfox_tag", "mention:reference_page"]
+    surface: list[str]  # the names matched on the evidence page (empty for a tag)
+    review: Literal["correct", "rejected", "unreviewed"]
+    counts_for_priority: bool
+    in_kev: bool
+    tier: Tier | None  # the CVE's tier in this export's risk queue; None if not queued
+
+
+class ThreatFamily(_Model):
+    rank: int
+    family: str
+    categories: list[str]
+    category_source: Literal["owner", "misp", "none"]
+    attack_software: str | None  # ATT&CK software ID (S####)
+    attack_name: str | None
+    techniques: list[TechniqueRef]
+    tactics: list[str]
+    links: list[ThreatLink]
+    linked_kev_cves: int
+    linked_high_tier_cves: int
+    ioc_rows: int
+    ioc_growth: int  # last 30 days minus the 30 before
+    why: list[str]
+
+
+class CategoryCount(_Model):
+    category: str
+    ioc_rows: int  # overlapping: a multi-category family counts in each
+    families: int
+
+
+class ThreatReview(_Model):
+    labeller: str
+    hand_labelled_families: int
+    links_reviewed: int
+    links_correct: int
+    link_precision_ci95: Interval | None
+
+
+class Threats(_Model):
+    available: bool  # False when `cti threats` has not run for this snapshot
+    snapshot_date: str | None
+    families_total: int
+    families: list[ThreatFamily]  # the top families by priority plus any with a CVE link
+    categories: list[CategoryCount]
+    kev_ransomware_cves: int  # KEV entries with known ransomware use (category-level link)
+    review: ThreatReview | None
+
+
 FILES: dict[str, type[_Model]] = {
     "meta.json": Meta,
     "risk.json": Risk,
     "iocs.json": Iocs,
     "graphs.json": Graphs,
     "eval.json": Eval,
+    "threats.json": Threats,
 }

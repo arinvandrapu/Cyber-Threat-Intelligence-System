@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Data, RiskRow, Tier } from "../types";
+import type { Data, RiskRow, ThreatLink, Tier } from "../types";
 import { DivergingBar, PageHead, Pager, TierDot, TierName } from "../components/ui";
 import { FEATURE_LABEL, TIER_LABEL, epss, int, signed } from "../format";
+import { LinkRow } from "./Threats";
 
 const PAGE = 100;
 const EVIDENCE: Record<string, string> = { exploitdb: "EDB", metasploit: "MSF", nuclei: "Nuclei" };
@@ -30,6 +31,14 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const [sort, setSort] = useState<SortKey>("rank");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<string | null>(focus ?? risk.rows[0]?.cve ?? null);
+
+  // CVE -> the threat families linked to it, with how each link was found and reviewed
+  const threatsByCve = useMemo(() => {
+    const m = new Map<string, { family: string; link: ThreatLink }[]>();
+    for (const f of data.threats.families)
+      for (const l of f.links) m.set(l.cve, [...(m.get(l.cve) ?? []), { family: f.family, link: l }]);
+    return m;
+  }, [data.threats.families]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: risk.rows.length };
@@ -156,14 +165,26 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
         </div>
 
         <aside className="panel side" style={{ flexBasis: 330 }} aria-label="Selected CVE">
-          {detail ? <Detail row={detail} epssVersion={meta.epss_model_versions.snapshot?.join(", ") ?? ""} snapshot={meta.snapshot_date} /> : <p className="muted">Select a CVE.</p>}
+          {detail ? <Detail row={detail} threats={threatsByCve.get(detail.cve) ?? []} threatsBuilt={data.threats.available} epssVersion={meta.epss_model_versions.snapshot?.join(", ") ?? ""} snapshot={meta.snapshot_date} /> : <p className="muted">Select a CVE.</p>}
         </aside>
       </section>
     </>
   );
 }
 
-function Detail({ row, epssVersion, snapshot }: { row: RiskRow; epssVersion: string; snapshot: string }) {
+function Detail({
+  row,
+  threats,
+  threatsBuilt,
+  epssVersion,
+  snapshot,
+}: {
+  row: RiskRow;
+  threats: { family: string; link: ThreatLink }[];
+  threatsBuilt: boolean;
+  epssVersion: string;
+  snapshot: string;
+}) {
   const contrib = Object.entries(row.contributions).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   const max = Math.max(1, ...contrib.map(([, v]) => Math.abs(v)));
   return (
@@ -203,6 +224,16 @@ function Detail({ row, epssVersion, snapshot }: { row: RiskRow; epssVersion: str
           {row.context.cwes.join(", ") || "no CWE"}
         </span>
         <span className="mono muted" style={{ fontSize: 12, overflowWrap: "anywhere" }}>assigner {row.context.assigner ?? "unknown"}</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+        <span className="label">Linked threats (not used by the model)</span>
+        {!threatsBuilt && <span className="muted" style={{ fontSize: 13 }}>Threat catalog not built for this snapshot.</span>}
+        {threatsBuilt && threats.length === 0 && (
+          <span className="muted" style={{ fontSize: 13 }}>No malware family is linked to this CVE.</span>
+        )}
+        {threats.map(({ family, link }) => (
+          <LinkRow key={`${family}-${link.via}`} link={link} label={family} />
+        ))}
       </div>
       <div className="mono muted" style={{ fontSize: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
         EPSS {epss(row.epss, row.epss_percentile)} · model {epssVersion} · scored {snapshot}

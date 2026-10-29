@@ -32,7 +32,7 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - **Prioritizes** vulnerabilities with a risk score evaluated forward in time against CISA
   KEV additions, with rank-based tiers whose hit rates fall monotonically.
-- **Presents** the results in a local, read-only analyst dashboard (seven views, three
+- **Presents** the results in a local, read-only analyst dashboard (eight views, three
   relationship graphs) served on 127.0.0.1 under a strict Content-Security-Policy.
   STIX 2.1 output is *planned*.
 
@@ -251,12 +251,13 @@ See [`vault/nlp-design.md`](vault/nlp-design.md).
 ## Analyst dashboard
 
 `cti export` turns the pipeline's outputs into schema-validated JSON, and `cti serve`
-serves a Vite + React dashboard over it on 127.0.0.1 only. Seven views:
+serves a Vite + React dashboard over it on 127.0.0.1 only. Eight views:
 
 | View | What an analyst gets |
 |---|---|
 | Overview | Ranked CVE count, tier sizes with their historical KEV rates (Wilson CIs), top of the queue, data versions and every disclosure |
-| Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank |
+| Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families |
+| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
@@ -355,6 +356,7 @@ cti embed --date 2026-10-25 --cwe-id-masked   # re-embed descriptions with liter
 cti cwe-eval --date 2026-10-25      # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
 cti risk-eval --date 2026-10-25     # forward-looking KEV prediction, rolling-origin folds (~30 s)
 cti export --date 2026-10-25        # dashboard JSON into data/export/<date>/ (~10 s)
+# threats need the export's risk tiers: cti export -> cti threats -> cti export
 (cd web && npm ci && npm run build) # build the dashboard once (pinned, no install scripts)
 cti serve                           # dashboard at http://127.0.0.1:8000/ (local only)
 cti serve --export-dir web/fixtures # the same dashboard on synthetic data (no pipeline run)

@@ -55,7 +55,7 @@ Three properties shape everything:
 | Risk evaluation | `cti risk-eval` → `nlp/risk_config.py`, `nlp/risk_eval.py` | no | Pre-registered rolling-origin KEV prediction: logistic model vs EPSS, SSVC and CVSS baselines, rank-based tiers |
 | Export | `cti export` → `dashboard/export.py`, `dashboard/schema.py` | no | The pre-registered model refit on all labelled windows ranks the snapshot; defanged IOCs, feed aggregates, CWE/ATT&CK/shared-host graphs, evaluation summaries → schema-validated JSON in `data/export/<date>/` |
 | Serve | `cti serve` → `dashboard/serve.py` | loopback only | Built dashboard + export over HTTP on 127.0.0.1: exact-match file allowlist, Host-header check, strict CSP and security headers |
-| Dashboard | `web/` (Vite + React + TypeScript) | no | Seven views over the exported JSON, hand-rolled SVG charts and graphs; CI builds it against `web/fixtures/` and loads every view in headless Chrome under the CSP |
+| Dashboard | `web/` (Vite + React + TypeScript) | no | Eight views over the exported JSON, hand-rolled SVG charts and graphs; CI builds it against `web/fixtures/` and loads every view in headless Chrome under the CSP |
 | STIX *(planned)* | Phase 9 | no | STIX 2.1 export |
 
 Every source module has two halves: `fetch(ctx)` writes raw bytes to the snapshot

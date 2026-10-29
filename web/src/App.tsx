@@ -9,6 +9,7 @@ import { WeaknessGraph } from "./views/WeaknessGraph";
 import { AttackGraph } from "./views/AttackGraph";
 import { Indicators } from "./views/Indicators";
 import { Evaluation } from "./views/Evaluation";
+import { Threats } from "./views/Threats";
 
 /** Hash routes: #/<view>[/<CVE>] (no server rewrites needed under `cti serve`). */
 function parseHash(): { view: View; arg: string | null } {
@@ -69,6 +70,7 @@ export function App() {
   const views: Record<View, () => ReactElement> = {
     overview: () => <Overview data={data} />,
     queue: () => <RiskQueue data={data} focus={route.arg} />,
+    threats: () => <Threats data={data} />,
     landscape: () => <RiskLandscape data={data} />,
     weakness: () => <WeaknessGraph data={data} />,
     attack: () => <AttackGraph data={data} />,
