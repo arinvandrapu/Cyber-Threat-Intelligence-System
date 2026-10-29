@@ -36,6 +36,19 @@ Every signal is captured **as of the cutoff date** for [[risk-scoring-design]].
 - abuse.ch terms §7.3 (2026-10-21): no training AI models on ThreatFox/URLhaus data.
 - Only 166 rows (16 CVEs) carry CVE tags; 39,572 have a report `reference` URL.
 
+## Reference files (Phase 10-0, committed)
+
+Upstream copies (MISP trimmed) under `data/reference/`, SHA-256 pinned in `cti.reference.PINNED`,
+licence in each folder's `NOTICE.md`; `test_reference.py` fails on an unpinned file.
+
+- CTID `attack_to_cve` CSV (Apache-2.0, commit `191e870`): Phase 10b test set.
+- CAPEC 3.9 zip (MITRE terms: keep copyright + licence): CWE → CAPEC → ATT&CK chain.
+- MISP galaxy, 9 cluster files (CC0 or BSD, commit `24877de`), **trimmed** by
+  `trim_misp_cluster()`: ransom notes (one held a victim's portal login; gitleaks caught it),
+  leak-site/.onion links, prices, victims dropped. `malpedia.json` excluded.
+- NVD 2002–2022 feeds: **not** committed; `cti fetch-nvd-archive` → gitignored
+  `data/reference-snapshots/<date>/`, never read by `cti upload` ([[attack-mapping-v2]]).
+
 ## Not used
 
 - **PhishTank**: new registrations disabled.

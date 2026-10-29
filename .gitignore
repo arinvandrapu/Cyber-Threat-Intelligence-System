@@ -22,6 +22,8 @@ dist/
 !/data/reference/
 /data/reference/*
 !/data/reference/ctid/
+!/data/reference/capec/
+!/data/reference/misp-galaxy/
 !/data/reference/*.csv
 
 # Node (dashboard)

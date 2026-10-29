@@ -248,13 +248,16 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       CVE → ATT&CK mapping is weak. Owner decisions: a fresh held-out mapping test;
       threats are categorised, linked and prioritised, and explain CVEs but **do not feed
       the CVE risk score**. Notes: [[threat-layer]], [[attack-mapping-v2]]. One PR each:
-  - [ ] **10-0. Licence fix + reference data** — abuse.ch terms §7.3 (2026-10-21) forbid
+  - [x] **10-0. Licence fix + reference data** — abuse.ch terms §7.3 (2026-10-21) forbid
         training AI models on ThreatFox/URLhaus data: drop abuse.ch rows from
         `cwe_eval.gold_check()` (`nlp/cwe_eval.py:453`), re-run the gold row, add a guard
         test. Commit CTID `attack_to_cve` CSV, CAPEC 3.9 XML, MISP galaxy subset (SHA-256
         pinned in code, licence/NOTICE). NVD 2002–2022 yearly feeds into a separate
         gitignored `data/reference-snapshots/<date>/` (existing `Snapshot` manifest,
         `.meta` SHA check, never uploaded; size checked first).
+        Done 2026-10-29: `cti.reference.PINNED` + `test_reference.py`; CAPEC committed as
+        the 3.9 zip; `cti fetch-nvd-archive` fetched 21 feeds (125 MB, 203,721 CVEs;
+        830/836 CTID CVEs, 6 NVD-Rejected).
   - [ ] **10a. Threat layer** — ThreatFox parse keeps `fk_malware` (logged re-parse);
         ATT&CK `uses` read from the raw bundle (like `revocations_from_bundle`).
         `threats/catalog.py`: family → STIX `malware-type-ov` categories (+ infostealer,

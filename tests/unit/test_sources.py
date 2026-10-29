@@ -120,6 +120,38 @@ def test_nvd_fetch_verifies_checksum_and_parse_filters(ctx, settings, snapshot):
     assert doc.metadata["references"] == ["https://vendor.example/adv"]
 
 
+@respx.mock
+def test_nvd_archive_fetches_the_years_before_the_window_and_parses_all_dates(
+    ctx, settings, snapshot
+):
+    source = nvd.NVDArchiveSource(settings)
+    # 2002 up to the year before the main source's first feed (2023): no gap, no overlap
+    assert list(source.years(2026)) == list(range(2002, 2023))
+    assert source.years(2026).stop == nvd.NVDSource(settings).years(2026).start
+    for year in source.years(2026):
+        payload = nvd_feed(
+            [
+                nvd_cve(f"CVE-{year}-0001", f"{year}-03-01T10:00:00.000"),
+                nvd_cve(f"CVE-{year}-0002", f"{year}-03-01T10:00:00.000", vulnStatus="Rejected"),
+            ]
+        )
+        stem = f"{nvd.BASE}/nvdcve-2.0-{year}"
+        respx.get(f"{stem}.meta").mock(return_value=httpx.Response(200, content=nvd_meta(payload)))
+        respx.get(f"{stem}.json.gz").mock(
+            return_value=httpx.Response(200, content=gzip_bytes(payload))
+        )
+    source.fetch(ctx)
+    docs = list(source.parse(snapshot))
+    # no publish-date window; rejected CVEs are still dropped
+    assert [d.source_id for d in docs] == [f"CVE-{y}-0001" for y in range(2002, 2023)]
+
+
+def test_nvd_archive_is_not_a_registered_source(settings):
+    from cti.sources.registry import all_sources
+
+    assert not any(isinstance(s, nvd.NVDArchiveSource) for s in all_sources(settings))
+
+
 def test_nvd_skips_cvss_v4_with_threat_metric():
     v4 = {
         "source": "nvd@nist.gov",
@@ -575,3 +607,24 @@ def test_nuclei_pins_every_extra_cutoff(ctx, settings, snapshot, monkeypatch):
     source.fetch(ctx)
     by_as_of = {s.as_of: s.values["commit"] for s in source.parse(snapshot)}
     assert by_as_of == {"cutoff2": "c2", "cutoff": "c1", "snapshot": "s"}
+
+
+@respx.mock
+def test_cli_fetch_nvd_archive_writes_only_to_reference_snapshots(tmp_path, monkeypatch):
+    from cti.cli import main
+
+    monkeypatch.setenv("CTI_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("CTI_CONTACT", "test@example.com")
+    payload = nvd_feed([])
+    respx.get(url__regex=r".*\.meta$").mock(
+        return_value=httpx.Response(200, content=nvd_meta(payload))
+    )
+    respx.get(url__regex=r".*\.json\.gz$").mock(
+        return_value=httpx.Response(200, content=gzip_bytes(payload))
+    )
+    today = date.today().isoformat()
+    assert main(["fetch-nvd-archive"]) == 0
+    # `cti upload` reads data/snapshots/ only; the archive must never land there
+    assert not (tmp_path / "snapshots").exists()
+    raw = tmp_path / "reference-snapshots" / today / "raw" / "nvd"
+    assert len(list(raw.rglob("nvdcve-2.0-*.json.gz"))) == 21
