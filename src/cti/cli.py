@@ -686,6 +686,7 @@ def cmd_threats(args, settings: Settings) -> int:
     alias_rows = list(read_jsonl(aliases))
     tiers = {r["cve"]: r["tier"] for r in json.loads(risk.read_text())["rows"]}
     uses = attack_catalog.uses(snap)
+    software_cves = attack_catalog.software_cves(snap)
 
     def build(link_review):
         return catalog.build(
@@ -700,6 +701,7 @@ def cmd_threats(args, settings: Settings) -> int:
             owner=owner,
             day=date.fromisoformat(args.date),
             link_review=link_review,
+            software_cves=software_cves,
         )
 
     link_sheet = settings.data_dir / "reference" / f"threat-links-{args.date}.csv"
@@ -707,29 +709,40 @@ def cmd_threats(args, settings: Settings) -> int:
     link_labels = review.read_link_labels(link_sheet) if link_status == "labelled" else {}
     result = build(link_labels)
     auto = {f["family"]: tuple(f["misp_categories"]) for f in result["families"]}
-    if not link_sheet.exists():
-        urls = {
-            r["id"]: r["final_url"]
-            for r in read_jsonl(settings.data_dir / "enriched" / args.date / "references.jsonl.gz")
+    urls = {
+        r["id"]: r["final_url"]
+        for r in read_jsonl(settings.data_dir / "enriched" / args.date / "references.jsonl.gz")
+    }
+
+    def evidence_url(c: dict) -> str:
+        if c["via"] == "threatfox_tag":
+            return f"https://threatfox.abuse.ch/browse/tag/{c['cve']}/"
+        if c["via"] == "attack:software":
+            sid = c["evidence"][0]["doc_id"].removeprefix("attack:")
+            return f"https://attack.mitre.org/software/{sid}/"
+        return " | ".join(sorted(urls[e["doc_id"]] for e in c["evidence"]))
+
+    links = [
+        {
+            "family": f["family"],
+            "cve": c["cve"],
+            "via": c["via"],
+            "surface": " | ".join(sorted({e["surface"] for e in c["evidence"]})),
+            "evidence_url": evidence_url(c),
         }
-        links = [
-            {
-                "family": f["family"],
-                "cve": c["cve"],
-                "via": c["via"],
-                "surface": " | ".join(sorted({e["surface"] for e in c["evidence"]})),
-                "evidence_url": " | ".join(sorted(urls[e["doc_id"]] for e in c["evidence"]))
-                or f"https://threatfox.abuse.ch/browse/tag/{c['cve']}/",
-            }
-            for f in result["families"]
-            for c in f["cves"]
-        ]
+        for f in result["families"]
+        for c in f["cves"]
+    ]
+    current = {(x["family"], x["cve"], x["via"]) for x in links}
+    if not link_sheet.exists():
         print(f"wrote {link_sheet}: {review.write_link_sheet(link_sheet, links)} links to review")
-        link_status = review.status(link_sheet, "correct")
-    current = {(f["family"], c["cve"], c["via"]) for f in result["families"] for c in f["cves"]}
+    elif current - review.link_keys(link_sheet):
+        # links a newer source found: appended unreviewed; earlier marks are kept
+        print(f"appended {review.append_links(link_sheet, links)} new links to {link_sheet}")
+    link_status = review.status(link_sheet, "correct")
     if review.link_keys(link_sheet) != current:
-        # written by an earlier run with other links: its marks would score and rank
-        # other links, so they are ignored entirely
+        # links the sheet has but this run does not (or vice versa): its marks would
+        # score and rank other links, so they are ignored entirely
         link_status, link_labels = "stale", {}
         result = build({})
         print(f"  warning: {link_sheet} lists other links than this run; not used")

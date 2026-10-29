@@ -35,3 +35,20 @@ ShadowPad,CVE-2026-3502,mention:reference_page,ShadowPad,https://research.checkp
 XMRIG,CVE-2026-110447,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-110447/,yes,ThreatFox reporter tag; not independently verified
 XMRIG,CVE-2026-60004,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-60004/,yes,ThreatFox reporter tag; not independently verified
 XMRIG,CVE-2026-96656,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-96656/,yes,ThreatFox reporter tag; not independently verified
+Agent Tesla,CVE-2017-11882,attack:software,Agent Tesla,https://attack.mitre.org/software/S0331/,,
+Agent Tesla,CVE-2017-8570,attack:software,Agent Tesla,https://attack.mitre.org/software/S0331/,,
+Cobalt Strike,CVE-2011-3544,attack:software,Cobalt Strike,https://attack.mitre.org/software/S0154/,,
+Cobalt Strike,CVE-2012-4681,attack:software,Cobalt Strike,https://attack.mitre.org/software/S0154/,,
+Cobalt Strike,CVE-2013-2460,attack:software,Cobalt Strike,https://attack.mitre.org/software/S0154/,,
+Cobalt Strike,CVE-2013-2465,attack:software,Cobalt Strike,https://attack.mitre.org/software/S0154/,,
+Formbook,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,,
+Formbook,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,,
+PoshC2,CVE-2016-0099,attack:software,PoshC2,https://attack.mitre.org/software/S0378/,,
+PoshC2,CVE-2016-9192,attack:software,PoshC2,https://attack.mitre.org/software/S0378/,,
+Ramsay,CVE-2017-0199,attack:software,Ramsay,https://attack.mitre.org/software/S0458/,,
+Ramsay,CVE-2017-11882,attack:software,Ramsay,https://attack.mitre.org/software/S0458/,,
+Ramsay,CVE-2017-8570,attack:software,Ramsay,https://attack.mitre.org/software/S0458/,,
+XLoader,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,,
+XLoader,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,,
+Xloader,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,,
+Xloader,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,,

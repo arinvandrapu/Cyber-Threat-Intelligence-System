@@ -817,6 +817,9 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
                     "cve": c["cve"],
                     "via": c["via"],
                     "surface": sorted({e["surface"] for e in c["evidence"]}),
+                    "evidence_text": next(
+                        (e["text"] for e in c["evidence"] if e.get("text")), None
+                    ),
                     "review": c["review"],
                     "counts_for_priority": c["counts_for_priority"],
                     "in_kev": c["in_kev"],

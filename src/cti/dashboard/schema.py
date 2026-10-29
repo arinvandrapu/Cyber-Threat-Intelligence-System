@@ -193,8 +193,9 @@ class TechniqueRef(_Model):
 
 class ThreatLink(_Model):
     cve: str
-    via: Literal["threatfox_tag", "mention:reference_page"]
+    via: Literal["threatfox_tag", "mention:reference_page", "attack:software"]
     surface: list[str]  # the names matched on the evidence page (empty for a tag)
+    evidence_text: str | None  # attack:software: the ATT&CK sentence citing the CVE
     review: Literal["correct", "rejected", "unreviewed"]
     counts_for_priority: bool
     in_kev: bool

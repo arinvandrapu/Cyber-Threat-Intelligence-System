@@ -119,6 +119,20 @@ def write_link_sheet(path: Path, links: list[dict]) -> int:
     return len(rows)
 
 
+def append_links(path: Path, links: list[dict]) -> int:
+    """Add blank rows for links the sheet lacks; existing rows (and marks) are untouched."""
+    present = link_keys(path)
+    rows = sorted(
+        r
+        for r in {tuple(link[c] for c in LINK_COLUMNS[:5]) for link in links}
+        if r[:3] not in present
+    )
+    with path.open("a", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        writer.writerows([*row, "", ""] for row in rows)
+    return len(rows)
+
+
 def link_keys(path: Path) -> set[tuple[str, str, str]]:
     """The (family, CVE, via) rows a link sheet lists."""
     with path.open(newline="", encoding="utf-8") as fh:
@@ -126,11 +140,14 @@ def link_keys(path: Path) -> set[tuple[str, str, str]]:
 
 
 def read_link_labels(path: Path) -> dict[tuple[str, str, str], bool]:
-    """(family, CVE, via) -> correct. Every row must be marked yes or no."""
+    """(family, CVE, via) -> correct, for rows marked yes or no. A blank row is a link not
+    yet reviewed (e.g. appended by a later run) and is left out; anything else is refused."""
     labels = {}
     with path.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             mark = row["correct"].strip().lower()
+            if not mark:
+                continue
             if mark not in CORRECT:
                 raise ValueError(f"{path}: {row['family']} {row['cve']}: correct must be yes/no")
             labels[(row["family"], row["cve"], row["via"])] = mark == "yes"
