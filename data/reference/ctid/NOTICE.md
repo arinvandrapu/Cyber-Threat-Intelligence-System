@@ -14,3 +14,20 @@ MITRE Center for Threat-Informed Defense Mappings Explorer project:
 
 Licensed under the Apache License, Version 2.0 (`LICENSE.txt` in this directory). It is
 used here only as expert-labelled ground truth for grading CVE → ATT&CK technique mapping.
+
+# MITRE CTID ATT&CK → CVE mappings (`attack_to_cve`)
+
+`attack_to_cve.csv` is an unmodified copy (renamed; bytes unchanged, including the UTF-8
+BOM) of a file from the MITRE Center for Threat-Informed Defense `attack_to_cve` project:
+
+- Source: https://github.com/center-for-threat-informed-defense/attack_to_cve
+- Path: `Att&ckToCveMappings.csv`
+- Commit: `191e87005a51be1e28983b0fa64adcb367e9aa30`
+- SHA-256: `b1daf3ed8918838e55f0f424f67fdb343882622c06d7c1c67e8a92624b19eea9` (checked in
+  `cti.reference.PINNED`)
+- Downloaded: 2026-10-29
+
+Copyright 2021 MITRE Engenuity. Approved for public release. Document number CT0018.
+
+Licensed under the Apache License, Version 2.0 (`LICENSE.txt` in this directory, the same
+licence as above). It is used here only as the held-out test set for Phase 10b.

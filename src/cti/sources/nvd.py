@@ -89,6 +89,9 @@ class NVDSource(Source):
     def years(self, snapshot_year: int) -> range:
         return range(self.settings.nvd_window_start.year - 1, snapshot_year + 1)
 
+    def window_start(self) -> date:
+        return self.settings.nvd_window_start
+
     def probe_url(self) -> str:
         return f"{BASE}/nvdcve-2.0-{self.settings.nvd_window_start.year}.meta"
 
@@ -111,7 +114,7 @@ class NVDSource(Source):
             )
 
     def parse(self, snapshot: Snapshot) -> Iterator[Document]:
-        start = self.settings.nvd_window_start
+        start = self.window_start()
         for entry in snapshot.entries(self.name):
             stream = gunzip_stream(snapshot.read_raw(entry))
             for item in ijson.items(stream, "vulnerabilities.item", use_float=True):
@@ -169,3 +172,24 @@ class NVDSource(Source):
                 "references": [r["url"] for r in cve.get("references", [])],
             },
         )
+
+
+class NVDArchiveSource(NVDSource):
+    """The yearly feeds the main source does not fetch: 2002 up to its first feed (the
+    year before ``nvd_window_start``), so 2002-2022 by default.
+
+    Reference data for the Phase 10b ATT&CK test set (CVEs from 2008-2020), not a risk
+    source: it is fetched once into ``data/reference-snapshots/``, which ``cti upload``
+    never reads, and is not in the source registry, so ``cti ingest`` never fetches it.
+    Parsing keeps every non-rejected CVE: there is no publish-date window. The source name
+    is still ``nvd``, so read these snapshots with this class, not ``NVDSource`` (whose
+    window would drop every record).
+    """
+
+    FIRST_YEAR = 2002  # NVD's oldest feed; it also holds the CVE-1999..2001 IDs
+
+    def years(self, snapshot_year: int) -> range:
+        return range(self.FIRST_YEAR, super().years(snapshot_year).start)
+
+    def window_start(self) -> date:
+        return date.min

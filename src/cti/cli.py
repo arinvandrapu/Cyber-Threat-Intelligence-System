@@ -27,6 +27,7 @@ from cti.nlp import evaluate as extract_eval
 from cti.nlp import extract
 from cti.snapshot import Snapshot, SnapshotExistsError
 from cti.sources.cwe import CWESource
+from cti.sources.nvd import NVDArchiveSource
 from cti.sources.registry import select
 from cti.storage import LocalStorage, S3Storage
 from cti.upload import upload_gold, upload_snapshot
@@ -36,6 +37,11 @@ log = logging.getLogger("cti")
 
 def _snapshots(settings: Settings) -> LocalStorage:
     return LocalStorage(settings.data_dir / "snapshots")
+
+
+def _reference_snapshots(settings: Settings) -> LocalStorage:
+    """Reference-only fetches (e.g. old NVD feeds); local and gitignored, never uploaded."""
+    return LocalStorage(settings.data_dir / "reference-snapshots")
 
 
 def _check_requirements(sources, settings: Settings) -> None:
@@ -68,7 +74,7 @@ def cmd_probe(args, settings: Settings) -> int:
     return 1 if failures else 0
 
 
-def _report(result: IngestResult) -> int:
+def _report(result: IngestResult, command: str = "cti ingest") -> int:
     print(f"snapshot {result.snapshot_id}")
     for name in result.completed:
         print(f"  done     {name}")
@@ -77,7 +83,7 @@ def _report(result: IngestResult) -> int:
     for name, error in result.failed.items():
         print(f"  FAILED   {name}: {error}")
     if not result.ok:
-        print("Fix the cause, then run `cti ingest --resume --date ...`.")
+        print(f"Fix the cause, then run `{command} --resume --date ...`.")
     return 0 if result.ok else 1
 
 
@@ -115,6 +121,21 @@ def cmd_ingest(args, settings: Settings) -> int:
         else:
             result = ingest(storage, settings, snapshot_date, sources, client, resume=args.resume)
     return _report(result)
+
+
+def cmd_fetch_nvd_archive(args, settings: Settings) -> int:
+    snapshot_date = date.fromisoformat(args.date) if args.date else date.today()
+    source = NVDArchiveSource(settings)
+    with make_client(settings.user_agent) as client:
+        result = ingest(
+            _reference_snapshots(settings),
+            settings,
+            snapshot_date,
+            [source],
+            client,
+            resume=args.resume,
+        )
+    return _report(result, "cti fetch-nvd-archive")
 
 
 def cmd_status(args, settings: Settings) -> int:
@@ -718,6 +739,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     only(p)
     p.set_defaults(func=cmd_ingest)
+
+    p = sub.add_parser(
+        "fetch-nvd-archive",
+        help="NVD feeds from 2002 up to the main source's first feed (2002-2022 by default), "
+        "for Phase 10b (into data/reference-snapshots/; never uploaded)",
+    )
+    p.add_argument("--date", help="reference snapshot date YYYY-MM-DD (default: today)")
+    p.add_argument("--resume", action="store_true", help="continue a failed run")
+    p.set_defaults(func=cmd_fetch_nvd_archive)
 
     p = sub.add_parser("status", help="show a snapshot's manifest")
     p.add_argument("--date", required=True)

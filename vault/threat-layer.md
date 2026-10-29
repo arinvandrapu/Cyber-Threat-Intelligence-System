@@ -40,6 +40,13 @@ Why: the system classified bugs ([[cwe-classification]]), not threats.
 - CVE tags: 166 rows, 16 CVEs. KEV `knownRansomwareCampaignUse` names no family, so it
   links a CVE to the ransomware category only.
 
+## MISP coverage (checked 2026-10-29)
+
+- By normalised name/synonym, the 9 committed cluster files name 18 of the top 34 known
+  ThreatFox families: 52,064 of 94,162 rows (55%). Missing incl. ClearFake, VShell,
+  IClickFix, AMOS, DCRat, XWorm, Stealc, AdaptixC2. Malpedia URLs in `refs` are rare
+  (≤ 13 per file), so the join is by name; owner labels carry the top 34.
+
 ## Links available
 
 - `alias_index()` (`nlp/extract.py:83`) joins ~110 families to ATT&CK software (S####).

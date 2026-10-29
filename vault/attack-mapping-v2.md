@@ -10,9 +10,13 @@ Why: Phase 5b's mapping is weak and its test split is spent ([[attack-mapping]])
 ## Test set
 
 - No newer CTID KEV file exists (repo checked 2026-10-28: only ATT&CK 15.1 and 16.1).
-- Fresh test: CTID `attack_to_cve` (`Att&ckToCveMappings.csv`, Apache-2.0): 839 CVEs from
-  2008–2020, ATT&CK v8/9 IDs, Phase 1 (456) / Phase 2 (383) rows, multi-technique cells,
-  an `Uncategorized` column. 204 have an exploitation technique; 27 overlap the KEV set.
+- Fresh test: CTID `attack_to_cve` (committed as `data/reference/ctid/attack_to_cve.csv`,
+  Apache-2.0): 839 rows / **836 CVEs** from 2008–2020, ATT&CK v8/9 IDs, Phase 1 (456) /
+  Phase 2 (383) rows, multi-technique cells, an `Uncategorized` column. 204 have an
+  exploitation technique; 27 overlap the KEV set.
+- Gotchas: 3 CVEs have a Phase 1 and a Phase 2 row (none with an exploitation label):
+  merge per CVE. Malformed IDs (`T11190`, `T1036.`, `T828` = ICS IDs missing a 0) occur
+  **only** in `Uncategorized`, which is dropped; graded columns are clean (tested).
 - **Seen while planning (disclose):** exploitation counts T1190 51, T1078 34,
   T1204.002 32, T1133 27, T1204.001 26, T1189 21, T1566 18.
 - Framing: KEV training CVEs span 2007–2025, so this is a **CVE-disjoint, non-KEV
@@ -24,6 +28,9 @@ Why: Phase 5b's mapping is weak and its test split is spent ([[attack-mapping]])
 
 - NVD parse keeps `published ≥ 2024-01-01` (`config.py:33`): the 284 old dev CVEs and all
   test CVEs need NVD 2002–2022 feeds plus an unfiltered parse path.
+- Fetched 2026-10-29 (`cti fetch-nvd-archive`, 21 feeds, 125 MB, all `.meta`-verified):
+  203,721 non-rejected CVEs; 830 of 836 CTID CVEs present, the other 6 are NVD-Rejected
+  ("DO NOT USE"), so the test set is ≤ 830. Best CVSS: v3.1 84,747, v2 75,077, v3.0 41,577.
 - Old CVEs are mostly CVSS v2. NVD v2 carries `userInteractionRequired` and
   `obtain*Privilege`, which `_best_cvss` (`nvd.py:64-79`) drops.
 - CAPEC: ATT&CK v20 active techniques have 0 CAPEC refs (36 on revoked/deprecated
