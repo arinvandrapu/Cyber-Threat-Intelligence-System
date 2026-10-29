@@ -180,14 +180,22 @@ def build_index(attack_docs: Iterable[dict], threatfox_docs: Iterable[dict]) -> 
         families[name].update(a.strip() for a in alias.split(",") if a.strip() not in ("", "None"))
     # ThreatFox families are software, so they only join ATT&CK malware or tools (their
     # alias lists often name a group too: PlugX lists RedDelta). The family's own name
-    # decides first; its aliases are a fallback.
+    # decides first. A ThreatFox alias is a fallback only when it is the ATT&CK entry's
+    # own title (WannaCryptor lists "WannaCry", S0366's title): a secondary ATT&CK alias
+    # is not enough, since Bashlite lists "Qbot" (QakBot's alias) and Houdini "Njw0rm"
+    # (njRAT's), which merged unrelated families before 2026-10-29.
     software = {
         k: {i for i in ids if index.entities[i].kind in ("malware", "tool")}
         for k, ids in index._by_key.items()
     }
     for name in sorted(families):
         names = {name, *families[name]}
-        matches = software.get(key(name)) or {i for n in names for i in software.get(key(n), ())}
+        matches = software.get(key(name)) or {
+            i
+            for n in families[name]
+            for i in software.get(key(n), ())
+            if key(index.entities[i].name) == key(n)
+        }
         if len(matches) == 1:
             index.add(index.entities[next(iter(matches))], names)
         else:

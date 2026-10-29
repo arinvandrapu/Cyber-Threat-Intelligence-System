@@ -58,7 +58,7 @@ Label chain NVD > CNA > CISA-ADP (other ADPs not used).
   Hypothesis (untested): frozen retrieval embeddings, mean pooled, blur lexical bug cues
   that TF-IDF keeps. Fine-tuned transformers (V2W-BERT, arXiv 2102.11498) are what the
   literature uses; out of scope on CPU.
-- Name leakage confirmed: name-present stratum TF-IDF 0.91, embedding 0.52.
+- Name leakage confirmed: name-present stratum TF-IDF 0.92, embedding 0.52.
 - **Both chosen C values sit at an edge of their grid** (TF-IDF top, embedding bottom).
   Better values may lie outside; not explored, per the pre-registration.
 - Secondary: train-only models score lower (TF-IDF 0.36), so the refit on train + dev
@@ -76,5 +76,5 @@ Label chain NVD > CNA > CISA-ADP (other ADPs not used).
   within 0.1 point.
 - Gold row (circular), on 249 docs (50 ThreatFox dropped, abuse.ch §7.3): source-only
   0.996 = TF-IDF 0.996 = the label-equals-source share (was 0.997 on all 299).
-- TF-IDF runs are not bit-identical: `saga` has no `random_state`. Re-run 2026-10-28: ±0.002
-  at 4 d.p.; every published (rounded) number and the chosen C unchanged. Seed = config deviation.
+- TF-IDF was unseeded (`saga`; re-runs ±0.002). Seeded 2026-10-29 (`cwe_config.SEED`,
+  disclosed deviation): headline and C unchanged; name-present 0.9128 → 0.9151 (0.92).

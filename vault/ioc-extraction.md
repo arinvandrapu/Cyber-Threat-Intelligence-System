@@ -34,13 +34,16 @@ ablation): [[risk-scoring-design]].
 ## Aliases
 
 - ATT&CK v20 groups/software plus ThreatFox families. Lookup keys ignore case, spaces and
-  hyphens; an ambiguous key returns every candidate (47 such keys).
+  hyphens; an ambiguous key returns every candidate (43 such keys, 2026-10-29).
 - Text matching is stricter: the known spelling's case and word count, no match after an
   apostrophe, a stoplist, and a threat cue for plain words. Without these, "in C" matched
   INC, "or at" matched oRAT, and "James" matched a malware alias.
-- Known issue (found 2026-10-29): a ThreatFox family whose own name matches no ATT&CK
-  software joins one through its ThreatFox aliases, so Bashlite ("Qbot") was merged into
-  S0650 QakBot. [[threat-catalog]] avoids this; the 5a index is not yet fixed.
+- Fixed 2026-10-29: a ThreatFox family whose own name matched no ATT&CK software joined
+  one through any ThreatFox alias, so Bashlite ("Qbot") merged into S0650 QakBot and
+  Houdini ("Njw0rm") into S0385 njRAT. Now an alias joins only if it is the ATT&CK entry's
+  own title (11 correct joins kept; Tsundere via "DinDoor" lost, conservative). Index:
+  `threatfox` 371 → 374 entities, ambiguous keys 40 → 43; one row changed (2 "Gafgyt"
+  matches on CVE-2026-34910 → Bashlite). Match counts unchanged.
 
 ## Evaluation (2026-10-26)
 

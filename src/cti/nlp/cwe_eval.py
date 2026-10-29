@@ -230,7 +230,10 @@ def fit_tfidf(texts: Sequence[str], y: np.ndarray, c: float):
         sublinear_tf=t.sublinear_tf,
         stop_words=t.stop_words,
     )
-    model = LogisticRegression(C=c, solver=t.solver, max_iter=t.max_iter, tol=t.tol)
+    # seeded (saga is stochastic): a disclosed deviation, see cwe_config's header
+    model = LogisticRegression(
+        C=c, solver=t.solver, max_iter=t.max_iter, tol=t.tol, random_state=cfg.SEED
+    )
     model.fit(vec.fit_transform(texts), y)
     return vec, model
 

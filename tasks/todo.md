@@ -279,8 +279,9 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           reviewed-correct or ThreatFox-tag links (`TRUSTED_LINKS`)
     - [x] Manual categories for the priority top 20 (`PRIORITY_REVIEW_TOP_N`; Havoc C2
           had MISP `ransomware`): 17 families added, converged, top 20 all manual
-    - [ ] Follow-up: Phase 5a alias index merges ThreatFox families into ATT&CK software
-          via their aliases (Bashlite → S0650 QakBot through "Qbot"); fix + re-run extract
+    - [x] Follow-up: Phase 5a alias index merged ThreatFox families into ATT&CK software
+          via secondary aliases (Bashlite → QakBot, Houdini → njRAT). Fixed 2026-10-29:
+          alias joins only through the ATT&CK entry's own title; extract + ner re-run
   - [x] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +
         git state in output) before any test score; disclose that test label counts were
         seen while planning. Train: all 419 CTID KEV CVEs. Test: CTID `attack_to_cve`
