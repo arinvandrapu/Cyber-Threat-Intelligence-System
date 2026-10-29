@@ -83,6 +83,7 @@ def test_load_test_merges_rows_remaps_and_counts(tmp_path, monkeypatch):
         },
         "CVE-B": {"exploitation_technique": {"T1059"}},
     }
+    assert labels.raw == {"CVE-A": {"T1190", "T1078", "T1204.002"}, "CVE-B": {"T1059.001"}}
     assert labels.counts["labels_remapped"] == 1
     assert labels.counts["labels_unknown_dropped"] == 1
     assert labels.counts["cves_with_two_rows"] == 1

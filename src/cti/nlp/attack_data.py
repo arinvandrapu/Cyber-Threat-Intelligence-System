@@ -104,6 +104,7 @@ def nvd_records(snapshots: Iterable[Snapshot], wanted: set[str]) -> dict[str, Nv
 class TestLabels:
     gold: dict[str, dict[str, set[str]]]  # cve -> mapping type -> parents
     counts: Counter = field(default_factory=Counter)  # remapped / dropped / merged rows
+    raw: dict[str, set[str]] = field(default_factory=dict)  # cve -> PRIMARY_TYPE IDs, unrolled
 
 
 def load_test(
@@ -115,6 +116,7 @@ def load_test(
     """
     text = reference.read_pinned(data_dir, reference.CTID_ATTACK_TO_CVE).decode("utf-8-sig")
     gold: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    raw: dict[str, set[str]] = defaultdict(set)
     counts: Counter = Counter()
     seen: Counter = Counter()
     for row in csv.DictReader(io.StringIO(text)):
@@ -134,9 +136,11 @@ def load_test(
                     counts["labels_unknown_dropped"] += 1
                     continue
                 gold[cve][mapping_type].add(parent(tid))
+                if mapping_type == cfg.PRIMARY_TYPE:
+                    raw[cve].add(tid)
     counts["cves_with_two_rows"] = sum(n > 1 for n in seen.values())
     counts["training_overlap_cves"] = len(set(seen) & exclude)
-    return TestLabels({c: dict(t) for c, t in gold.items()}, counts)
+    return TestLabels({c: dict(t) for c, t in gold.items()}, counts, dict(raw))
 
 
 # ---- CAPEC chain ------------------------------------------------------------------------
