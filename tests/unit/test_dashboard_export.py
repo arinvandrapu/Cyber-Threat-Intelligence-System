@@ -304,6 +304,14 @@ def test_derived_name():
         "Widget: Cross-site Scripting"
     )
     assert export.derived_name([], []) is None
+    php = [{"vendor": "PHP Group", "product": "PHP"}]
+    two = [
+        {"id": "CWE-1325", "name": "Memory Allocation"},
+        {"id": "CWE-416", "name": "Use After Free"},
+    ]
+    assert export.derived_name(php, two) == "PHP vulnerability"  # several CWEs, none primary
+    primary = [{"source_kind": "nvd", "type": "Primary", "id": "CWE-416"}]
+    assert export.derived_name(php, two, primary) == "PHP: Use After Free"
 
 
 def test_build_iocs():

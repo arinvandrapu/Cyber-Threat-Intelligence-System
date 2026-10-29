@@ -34,7 +34,7 @@ Decisions and licence: [[threat-layer]].
 
 ## First run (2026-10-26 snapshot)
 
-- 467 named families (now: 51 hand-labelled, 75 MISP, 341 none). 36 CVE links on 18
+- 467 named families (now: 51 reviewed by Claude for the owner, 75 MISP, 341 none). 36 CVE links on 18
   families (26 reference-page mentions, 10 ThreatFox tags); 32 are KEV CVEs, which the
   queue excludes by design, so owner added `linked_kev_cves` as the first priority key
   (own commit, before any label). KEV ransomware-use CVEs: 361 (category link only).
@@ -69,7 +69,7 @@ Decisions and licence: [[threat-layer]].
 
 - `cti export` reads `data/threats/<date>/threats.json` as an **optional** input (order:
   export → threats → export); missing → `available: false`; stale tiers → export fails.
-- Ships the priority top `PRIORITY_REVIEW_TOP_N` (export refuses if any is not hand-labelled)
+- Ships the priority top `PRIORITY_REVIEW_TOP_N` (export refuses if any is unreviewed)
   + families with a link not reviewed as wrong (none today: 20 shown); no IOC
   values, URLs or evidence doc IDs. Threats view + "Linked threats" in the CVE detail;
   unchecked MISP labels are dashed. No predicted techniques ([[attack-mapping-v2-results]]).

@@ -33,7 +33,7 @@ export function Overview({ data }: { data: Data }) {
           <span className="label">1 · Vulnerabilities</span>
           <h2 style={{ margin: 0, fontSize: 17 }}>Which CVEs to fix next</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            {int(risk.ranked_cves)} CVEs not yet known to be exploited are scored on how likely CISA is to add them to its
+            {int(risk.ranked_cves)} CVEs published since 2024 and not yet in CISA's list are scored on how likely CISA is to add them to its
             Known Exploited Vulnerabilities (KEV) list within 180 days; the top {int(risk.rows.length)} form the queue.
             Each one shows what moved it up or down.
           </p>
@@ -44,7 +44,7 @@ export function Overview({ data }: { data: Data }) {
           <h2 style={{ margin: 0, fontSize: 17 }}>Which attackers' tools matter most</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
             {threats.available
-              ? `${int(threats.families_total)} malware and tool families seen in ThreatFox, each with a category (ransomware, botnet, infostealer…), its ATT&CK techniques, and the CVEs it is linked to.`
+              ? `${int(threats.families_total)} malware and tool families seen in ThreatFox. The top ${int(threats.families.length)} are shown with a category (ransomware, botnet, infostealer…), their ATT&CK techniques where matched, and any CVEs linked to them.`
               : "The threat catalog has not been built for this snapshot."}
           </p>
           <a href="#/threats" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open threats</a>
@@ -55,7 +55,7 @@ export function Overview({ data }: { data: Data }) {
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
             A CVE linked to a threat (e.g. a botnet exploiting it) is more urgent; a threat linked to CVEs tells you what
             to patch to defend against it. CVEs already in KEV are confirmed exploited: patch those first. They are not
-            ranked, but open from the threats that use them. Threats never change a CVE's rank.
+            ranked; their CISA entry opens from the threats linked to them. Threats never change a CVE's rank.
           </p>
         </div>
       </section>
@@ -211,7 +211,7 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
       title: "Risk queue",
       what: `The ${int(risk.rows.length)} highest-risk CVEs that are not yet in CISA KEV, best first, in critical, high and elevated tiers.`,
       why: "So you know which unexploited vulnerabilities to patch next, before attackers start using them.",
-      how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days, and caught ${vsEpss} more of them than EPSS in the top 100. Tiers are rank bands, not probabilities.`,
+      how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days. In back-tests of the same procedure it caught ${vsEpss} more later KEV additions than EPSS in each period's top 100; this snapshot's ranking itself cannot be scored yet. Tiers are rank bands, not probabilities.`,
     },
     {
       view: "threats",
@@ -219,7 +219,7 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
       what: "Malware and tool families seen in abuse.ch ThreatFox, with category, ATT&CK techniques and linked CVEs.",
       why: "So you know which attackers' tools are active and which vulnerabilities they exploit.",
       how: review
-        ? `Ranked by a fixed rule, not a trained model: linked CVEs confirmed exploited (KEV), then linked high-risk queue CVEs, ransomware, then 30-day growth in indicators. Categories of the top families are hand-checked; ${review.links_correct} of ${review.links_reviewed} CVE links were reviewed correct, and only reviewed-correct links or ThreatFox's own tags count.`
+        ? `Ranked by a fixed rule, not a trained model: linked CVEs confirmed exploited (KEV), then linked high-risk queue CVEs, ransomware, then 30-day growth in indicators. Categories of the top families were labelled by an AI reviewer (Claude) on the owner's behalf, not by MISP name matching; ${review.links_correct} of ${review.links_reviewed} CVE links were reviewed correct, and only reviewed-correct links or ThreatFox's own tags count.`
         : "Not built for this snapshot.",
     },
     {
@@ -234,7 +234,7 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
       title: "Weakness graph",
       what: "The kinds of bug behind critical and high-risk CVEs, grouped by CWE category.",
       why: "Recurring weakness types point to root causes worth fixing across products.",
-      how: "Each critical/high CVE is joined to the CWE that NVD or the vendor assigned, and each CWE to its top-level CWE category.",
+      how: "Each critical/high CVE is joined to the CWE that NVD or the reporting organisation (CNA) assigned, and each CWE to its top-level CWE category.",
     },
     {
       view: "attack",
@@ -248,14 +248,14 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
       title: "Indicators",
       what: "IP addresses, domains, URLs and file hashes found in CVE reference pages, plus abuse.ch feed totals.",
       why: "Context for hunting and blocking, and for seeing infrastructure shared across CVEs.",
-      how: `Pattern matching with validation; every value is defanged so it can't be clicked. ${extract ? `On a reviewed sample ${pct(extract.precision)} were real indicators of their type.` : ""} They are not vetted as malicious. abuse.ch data is shown only as counts (licence).`,
+      how: `Pattern matching with validation; every value is defanged so it can't be clicked. ${extract ? `On a reviewed sample from reference pages, ${pct(extract.precision)} of extracted values were real values of their type, but most of those are CVE IDs; IP addresses are much weaker (see Evaluation).` : ""} Nothing here is vetted as malicious. abuse.ch data is shown only as counts (licence).`,
     },
     {
       view: "evaluation",
       title: "Evaluation",
       what: "How well each part works, on data it was not built from.",
       why: "So you know how much to trust each number on the other tabs.",
-      how: "Each test was fixed in advance, then run once: the risk model against EPSS on later KEV additions, the CWE classifier, the ATT&CK mapping, and indicator extraction. Weak results are shown, not hidden.",
+      how: "The risk model, CWE classifier and ATT&CK re-test were set up in advance and scored on data they were not built from; indicator extraction was scored on a hand-reviewed sample. Anything changed after seeing results is disclosed, and weak results are shown, not hidden.",
     },
   ];
 }
