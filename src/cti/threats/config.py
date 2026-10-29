@@ -1,10 +1,11 @@
 """Pre-declared configuration for the threat layer (Phase 10a).
 
-Every choice here was committed before the owner labelled the review sheets
-(``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` was added
-after the first ``cti threats`` run, in its own commit, from that run's link list (see
-its comment), and so was the ``linked_kev_cves`` priority key. Any later change must be
-disclosed in ``vault/threat-catalog.md``.
+Every choice here except ``TRUSTED_LINKS`` and ``REVIEW_LABELLER`` was committed before
+the review sheets were labelled (``git log -- src/cti/threats/config.py`` is the
+evidence). ``MENTION_ORIGINS`` and the ``linked_kev_cves`` key were added after the
+first ``cti threats`` run, each in its own commit; ``TRUSTED_LINKS`` after the link
+review, also in its own commit. Any later change must be disclosed in
+``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.
@@ -113,4 +114,11 @@ PRIORITY_KEYS = (
     "ioc_rows",  # total IOC rows
 )
 HIGH_TIERS = ("critical", "high")
+# Which CVE links count toward the two linked-CVE keys (owner decision 2026-10-29, after
+# the link review, in its own commit). A link reviewed "no" never counts; one reviewed
+# "yes" always does; an unreviewed link counts only if its source is in TRUSTED_LINKS.
+# The review found ThreatFox tags 10/10 correct but reference-page mentions 12/26 (46%),
+# so an unreviewed mention is more likely wrong than right. Every link stays in the
+# output with its review state; this only decides what ranks.
+TRUSTED_LINKS = ("threatfox_tag",)
 GROWTH_DAYS = 30
