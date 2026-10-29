@@ -243,7 +243,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         `docs/architecture.md`, `docs/decisions.md` (stack change); handoff. Phase 9
         note: screenshots from real data with the abuse.ch panel cropped (no
         abuse.ch-derived content committed); the fixture is for CI only.
-- [ ] **10. Threats + better ATT&CK mapping** *(planned 2026-10-28, owner-approved; runs
+- [x] **10. Threats + better ATT&CK mapping** *(planned 2026-10-28, owner-approved; runs
       before Phase 9)* — the system classifies bugs (CWE) but not threats, and the
       CVE → ATT&CK mapping is weak. Owner decisions: a fresh held-out mapping test;
       threats are categorised, linked and prioritised, and explain CVEs but **do not feed
@@ -258,7 +258,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         Done 2026-10-29: `cti.reference.PINNED` + `test_reference.py`; CAPEC committed as
         the 3.9 zip; `cti fetch-nvd-archive` fetched 21 feeds (125 MB, 203,721 CVEs;
         830/836 CTID CVEs, 6 NVD-Rejected).
-  - [ ] **10a. Threat layer** — ThreatFox parse keeps `fk_malware` (logged re-parse);
+  - [x] **10a. Threat layer** — ThreatFox parse keeps `fk_malware` (logged re-parse);
         ATT&CK `uses` read from the raw bundle (like `revocations_from_bundle`).
         `threats/catalog.py`: family → STIX `malware-type-ov` categories (+ infostealer,
         loader, c2-framework, web-skimmer, fake-update) from MISP galaxies; family →
@@ -275,8 +275,8 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           only (NVD text names the vulnerable product); "banker" added to the vocabulary;
           `linked_kev_cves` added as the first priority key (owner decision)
     - [x] Review sheets filled (owner delegated to Claude; disclosed in `REVIEW_LABELLER`):
-          links 22/36 correct (mentions 12/26, tags 10/10; 39/53 after the 2026-10-29
-          ATT&CK software links); ranking now uses only
+          links 22/36 correct (mentions 12/26, tags 10/10; 35/53 after the 2026-10-29
+          ATT&CK software links: ATT&CK 13/17, the XLoader platform collision rejected); ranking now uses only
           reviewed-correct or ThreatFox-tag links (`TRUSTED_LINKS`)
     - [x] Manual categories for the priority top 20 (`PRIORITY_REVIEW_TOP_N`; Havoc C2
           had MISP `ransomware`): 17 families added, converged, top 20 all manual
@@ -304,6 +304,92 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         threats" in the CVE detail. No predicted techniques (owner decision 2026-10-29: the
         combiner passed narrowly via a post-hoc-informed rule; results shown on the
         Evaluation page only). abuse.ch values stay aggregates.
+
+- [ ] **11. Review fixes** *(from the 2026-10-29 end-to-end review: pipeline, methods,
+      security, dashboard/docs; runs before Phase 9)* — the project works end to end
+      (hash chain verified, deterministic re-runs, no leakage, numbers match outputs);
+      fixes are about claims, docs, UX and robustness. Three batches, one PR each; verify
+      each claim against the outputs before editing.
+  - [ ] **11a. Credibility (do first; before any interview)**
+    - [ ] README: drop or mark planned "threat modeling (STRIDE)" (skills table, ~:291)
+          and "a documented threat model" (~:413); STIX 2.1 listed as a skill (~:289)
+          but planned (~:37)
+    - [ ] Overview guide (`web/src/views/Overview.tsx` risk-queue "how"): "+4 … in each
+          period's top 100" is wrong; +4 is the total over 3 periods (0, +2, +2), CI +1
+          to +8. Same check for the "Better than EPSS" tile (add the CI; note EPSS wins
+          on mean AP)
+    - [ ] Link precision: report judged links separately: 25/43 (58%) judged from
+          evidence; the 10 ThreatFox tags were accepted as reporter attributions. Update
+          Threats fold, Overview guide, README Results, vault/threat-links.md
+    - [ ] Threat "why" wording: "linked to N CVEs in CISA KEV (confirmed exploited)"
+          reads as the family exploited them. Name the source (e.g. "4 KEV CVEs cited by
+          ATT&CK"); decide (owner) whether capability-only or very old links (Cobalt
+          Strike's 2011–2013 Java CVEs) should count less — a disclosed rule change
+    - [ ] One framing for tier lift: Overview "≈159× likelier than the rest" (vs baseline
+          tier, 6 positives) vs README "≈90× the overall rate"; pick one, add the CI
+    - [ ] Wording: "not yet known to be exploited" → "not in CISA KEV"; "more exploited
+          CVEs caught" → "more later KEV additions caught"
+    - [ ] Disclose ATT&CK 10b hit@10: combiner 0.845 < majority 0.865 (results +
+          README); call the pass "marginal, rank-5 specific"
+    - [ ] Re-stamp outputs from a clean `main`: `cti extract` (iocs.jsonl.gz predates the
+          `ftp://`→`fxp://` defang fix, 3 rows), `cti extract-eval --labels …`, `cti
+          threats`, `cti export` (meta.json says commit e3a8528 + uncommitted changes)
+  - [ ] **11b. Docs catch-up**
+    - [ ] README: `--date 2026-10-25` (18×) → 2026-10-26; command order (parse → enrich
+          → extract → … → export → threats-sheet/label → threats → export); threat
+          layer in "What it does", the diagram and Results; layout section says 7 views;
+          abuse.ch wording ("aggregates only" vs a few cited tag links in the link sheet)
+    - [ ] docs/architecture.md (stops at Phase 8; add threats, threats-sheet,
+          attack-eval2, fetch-nvd-archive); docs/data-sources.md (MISP, CAPEC, CTID
+          attack_to_cve); docs/decisions.md (threat-priority heuristic, threats kept out
+          of the risk score, Claude as labeller, abuse.ch no-training)
+    - [ ] Vault: threat-links.md counts (3 queued; 30 KEV + 2 NVD cards; 56 labelled),
+          threat-layer.md:21 ("owner labels blind" → Claude, not fully blind),
+          dashboard.md (7 views; truncated "Brand:" line), dashboard-web.md:15,
+          index.md (attack-mapping-v2 "planned"); split risk-scoring-design.md (88) and
+          ingest-once-snapshot.md (82)
+    - [ ] `cli.py` module docstring (lists 7 commands); future-extensions.md status;
+          this file's Review section
+  - [ ] **11c. Dashboard**
+    - [ ] Every referenced CVE opens a detail: 154 Indicators-table CVEs are neither
+          queued nor KEV (export a small NVD card for every CVE the export references);
+          make "+N more" expandable; normal link colour
+    - [ ] Threats "Indicators by category" bars render ~80px tall (`.chart{height:auto}` +
+          `preserveAspectRatio="none"`); fixed height or the bar-row pattern
+    - [ ] Terminology: "CVEs ranked 167,844" vs the queue's 8,392 ("scored" vs
+          "ranked"/"below the queue"); one term each for KEV / exploited / tier / family
+    - [ ] Explanations that look contradictory: "ExploitDB entry −0.19" (public exploit
+          lowers rank), age sign on Landscape vs queue, refit EPSS weight 0.22 vs tested
+          0.63 — one plain sentence each, consistent sign convention
+    - [ ] Jargon left: SSVC values ("none/yes/total") → "Exploited? / Automatable? /
+          Impact"; raw assigner UUIDs → CNA names where known
+    - [ ] Small: truncated CWE names on the Weakness graph; Evaluation CI wrapping and two
+          "Limitations" panels; family names in a CVE's detail link to Threats; queue
+          overflow on narrow screens; chart vs filter category lists on Threats; MimiKatz
+          category "unknown"; rows 17–20 show only "ransomware" as the reason
+    - [ ] Optional (owner liked the idea): "Used by malware" badge + "Linked to a threat"
+          filter in the queue (CVE-2026-109618)
+  - [ ] **11d. Robustness + hygiene**
+    - [ ] export/threats recovery loop: if tiers change, `cti export` refuses before
+          writing risk.json and `cti threats` re-reads the old one; write risk.json first
+          (or ship threats `available:false` with a warning)
+    - [ ] Check `KEV_CATALOG_VERSION` against the snapshot's parsed KEV version (refuse on
+          mismatch); `cti threats --archive-date` (today: newest reference snapshot);
+          cwe-eval output records `config_sha256` + git state
+    - [ ] Add a LICENSE (MIT or Apache-2.0 for own code; `data/reference/*` keep theirs);
+          SecureBERT model licence line in README attribution
+    - [ ] CI: hashed Python locks (`--generate-hashes`, `--require-hashes`), pin pip,
+          `persist-credentials: false` on checkout, exact version comments
+    - [ ] Scraper: refuse https→http redirect downgrades; robots on every hop; S3 manifest
+          overwrite with `IfMatch`; http/client.py docstring (key in URL path)
+    - [ ] Quality: one Wilson implementation (z, and (0,1)/None for n=0); public names
+          for `nvd._affected`, `attack_eval._per_cve`; move orchestration out of `cli.py`
+          (cmd_threats 142 lines, cmd_attack_eval2 105, build_parser 156); embed.py pooling
+          test with a fake model
+  - Interview prep (no code): +4/68 holds at every budget (5–1 @50, 6–2 @100, 8–6 @200,
+    11–7 @300, 16–12 @500); EPSS wins mean AP; last-fold EPSS AUC 0.41 (one positive
+    had no EPSS, ranked last); refit vs tested weights; SSVC exploitation weight ≈ 0;
+    "isn't this just recency?" → no-EPSS ablation + age cap.
 
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,

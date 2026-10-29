@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-10-27 → 10-28 (Phases 5 and 6). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-10-29 (Phase 10, follow-up fixes, dashboard clarity, end-to-end review). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -21,18 +21,30 @@
 | 7a. Extra cutoffs (rolling-origin data) | ✅ merged | #24, #25 |
 | 7b. Risk scoring evaluation (`cti risk-eval`) | ✅ merged | #26 |
 | 8 PR 1. `cti export` + `cti serve` | ✅ merged | #27 |
-| 8 PR 2. Dashboard UI (`web/`) | ✅ PR open | — |
-| **9. Security deliverables + polish** | **⏭ next** | — |
+| 8 PR 2. Dashboard UI (`web/`) | ✅ merged | #28 |
+| 10-0. abuse.ch licence fix + pinned reference data + NVD archive | ✅ merged | #30, #31 |
+| 10a. Threat layer (`cti threats`) | ✅ merged | #32 |
+| 10b. Pre-registered ATT&CK re-test (`cti attack-eval2`) | ✅ merged | #33 |
+| 10c. Threats view + linked threats | ✅ merged | #34 |
+| Dashboard clarity (CVE names, tab guide) | ✅ merged | #35 |
+| Alias-bug fix + CWE seed | ✅ merged | #36 |
+| ATT&CK software links + CVE cards (re-land of #37) | ✅ merged | #38 |
+| Plain-language pass + every CVE opens a detail | ✅ merged | #39 |
+| **11. Review fixes** (from the 2026-10-29 end-to-end review) | **⏭ next** | — |
+| 9. Security deliverables + polish | after 11 | — |
 
 `main` is green (offline tests on the Phase 8 PR 2 branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
-1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`.
-2. Start Phase 8 (dashboard) with the staged pipeline. It reads pipeline-exported JSON
-   only; it needs a scoring export (current-snapshot scores + tiers) designed first.
-3. Owner context: may present this project at a MITRE final-round interview. Offer mock
-   Q&A on the ATT&CK, CWE and risk results when asked.
+1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`
+   (Phase 11 is the plan, in batches 11a → 11d).
+2. Start **11a (credibility)**: false/overstated claims (README STRIDE/STIX, "+4 in each
+   period", link precision 25/43 judged, threat "why" wording, tier-lift framing), then
+   re-stamp outputs from a clean `main`. Verify each claim against the outputs first.
+3. Then 11b docs, 11c dashboard, 11d robustness/hygiene, one PR each. Phase 9 after.
+4. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
+   are at the end of Phase 11 in `tasks/todo.md`.
 
 ## Phase 3 result (2026-10-26)
 
@@ -92,7 +104,9 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 - `cti cwe-eval` (≈8 min, `ml` extra): headline test name-absent macro-F1 TF-IDF + LR
   0.394, SecureBERT embeddings + LR 0.265 (paired −0.13), centroid 0.14, majority 0.002.
-  Pre-registered in `nlp/cwe_config.py` (`2e69e14`). Both ch## Phase 7a result (2026-10-28)
+  Pre-registered in `nlp/cwe_config.py` (`2e69e14`). Details: `vault/cwe-classification.md`.
+
+## Phase 7a result (2026-10-28)
 
 - Owner decisions: rolling-origin evaluation over four 180-day cutoffs; EPSS from each
   cutoff's file only (percentile, model version per fold, disclosed); text features only
@@ -118,7 +132,22 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
   Tiers monotonic (critical 2.6%). No-EPSS ablation catches 9. Details:
   `vault/risk-eval.md`, README section.
 
-## Pick up here: Phase 9 (security deliverables + polish)
+## Phase 10 + follow-ups result (2026-10-29)
+
+- Threat layer: 467 ThreatFox families; top 20 by a declared heuristic (linked KEV CVEs,
+  queue CVEs, ransomware, 30-day growth), categories labelled by Claude for the owner
+  (56; disclosed), 53 CVE links (ThreatFox tags, reference pages, ATT&CK software
+  citations), 35 reviewed correct (25/43 judged from evidence). Notes:
+  `vault/threat-catalog.md`, `vault/threat-links.md`.
+- ATT&CK 10b: pre-registered, run once; combiner +0.035 hit@5 (CI +0.005 to +0.070),
+  driven by a post-hoc CVSS rule; no predicted techniques shown (owner decision).
+- Dashboard: Threats view, every CVE opens a detail (`kev.json` + NVD cards), plain
+  language (method folded or on Evaluation). Phishing source deferred (E4 in
+  `future-extensions.md`).
+- Process lessons (`tasks/lessons.md`): two commits were stranded by pushing after a
+  merge, and a stacked PR merged into a finished branch; both re-landed (#38, #39).
+
+## Previously: Phase 9 notes (now after Phase 11)
 
 - Dashboard done: `cti export --date 2026-10-26`, `(cd web && npm ci && npm run build)`,
   `cti serve` → http://127.0.0.1:8000/. Fixture: `cti serve --export-dir web/fixtures`.
@@ -148,7 +177,7 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 358 passed
+.venv/bin/pytest -q          # expect 551 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 
@@ -161,6 +190,8 @@ git checkout main && git pull
 
 - Every change goes through a PR; the **owner merges**. Never push to `main`.
 - Run the implementation audit **before** opening a PR (the owner merges quickly).
-- Check `gh pr view <n> --json state` before pushing to an existing PR branch.
+- Gate pushes to an existing PR branch on its state: `[ "$(gh pr view N --json state -q .state)" = OPEN ] && git push`.
+- Don't stack PRs; branch from `main` after the base PR merges.
+- Dashboard language for analysts: answers up front, method on request (owner feedback).
 - README describes the project only; no mention of its origins.
 - Ingest runs **once**. S3 is the only AWS service. Keep cost low.
