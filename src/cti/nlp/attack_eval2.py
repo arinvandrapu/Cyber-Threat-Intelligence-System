@@ -22,7 +22,6 @@ from cti.nlp import attack_data
 from cti.nlp.attack_eval import _per_cve, log_prior, rank_matrix
 
 Gold = dict[str, dict[str, set[str]]]
-TIE = 1000.0  # rule scores are scaled past any log-prior magnitude, so the prior only breaks ties
 
 
 @dataclass
@@ -145,6 +144,13 @@ def _rankings(cves, parents, scores) -> dict[str, list[str]]:
     return dict(zip(cves, rank_matrix(parents, scores), strict=True))
 
 
+def _rankings_by(cves, parents, primary: np.ndarray, tiebreak: np.ndarray) -> dict:
+    """Order by ``primary``, then ``tiebreak``, then parent ID: exact, no score scaling."""
+    ids = np.arange(len(parents))[None, :].repeat(len(cves), 0)
+    order = np.lexsort((ids, -tiebreak, -primary), axis=1)
+    return dict(zip(cves, ([parents[i] for i in row] for row in order), strict=True))
+
+
 def per_cve_table(rankings, gold: Gold, mapping_type: str) -> tuple[list[str], np.ndarray, list]:
     cves = sorted(c for c in rankings if gold.get(c, {}).get(mapping_type))
     rows = [_per_cve(rankings[c], gold[c][mapping_type]) for c in cves]
@@ -201,7 +207,8 @@ def folds(cves: Sequence[str]) -> list[list[str]]:
 
 
 def _pick(grid: dict, values: Sequence[float]) -> float:
-    """Best mean hit@5, then MRR, then the smaller value."""
+    """Best mean hit@5, then MRR, then the smaller value. The mean is over all held-out
+    CVEs pooled across folds (each training CVE is held out once)."""
     return max(values, key=lambda v: (round(grid[v][0], 6), round(grid[v][1], 6), -v))
 
 
@@ -267,10 +274,10 @@ def rank_all(
         "prior+biencoder": _rankings(
             test, parents, test_sig.biencoder + chosen["beta"] * test_prior
         ),
-        "capec-chain": _rankings(test, parents, TIE * test_sig.capec + test_prior),
+        "capec-chain": _rankings_by(test, parents, test_sig.capec, test_prior),
     }
     if mapping_type == cfg.PRIMARY_TYPE:
-        out["methodology-replay"] = _rankings(test, parents, TIE * test_sig.replay + test_prior)
+        out["methodology-replay"] = _rankings_by(test, parents, test_sig.replay, test_prior)
     for name, drop in (("combiner", None), *((a, a.split("no-")[1]) for a in cfg.ABLATIONS)):
         model = fit_combiner(train_sig, train_prior, y, chosen[name], drop)
         out[name] = _rankings(test, parents, combiner_scores(model, test_sig, test_prior, drop))
@@ -403,6 +410,9 @@ def _subtechnique(primary, gold, raw) -> dict:
         subs = sorted({t for ids in raw.values() for t in ids if t.split(".")[0] == fam})
         for sub in subs:
             cves = [c for c, ids in raw.items() if sub in ids and c in primary[cfg.HEADLINE]]
+            if not cves:  # every such CVE was excluded (e.g. no NVD text)
+                out[sub] = {"cves": 0}
+                continue
             out[sub] = {
                 m: round(float(np.mean([fam in primary[m][c][:5] for c in cves])), 4)
                 for m in (cfg.HEADLINE, cfg.BASELINE)

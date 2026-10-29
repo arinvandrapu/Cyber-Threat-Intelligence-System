@@ -88,3 +88,13 @@ def test_load_test_merges_rows_remaps_and_counts(tmp_path, monkeypatch):
     assert labels.counts["labels_unknown_dropped"] == 1
     assert labels.counts["cves_with_two_rows"] == 1
     assert labels.counts["training_overlap_cves"] == 1
+    # CVE-B's only primary-impact label (T9999) was dropped: not graded for that type
+    assert labels.counts["cves_all_labels_dropped_primary_impact"] == 1
+    assert labels.counts["cves_all_labels_dropped_exploitation_technique"] == 0
+
+
+def test_current_only_drops_unknown_training_parents():
+    gold = {"A": {"exploitation_technique": {"T1190", "T9999"}}, "B": {"primary_impact": {"T9998"}}}
+    kept, dropped = ad.current_only(gold, {"T1190", "T1059.001"})
+    assert kept == {"A": {"exploitation_technique": {"T1190"}}, "B": {}}
+    assert dropped == 2

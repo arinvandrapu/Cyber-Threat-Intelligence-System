@@ -403,23 +403,41 @@ def cmd_attack_eval2(args, settings: Settings) -> int:
     revoked = attack_catalog.revocations(main_snap)
     ctid_path = settings.data_dir / attack_eval.CTID_FILE
     train_gold, train_remapped = attack_eval.gold_labels(attack_eval.load_ctid(ctid_path), revoked)
+    train_gold, train_unknown = attack_data.current_only(train_gold, current)
+    parents = sorted({attack_catalog.parent(t.id) for t in techniques})
+    cwe_capec = attack_data.cwe_to_capec(CWESource(settings), main_snap)
+    capec_attack = attack_data.capec_to_attack(settings.data_dir, revoked, current)
+    if args.feasibility_only:
+        # training CVEs only, before the test file is read (attack2_config.TRAIN_FEASIBILITY)
+        records = attack_data.nvd_records([main_snap, archive], set(train_gold))
+        train = sorted(c for c in train_gold if c in records and records[c].text)
+        zeros = np.zeros((len(train), len(parents)))
+        sig = attack_eval2.build_signals(
+            train, records, parents, zeros, zeros, cwe_capec, capec_attack
+        )
+        families = {c: (records[c].cvss or {}).get("family", "none") for c in train}
+        report = attack_eval2.train_feasibility(sig, train_gold, parents, families)
+        report |= {"train_cves": len(train), "train_labels_unknown_dropped": train_unknown}
+        out = settings.data_dir / "eval" / args.date / "attack-eval2-feasibility.json"
+        write_json(out, report)
+        print(json.dumps(report, indent=2, sort_keys=True))
+        print(f"  wrote {out}")
+        return 0
     test = attack_data.load_test(settings.data_dir, current, revoked, exclude=set(train_gold))
     records = attack_data.nvd_records([main_snap, archive], set(train_gold) | set(test.gold))
     counts = dict(test.counts)
     train = sorted(c for c in train_gold if c in records and records[c].text)
     counts["train_dropped_no_nvd_text"] = len(train_gold) - len(train)
+    counts["train_labels_unknown_dropped"] = train_unknown
     in_nvd = [c for c in test.gold if c in records]
     counts["test_dropped_rejected_or_absent"] = len(test.gold) - len(in_nvd)
     test_cves = sorted(c for c in in_nvd if records[c].text)
     counts["test_dropped_no_nvd_text"] = len(in_nvd) - len(test_cves)
     gold = {c: train_gold[c] for c in train} | {c: test.gold[c] for c in test_cves}
 
-    parents = sorted({attack_catalog.parent(t.id) for t in techniques})
     encoder = embed.Encoder()
     tech_emb = encoder.encode([t.text for t in techniques])
     tfidf = attack_eval.TfidfRanker(techniques)
-    cwe_capec = attack_data.cwe_to_capec(CWESource(settings), main_snap)
-    capec_attack = attack_data.capec_to_attack(settings.data_dir, revoked, current)
     signals, emb = {}, {}
     for split, cves in (("train", train), ("test", test_cves)):
         texts = [records[c].text for c in cves]
@@ -1030,6 +1048,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--date", required=True, help="main snapshot")
     p.add_argument("--archive-date", required=True, help="NVD 2002-2022 reference snapshot")
+    p.add_argument(
+        "--feasibility-only",
+        action="store_true",
+        help="training-only checks; exits before the test file is read",
+    )
     p.set_defaults(func=cmd_attack_eval2)
 
     p = sub.add_parser("cwe-eval", help="classify NVD descriptions into CWEs (Phase 6)")

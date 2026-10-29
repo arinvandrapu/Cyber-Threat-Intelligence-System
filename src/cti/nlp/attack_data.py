@@ -119,6 +119,7 @@ def load_test(
     raw: dict[str, set[str]] = defaultdict(set)
     counts: Counter = Counter()
     seen: Counter = Counter()
+    had_label: set[tuple[str, str]] = set()  # (cve, type) with >= 1 label before filtering
     for row in csv.DictReader(io.StringIO(text)):
         cve = row["CVE ID"].strip()
         seen[cve] += 1
@@ -129,6 +130,7 @@ def load_test(
             for tid in (t.strip() for t in row[column].split(";")):
                 if not tid:
                     continue
+                had_label.add((cve, mapping_type))
                 if tid in revoked:
                     tid = revoked[tid]
                     counts["labels_remapped"] += 1
@@ -138,6 +140,10 @@ def load_test(
                 gold[cve][mapping_type].add(parent(tid))
                 if mapping_type == cfg.PRIMARY_TYPE:
                     raw[cve].add(tid)
+    for mapping_type in cfg.TEST_COLUMNS.values():  # not graded for that type (config)
+        counts[f"cves_all_labels_dropped_{mapping_type}"] = sum(
+            t == mapping_type and not gold.get(c, {}).get(t) for c, t in had_label
+        )
     counts["cves_with_two_rows"] = sum(n > 1 for n in seen.values())
     counts["training_overlap_cves"] = len(set(seen) & exclude)
     return TestLabels({c: dict(t) for c, t in gold.items()}, counts, dict(raw))
@@ -176,6 +182,22 @@ def capec_to_attack(data_dir, revoked: Mapping[str, str], current: set[str]) -> 
                     out[f"CAPEC-{elem.get('ID')}"].add(parent(tid))
             elem.clear()
     return dict(out)
+
+
+def current_only(gold: dict, current: set[str]) -> tuple[dict, int]:
+    """Training labels restricted to parents of current techniques (config: unknown IDs are
+    dropped and counted for training as for test). ``gold``: cve -> type -> parents."""
+    parents = {parent(t) for t in current}
+    dropped = 0
+    out = {}
+    for cve, types in gold.items():
+        kept = {}
+        for t, labels in types.items():
+            dropped += len(labels - parents)
+            if labels & parents:
+                kept[t] = labels & parents
+        out[cve] = kept
+    return out, dropped
 
 
 def capec_paths(

@@ -132,3 +132,19 @@ def test_evaluate_end_to_end_reports_every_preregistered_section():
     assert set(out["results"]) == {PT, *cfg.SECONDARY_TYPES}
     assert out["below_near_duplicate"]["excluded"] == 4
     assert out["train_feasibility"]["graded_cves_per_type"][PT] == len(train_sig.cves)
+
+
+def test_rankings_by_is_exact_lexicographic():
+    primary = np.array([[0.0, 0.69, 0.69, 0.0, 0.0]])
+    tiebreak = np.array([[-1.0, -9.0, -2.0, -0.5, -0.5]])  # prior-like, any magnitude
+    [order] = ae2._rankings_by(["c"], PARENTS, primary, tiebreak).values()
+    # primary first; within ties the higher tiebreak; then parent ID
+    assert order == ["T1189", "T1078", "T1190", "T1204", "T1068"]
+
+
+def test_subtechnique_report_handles_an_empty_group():
+    gold = _gold({"c": ["T1204"]})
+    ranked = {m: {"c": PARENTS} for m in (cfg.HEADLINE, cfg.BASELINE)}
+    out = ae2._subtechnique(ranked, gold, {"c": {"T1204.001"}, "gone": {"T1204.002"}})
+    assert out["T1204.002"] == {"cves": 0}
+    assert out["T1204.001"]["cves"] == 1 and out["T1204.001"][cfg.HEADLINE] == 1.0
