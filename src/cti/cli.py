@@ -522,6 +522,22 @@ def cmd_risk_eval(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_threats_sheet(args, settings: Settings) -> int:
+    from cti.threats import review
+    from cti.threats.config import CATEGORIES, LABEL_SEPARATOR
+
+    iocs = settings.data_dir / "processed" / args.date / "threatfox.jsonl.gz"
+    path = settings.data_dir / "reference" / f"threat-categories-{args.date}.csv"
+    fams = review.families(read_jsonl(iocs))
+    top = review.write_sheet(path, fams)
+    named = sum(f.rows for f in fams if review.is_named(f))
+    share = sum(f.rows for f in top) / named if named else 0.0
+    print(f"wrote {path}: top {len(top)} named families, {share:.1%} of named rows")
+    print(f"Fill `categories` (several allowed, separated by '{LABEL_SEPARATOR}') from:")
+    print("  " + " ".join(CATEGORIES))
+    return 0
+
+
 def cmd_export(args, settings: Settings) -> int:
     if importlib.util.find_spec("sklearn") is None:
         raise ConfigError("the export refits the risk model: pip install -e '.[ml]'")
@@ -748,6 +764,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", help="reference snapshot date YYYY-MM-DD (default: today)")
     p.add_argument("--resume", action="store_true", help="continue a failed run")
     p.set_defaults(func=cmd_fetch_nvd_archive)
+
+    p = sub.add_parser(
+        "threats-sheet", help="blank blind-review sheet of the top ThreatFox families (10a)"
+    )
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_threats_sheet)
 
     p = sub.add_parser("status", help="show a snapshot's manifest")
     p.add_argument("--date", required=True)

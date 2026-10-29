@@ -19,7 +19,7 @@ FEED_READERS = {
     "nlp/aliases.py": "tags lookup-list entities that come from ThreatFox family names",
     "nlp/extract.py": "builds the alias lookup list from family names",
     "dashboard/export.py": "publishes aggregate counts only",
-    "cli.py": "checks that `cti extract` inputs exist",
+    "cli.py": "checks `cti extract` inputs; `cti threats-sheet` counts families (lookup)",
 }
 
 # Functions that load the gold set without fitting on it (or filter before fitting).

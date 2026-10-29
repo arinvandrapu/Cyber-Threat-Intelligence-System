@@ -497,6 +497,7 @@ def test_threatfox_defangs_and_redacts_key(ctx, settings, snapshot):
         "hxxp://evil[.]example[.]com/a",
     ]
     assert docs[0].metadata["tags"] == ["qakbot", "c2"]
+    assert (docs[0].metadata["malware"], docs[0].metadata["malware_id"]) == ("QakBot", "win.qakbot")
     assert all("someone" not in d.model_dump_json() for d in docs)  # reporter dropped
 
 
