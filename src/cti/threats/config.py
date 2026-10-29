@@ -1,8 +1,9 @@
 """Pre-declared configuration for the threat layer (Phase 10a).
 
-Every choice here was committed before any automatic category label was computed and
-before the owner labelled the review sheet (``git log -- src/cti/threats/config.py`` is
-the evidence). Changing a rule afterwards must be disclosed in ``vault/threat-layer.md``.
+Every choice here was committed before the owner labelled the review sheets
+(``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` was added
+after the first ``cti threats`` run, in its own commit, from that run's link list (see
+its comment). Any later change must be disclosed in ``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.
@@ -70,6 +71,13 @@ THREATFOX_UNKNOWN_IDS: dict[str, str] = {
     "unknown_stealer": "infostealer",
     "unknown_rat": "remote-access-trojan",
 }
+
+# ---- CVE links ----------------------------------------------------------------------------
+# Alias mentions link a family to a CVE only from these ``cti extract`` origins. NVD
+# descriptions are excluded: a family named there is almost always the vulnerable product
+# (CVE-2024-41111 is a bug in Sliver, CVE-2024-45163 one in Mirai's C2), not the exploiter.
+# Decided 2026-10-29 from the first run's link list, before any owner label or link review.
+MENTION_ORIGINS = ("reference_page",)
 
 # ---- owner review (blind) ----------------------------------------------------------------
 # The owner labels the most frequent named families without seeing any automatic label,
