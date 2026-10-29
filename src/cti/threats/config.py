@@ -1,11 +1,11 @@
 """Pre-declared configuration for the threat layer (Phase 10a).
 
-Every choice here except ``TRUSTED_LINKS`` and ``REVIEW_LABELLER`` was committed before
-the review sheets were labelled (``git log -- src/cti/threats/config.py`` is the
-evidence). ``MENTION_ORIGINS`` and the ``linked_kev_cves`` key were added after the
-first ``cti threats`` run, each in its own commit; ``TRUSTED_LINKS`` after the link
-review, also in its own commit. Any later change must be disclosed in
-``vault/threat-catalog.md``.
+Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N`` and
+``REVIEW_LABELLER`` was committed before the review sheets were labelled
+(``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` and the
+``linked_kev_cves`` key were added after the first ``cti threats`` run, and
+``TRUSTED_LINKS`` and ``PRIORITY_REVIEW_TOP_N`` after the link review, each in its own
+commit. Any later change must be disclosed in ``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.
@@ -88,6 +88,12 @@ MENTION_ORIGINS = ("reference_page",)
 # named rows (22 / 46 / 79 / 197 families reach 80 / 90 / 95 / 99%). The planning
 # estimate of 99% was a miscount; 34 is kept as a feasible hand-labelling load.
 REVIEW_TOP_N = 34
+# Owner decision 2026-10-29, after the link review (own commit): every family in the
+# priority top PRIORITY_REVIEW_TOP_N also gets a manual category, because MISP name
+# matches collide (an unrelated MISP "Havoc" ransomware labelled the Havoc C2 framework,
+# rank 6). Added by `cti threats-sheet --priority`; re-run until the top N is all labelled,
+# since labels can move families into or out of it.
+PRIORITY_REVIEW_TOP_N = 20
 # Who filled the 2026-10-26 sheets (recorded after labelling; reported in threats.json).
 # The owner delegated both reviews, so agreement measures Claude vs MISP, not owner vs MISP.
 REVIEW_LABELLER = (
