@@ -38,6 +38,12 @@ One pre-registered run of `cti attack-eval2 --date 2026-10-26 --archive-date 202
 - Replay at 0.815 shows how much the labels follow CTID's own method (circular; reference).
 - Near-duplicates: 3 test CVEs ≥ 0.9 cosine; results unchanged without them.
 
+## Owner decision (2026-10-29)
+
+- The rule allowed predicted techniques in the dashboard (combiner passed). Owner chose
+  **not** to show them: +0.035 hit@5 resting on a post-hoc-informed rule is too weak to
+  put in front of an analyst. Stricter than the rule, so not a deviation.
+
 ## Impact types (descriptive, no decision)
 
 - Primary impact: combiner 0.593 vs majority 0.472 (+0.12 [0.08, 0.16]).

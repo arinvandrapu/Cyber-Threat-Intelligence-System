@@ -299,8 +299,9 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       gain is the CVSS rule at T1189. See vault/attack-mapping-v2-results.md.
   - [ ] **10c. Dashboard** — `threats.json` (schema, types, fixture, vite/smoke lists);
         Threats view (categories, priority table with "why", family detail); "Linked
-        threats" in the CVE detail; predicted techniques only if the combiner passes,
-        labelled "predicted". abuse.ch values stay aggregates.
+        threats" in the CVE detail. No predicted techniques (owner decision 2026-10-29: the
+        combiner passed narrowly via a post-hoc-informed rule; results shown on the
+        Evaluation page only). abuse.ch values stay aggregates.
 
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
