@@ -872,6 +872,32 @@ def _real(value: str) -> str:
     return "" if value.strip().lower() in _PLACEHOLDER else value.strip()
 
 
+def kev_card(row: dict, families: list[str]) -> dict:
+    """A KEV CVE's card: CISA's own entry (public domain), defanged and truncated."""
+    m = row["metadata"]
+    return {
+        "cve": row["source_id"],
+        "source": "kev",
+        "name": row["title"],
+        "vendor": m.get("vendor") or "",
+        "product": m.get("product") or "",
+        "description": truncate(defang_text(row.get("text") or "")),
+        "published": None,
+        "date_added": m["date_added"],
+        "due_date": m.get("due_date"),
+        "ransomware_use": m.get("ransomware_use") or "Unknown",
+        "cwes": sorted(m.get("cwes") or []),
+        "families": families,
+    }
+
+
+def build_kev(kev_rows: Iterable[dict]) -> dict:
+    """``kev.json``: a card for every KEV CVE, so any KEV CVE shown anywhere (ATT&CK graph,
+    indicators, threats) opens CISA's entry. KEV CVEs are never in the risk queue."""
+    cards = [kev_card(r, []) for r in kev_rows]
+    return {"entries": sorted(cards, key=lambda e: cve_sort_key(e["cve"]))}
+
+
 def _linked_cves(
     families: list[dict], kev_rows: Iterable[dict], nvd: dict[str, dict], cwe_names: dict[str, str]
 ) -> list[dict]:
@@ -885,26 +911,11 @@ def _linked_cves(
                 families_of = linked.setdefault(link["cve"], set())  # every one gets a card
                 if link["review"] != "rejected":
                     families_of.add(f["family"])
-    out = {}
-    for r in kev_rows:
-        cve = r["source_id"]
-        if cve not in linked:
-            continue
-        m = r["metadata"]
-        out[cve] = {
-            "cve": cve,
-            "source": "kev",
-            "name": r["title"],
-            "vendor": m.get("vendor") or "",
-            "product": m.get("product") or "",
-            "description": truncate(defang_text(r.get("text") or "")),
-            "published": None,
-            "date_added": m["date_added"],
-            "due_date": m.get("due_date"),
-            "ransomware_use": m.get("ransomware_use") or "Unknown",
-            "cwes": sorted(m.get("cwes") or []),
-            "families": sorted(linked[cve]),
-        }
+    out = {
+        r["source_id"]: kev_card(r, sorted(linked[r["source_id"]]))
+        for r in kev_rows
+        if r["source_id"] in linked
+    }
     for cve in sorted(set(linked) - set(out)):
         if not (rec := nvd.get(cve)):
             continue  # not in our NVD data (counted by `cti threats`)
@@ -1052,6 +1063,7 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             "graphs.json": graphs,
             "eval.json": evals,
             "threats.json": threats,
+            "kev.json": build_kev(read_jsonl(paths["kev"])),
         }
     )
 

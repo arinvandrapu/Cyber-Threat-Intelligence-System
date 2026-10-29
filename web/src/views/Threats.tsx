@@ -316,7 +316,8 @@ export function CveCard({ entry: k }: { entry: LinkedCve }) {
       </span>
       <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>{k.description}</span>
       <span className="mono muted" style={{ fontSize: 12 }}>
-        {k.cwes.join(", ") || "no CWE"} · linked threats: {k.families.join(", ") || "none (link reviewed as wrong)"}
+        {k.cwes.join(", ") || "no CWE"}
+        {k.families.length > 0 && ` · linked threats: ${k.families.join(", ")}`}
       </span>
     </div>
   );

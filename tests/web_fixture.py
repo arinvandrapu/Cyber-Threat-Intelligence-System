@@ -471,6 +471,7 @@ def build() -> dict[str, dict]:
             "graphs.json": graphs,
             "eval.json": evals,
             "threats.json": threats,
+            "kev.json": export.build_kev([kev_row]),
         }
     )
 

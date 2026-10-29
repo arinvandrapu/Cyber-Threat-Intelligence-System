@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import type { Data, GraphNode } from "../types";
+import type { Data, GraphNode, LinkedCve } from "../types";
 import { PageHead, Seg, useTooltip } from "../components/ui";
 import { hash01, int } from "../format";
+import { CveCard } from "./Threats";
 
 // ATT&CK Enterprise tactics in kill-chain order (positions on the ring)
 // (v20 splits defense evasion into stealth and defense impairment; unknown tactics go last)
@@ -76,6 +77,7 @@ export function AttackGraph({ data }: { data: Data }) {
     return { present, angle, placed, cves, cvePos: new Map(cves.map((c) => [c.n.id, c])) };
   }, [g]);
 
+  const kevByCve = useMemo(() => new Map(data.kev.entries.map((k) => [k.cve, k])), [data.kev.entries]);
   if (!g || !model) return <p className="empty">No ATT&amp;CK mappings in this export.</p>;
   const selected = model.placed.find((t) => t.n.id === picked) ?? model.placed[0];
   const selectedCves = new Set(selected?.cves ?? []);
@@ -161,8 +163,8 @@ export function AttackGraph({ data }: { data: Data }) {
                 <div><span className="label">KEV CVEs</span><span className="mono" style={{ fontSize: 20 }}>{selected.cves.length}</span></div>
                 <div><span className="label">Techniques (all)</span><span className="mono" style={{ fontSize: 20 }}>{model.placed.length}</span></div>
               </div>
-              <div className="mono" style={{ fontSize: 12.5, maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
-                {[...selected.cves].sort().map((c) => <span key={c}><span className="dot" style={{ background: "var(--kev)" }} />{c}</span>)}
+              <div className="mono" style={{ fontSize: 12.5, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
+                {[...selected.cves].sort().map((c) => <KevRow key={c} cve={c} card={kevByCve.get(c)} />)}
               </div>
               {primary && majority && (
                 <p className="muted" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
@@ -176,5 +178,22 @@ export function AttackGraph({ data }: { data: Data }) {
         </aside>
       </section>
     </>
+  );
+}
+
+/** A KEV CVE in the technique panel: click to open CISA's entry in place. */
+function KevRow({ cve, card }: { cve: string; card?: LinkedCve }) {
+  const [open, setOpen] = useState(false);
+  if (!card) {
+    return <span><span className="dot" style={{ background: "var(--kev)" }} />{cve}</span>;
+  }
+  return (
+    <span style={{ display: "flex", flexDirection: "column" }}>
+      <button type="button" className="linkish" aria-expanded={open} onClick={() => setOpen(!open)} style={{ fontSize: 12.5 }}>
+        <span className="dot" style={{ background: "var(--kev)" }} />
+        {cve} {open ? "▾" : "▸"}
+      </button>
+      {open && <span style={{ fontFamily: "var(--sans)" }}><CveCard entry={card} /></span>}
+    </span>
   );
 }

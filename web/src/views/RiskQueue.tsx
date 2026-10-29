@@ -79,7 +79,9 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const shown = rows.slice(page * PAGE, (page + 1) * PAGE);
   const detail = risk.rows.find((r) => r.cve === selected) ?? null;
   const notRanked = focus && !risk.rows.some((r) => r.cve === focus);
-  const focusCard = focus ? data.threats.linked_cves.find((k) => k.cve === focus) : undefined;
+  const focusCard = focus
+    ? data.threats.linked_cves.find((k) => k.cve === focus) ?? data.kev.entries.find((k) => k.cve === focus)
+    : undefined;
   const reset = () => setPage(0);
 
   const header = (key: SortKey, text: string, className?: string) => (

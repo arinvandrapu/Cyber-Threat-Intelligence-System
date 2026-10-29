@@ -307,6 +307,10 @@ export interface Threats {
   review: ThreatReview | null;
 }
 
+export interface KevCatalog {
+  entries: LinkedCve[];
+}
+
 export interface Data {
   meta: Meta;
   risk: Risk;
@@ -314,4 +318,5 @@ export interface Data {
   graphs: Graphs;
   evals: Eval;
   threats: Threats;
+  kev: KevCatalog;
 }

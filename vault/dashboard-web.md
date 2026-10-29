@@ -71,3 +71,6 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   from Overview to Evaluation ("Data versions & limitations"); Threats tiles are
   analyst facts (QA numbers in a folded "How this list is built"); link rows are one
   line (source badge + ✓/✗, details on ▸); bar caption one line, full text in a tooltip.
+- Any CVE anywhere opens a detail: `kev.json` holds CISA's entry for all 1,756 KEV CVEs
+  (`export.build_kev`); `#/queue/<CVE>` shows the ranked detail, else a KEV or NVD card.
+  ATT&CK panel CVEs expand inline; Indicators' KEV nodes click through.
