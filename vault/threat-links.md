@@ -49,5 +49,9 @@ owner decisions that followed. Catalog overview: [[threat-catalog]].
 - Rejected sources: campaigns (cross product), MISP descriptions, KEV text, Metasploit names.
 - The link sheet is append-only (new links blank = unreviewed, only when none removed);
   `review.links.unreviewed` counts them. Quoted MITRE text carries MITRE's attribution.
+- Every linked CVE outside the queue opens a card (`threats.linked_cves`): CISA's KEV
+  entry, else its NVD record (main snapshot + 2002–2022 archive, looked up by `cti
+  threats`); rejected links too. 2026-10-26: 42 links, 4 queued, 26 KEV + 2 NVD cards.
+  The KEV card from #34 had been lost (pushed after the merge) and was restored here.
 
 Related: [[threat-catalog]], [[threat-layer]], [[attack-mapping]].

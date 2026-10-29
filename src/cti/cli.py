@@ -755,8 +755,34 @@ def cmd_threats(args, settings: Settings) -> int:
             else None,
         },
     }
+    # NVD records for linked CVEs the dashboard can't open otherwise (not queued, not in
+    # KEV): from the main snapshot and, if fetched, the 2002-2022 archive
+    from cti.nlp import attack_data
+
+    in_kev = {r["source_id"] for r in read_jsonl(processed / "kev.jsonl.gz")}
+    orphans = {
+        c["cve"]
+        for f in result["families"]
+        for c in f["cves"]
+        if c["cve"] not in tiers and c["cve"] not in in_kev
+    }
+    archives = sorted(_reference_snapshots(settings).list_keys(""))
+    archive_ids = sorted({k.split("/", 1)[0] for k in archives if k.endswith("manifest.json")})
+    snaps = [snap] + [Snapshot.open(_reference_snapshots(settings), a) for a in archive_ids[-1:]]
+    records = attack_data.nvd_records(snaps, orphans) if orphans else {}
+    result["nvd_cves"] = {
+        c: {
+            "text": r.text,
+            "cwes": list(r.cwes),
+            "affected": list(r.affected),
+            "published": r.published,
+        }
+        for c, r in sorted(records.items())
+    }
+    result["summary"]["linked_cves_without_nvd"] = sorted(orphans - set(records))
     result["provenance"] = {
         "config_sha256": hashlib.sha256(Path(threat_cfg.__file__).read_bytes()).hexdigest(),
+        "nvd_archive": archive_ids[-1] if archive_ids else None,
         "git": _git_state(),
         "misp_sha256": {n: reference.PINNED[f"misp-galaxy/{n}.json"] for n in clusters},
     }

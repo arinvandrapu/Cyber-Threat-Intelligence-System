@@ -47,3 +47,8 @@ Reviewed at the start of each session.
 - **Mistake:** Reviewing ATT&CK software links, I marked ThreatFox "XLoader" and "Xloader" correct because the names matched ATT&CK S1207; their IDs were `apk.xloader` (Android, a different malware) and `osx.xloader` (macOS build), so the Windows Office-exploit sentence didn't apply. An audit caught it.
 - **Trigger:** Any review or join that connects records by name across sources (ThreatFox, ATT&CK, MISP, reference pages).
 - **Rule:** Before marking a name-based link correct, check the source's own ID (platform prefix, Malpedia ID) and that the evidence describes the same variant; note any mismatch.
+
+### Check a PR is still open before pushing more work to it
+- **Mistake:** I pushed the KEV-card commit to PR #34's branch after the owner had merged #34 at the previous commit. The commit never reached `main`, the local branch was deleted, and the feature silently vanished until the owner noticed links were dead again.
+- **Trigger:** Pushing to any feature branch whose PR the owner might already have merged (especially right after saying "ready to merge").
+- **Rule:** Run `gh pr view <n> --json state,headRefOid` before pushing; if merged, put new work on a fresh branch from `main`. Before deleting a merged branch, check `git log main..<branch>` is empty.

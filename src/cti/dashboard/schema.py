@@ -219,18 +219,20 @@ class ThreatFamily(_Model):
     why: list[str]
 
 
-class KevEntry(_Model):
-    """A KEV CVE linked to a shown family. KEV CVEs are never in the risk queue (already
-    confirmed exploited), so this is their only detail in the dashboard."""
+class LinkedCve(_Model):
+    """A CVE a shown family links to that is not in the risk queue (already in KEV, older
+    than the queue's window, or below its tiers): its only detail in the dashboard."""
 
     cve: str
-    name: str  # CISA's vulnerabilityName
+    source: Literal["kev", "nvd"]  # CISA's KEV entry, else the CVE's NVD record
+    name: str | None  # KEV: CISA's vulnerabilityName; NVD: derived (approximate)
     vendor: str
     product: str
-    description: str  # CISA's short description, defanged and truncated
-    date_added: str
-    due_date: str | None
-    ransomware_use: str  # "Known" | "Unknown" (CISA's field)
+    description: str  # defanged and truncated
+    published: str | None  # NVD only
+    date_added: str | None  # KEV only
+    due_date: str | None  # KEV only
+    ransomware_use: str | None  # KEV only: "Known" | "Unknown"
     cwes: list[str]
     families: list[str]  # shown families linking to it (links not reviewed as wrong)
 
@@ -256,7 +258,7 @@ class Threats(_Model):
     # that was not reviewed as wrong
     categories: list[CategoryCount]
     kev_ransomware_cves: int  # KEV entries with known ransomware use (category-level link)
-    kev: list[KevEntry]
+    linked_cves: list[LinkedCve]
     review: ThreatReview | None
 
 

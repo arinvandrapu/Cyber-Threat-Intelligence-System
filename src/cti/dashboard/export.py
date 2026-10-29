@@ -769,12 +769,15 @@ def build_threats(
     tiers: dict[str, str],
     technique_names: dict[str, str],
     kev_rows: Iterable[dict] = (),
+    cwe_names: dict[str, str] | None = None,
 ):
     """``threats.json`` from a ``cti threats`` document (or ``None``: not yet run).
 
     ``tiers``: this export's tier per ranked CVE (baseline excluded), checked against the
     tier ``cti threats`` recorded on every link, so a stale threats file fails the export.
-    ``kev_rows``: parsed KEV records; linked KEV CVEs get a detail entry from them.
+    ``kev_rows``: parsed KEV records; ``cwe_names``: CWE ID -> name. Every linked CVE
+    outside the risk queue gets a card: CISA's entry if it is in KEV, else its NVD record
+    (``doc["nvd_cves"]``, written by ``cti threats``), so no link leads nowhere.
     """
     if doc is None:
         return {
@@ -784,7 +787,7 @@ def build_threats(
             "families": [],
             "categories": [],
             "kev_ransomware_cves": 0,
-            "kev": [],
+            "linked_cves": [],
             "review": None,
         }
     stale = sorted(
@@ -854,7 +857,7 @@ def build_threats(
             for cat, rows in sorted(doc["category_rows"].items(), key=lambda kv: (-kv[1], kv[0]))
         ],
         "kev_ransomware_cves": len(doc["kev_ransomware_cves"]),
-        "kev": _kev_entries(families, kev_rows),
+        "linked_cves": _linked_cves(families, kev_rows, doc.get("nvd_cves", {}), cwe_names or {}),
         "review": {
             "labeller": review["labeller"],
             "hand_labelled_families": doc["summary"]["category_source"].get("owner", 0),
@@ -865,33 +868,64 @@ def build_threats(
     }
 
 
-def _kev_entries(families: list[dict], kev_rows: Iterable[dict]) -> list[dict]:
+def _real(value: str) -> str:
+    return "" if value.strip().lower() in _PLACEHOLDER else value.strip()
+
+
+def _linked_cves(
+    families: list[dict], kev_rows: Iterable[dict], nvd: dict[str, dict], cwe_names: dict[str, str]
+) -> list[dict]:
+    """A card for every CVE a shown family links to that is not in the risk queue: CISA's
+    KEV entry, else its NVD record. Rejected links get one too (it shows why), but only
+    links not reviewed as wrong are listed under ``families``."""
     linked: dict[str, set[str]] = defaultdict(set)
     for f in families:
         for link in f["links"]:
-            if link["in_kev"] and link["review"] != "rejected":
-                linked[link["cve"]].add(f["family"])
-    out = []
+            if link["tier"] is None:
+                families_of = linked.setdefault(link["cve"], set())  # every one gets a card
+                if link["review"] != "rejected":
+                    families_of.add(f["family"])
+    out = {}
     for r in kev_rows:
         cve = r["source_id"]
         if cve not in linked:
             continue
         m = r["metadata"]
-        out.append(
-            {
-                "cve": cve,
-                "name": r["title"],
-                "vendor": m.get("vendor") or "",
-                "product": m.get("product") or "",
-                "description": truncate(defang_text(r.get("text") or "")),
-                "date_added": m["date_added"],
-                "due_date": m.get("due_date"),
-                "ransomware_use": m.get("ransomware_use") or "Unknown",
-                "cwes": sorted(m.get("cwes") or []),
-                "families": sorted(linked[cve]),
-            }
-        )
-    return sorted(out, key=lambda e: cve_sort_key(e["cve"]))
+        out[cve] = {
+            "cve": cve,
+            "source": "kev",
+            "name": r["title"],
+            "vendor": m.get("vendor") or "",
+            "product": m.get("product") or "",
+            "description": truncate(defang_text(r.get("text") or "")),
+            "published": None,
+            "date_added": m["date_added"],
+            "due_date": m.get("due_date"),
+            "ransomware_use": m.get("ransomware_use") or "Unknown",
+            "cwes": sorted(m.get("cwes") or []),
+            "families": sorted(linked[cve]),
+        }
+    for cve in sorted(set(linked) - set(out)):
+        if not (rec := nvd.get(cve)):
+            continue  # not in our NVD data (counted by `cti threats`)
+        affected = rec.get("affected") or []
+        cwes = [{"id": c, "name": cwe_names.get(c)} for c in rec.get("cwes", [])]
+        first = affected[0] if affected else {}
+        out[cve] = {
+            "cve": cve,
+            "source": "nvd",
+            "name": defang_text(derived_name(affected, cwes) or "") or None,
+            "vendor": _real(first.get("vendor", "")),
+            "product": _real(first.get("product", "")),
+            "description": truncate(defang_text(rec.get("text") or "")),
+            "published": rec.get("published"),
+            "date_added": None,
+            "due_date": None,
+            "ransomware_use": None,
+            "cwes": sorted(rec.get("cwes", [])),
+            "families": sorted(linked[cve]),
+        }
+    return sorted(out.values(), key=lambda e: cve_sort_key(e["cve"]))
 
 
 def tier_lookup(scored: dict) -> dict[str, str]:
@@ -975,7 +1009,13 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
     threats_doc = load_threats(paths["threats"], day)
     shown_tiers = {c: t for c, t in tier_lookup(scored).items() if t != "baseline"}
     names = {t.id: t.name for t in load_techniques(paths["nvd"].parent)}
-    threats = build_threats(threats_doc, shown_tiers, names, read_jsonl(paths["kev"]))
+    threats = build_threats(
+        threats_doc,
+        shown_tiers,
+        names,
+        read_jsonl(paths["kev"]),
+        {r["source_id"]: r["title"] for r in read_jsonl(paths["cwe"])},
+    )
     shown = f"{len(threats['families'])} families shown" if threats_doc else "not run"
     log(f"  threats: {shown}")
     evals = build_eval(results)

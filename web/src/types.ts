@@ -268,15 +268,17 @@ export interface ThreatFamily {
   why: string[];
 }
 
-export interface KevEntry {
+export interface LinkedCve {
   cve: string;
-  name: string;
+  source: "kev" | "nvd";
+  name: string | null;
   vendor: string;
   product: string;
   description: string;
-  date_added: string;
+  published: string | null;
+  date_added: string | null;
   due_date: string | null;
-  ransomware_use: string;
+  ransomware_use: string | null;
   cwes: string[];
   families: string[];
 }
@@ -301,7 +303,7 @@ export interface Threats {
   families: ThreatFamily[];
   categories: CategoryCount[];
   kev_ransomware_cves: number;
-  kev: KevEntry[];
+  linked_cves: LinkedCve[];
   review: ThreatReview | null;
 }
 
