@@ -60,3 +60,12 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
 - Vite `build.modulePreload.polyfill: false` and `assetsInlineLimit: 0`: nothing inline,
   no `data:` assets. `<link rel="icon" href="data:,">` stops a favicon request.
 - EPSS percentiles are floored for display (0.99981 → 99.98th, never "100th").
+## Clarity pass (2026-10-29, owner feedback)
+
+- Overview opens with the question and the two linked lists, then a tab guide (what /
+  why / how, numbers from the export, `guide()` in `Overview.tsx`).
+- Plain labels: "What moved this CVE up or down" (log-odds explained in the caption),
+  signal names without logit/log wording, SSVC header tooltip.
+- CVE name: derived for queue CVEs (`export.derived_name`; placeholder vendors such as
+  "n/a" skipped), CISA's name for KEV CVEs. Display only, never a model input.
+

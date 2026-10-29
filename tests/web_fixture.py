@@ -371,6 +371,7 @@ def build() -> dict[str, dict]:
     context = {
         c: {
             "assigner": "fixture-cna@example.org",
+            "affected": [{"vendor": "Example Vendor", "product": "Example Product"}],
             "description": export.truncate(
                 export.defang_text(
                     f"Synthetic fixture record {c}: an example product at https://vendor.example.com/"

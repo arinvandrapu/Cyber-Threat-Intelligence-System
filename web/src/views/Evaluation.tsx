@@ -61,7 +61,7 @@ export function Evaluation({ data }: { data: Data }) {
           </div>
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <Stat value={`${decision.difference_hits >= 0 ? "+" : ""}${hits(decision.difference_hits)}`} label={`extra KEV hits (${hits(r.methods.logistic!.pooled["hits@100"])} vs ${hits(r.methods.epss!.pooled["hits@100"])})`} />
-            <Stat value={`[${hits(decision.ci95[0])}, ${hits(decision.ci95[1])}]`} label="paired bootstrap 95% CI" />
+            <Stat value={`[${hits(decision.ci95[0])}, ${hits(decision.ci95[1])}]`} label="95% range of the difference (paired bootstrap)" />
             {at1 && <Stat value={`${hits(r.methods.logistic!.pooled["hits@1%"])} vs ${hits(r.methods.epss!.pooled["hits@1%"])}`} label={at1.excludes_zero ? "top 1%: model ahead" : "top 1%: no detectable difference"} />}
           </div>
         </section>

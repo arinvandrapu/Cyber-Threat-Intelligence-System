@@ -272,6 +272,15 @@ def build_risk(
                     "cvss_cna": (ctx_snap.get("cvss_cna") or {}).get("base_score"),
                     "cwes": [c["id"] for c in ctx_snap.get("cwes", [])],
                     "assigner": nvd.get("assigner"),
+                    "name": defang_text(
+                        derived_name(
+                            nvd.get("affected", []),
+                            ctx_snap.get("cwes", []),
+                            nvd.get("cwe_assignments", []),
+                        )
+                        or ""
+                    )
+                    or None,
                     "description": nvd.get("description", ""),
                 },
             }
@@ -316,16 +325,60 @@ def build_risk(
 
 
 def nvd_context(nvd_rows: Iterable[dict], cves: set[str]) -> dict[str, dict]:
-    """Assigner and defanged, truncated description for each of ``cves``."""
+    """Assigner, affected vendor/product and defanged, truncated description for ``cves``."""
     out = {}
     for row in nvd_rows:
         cve = row["source_id"]
         if cve in cves:
             out[cve] = {
                 "assigner": row["metadata"].get("assigner"),
+                "affected": row["metadata"].get("affected", []),
+                "cwe_assignments": row["metadata"].get("cwe_assignments", []),
                 "description": truncate(defang_text(row.get("text") or "")),
             }
     return out
+
+
+_PLACEHOLDER = frozenset({"", "n/a", "na", "unknown", "unspecified", "-"})
+
+
+def derived_name(
+    affected: list[dict], cwes: list[dict], assignments: list[dict] = ()
+) -> str | None:
+    """An approximate common name from data we hold: "<vendor> <product>: <weakness>".
+
+    - What: the first affected entry; placeholder values ("n/a", "unknown") skipped, and
+      the vendor dropped when it repeats the product ("Linux" + "Linux kernel", "PHP
+      Group" + "PHP").
+    - Weakness: NVD's Primary CWE, else the CVE's only CWE. With several CWEs and none
+      marked primary there is no honest single choice, so the name says "vulnerability".
+    """
+    what = ""
+    for data in affected[:1]:
+        vendor, product = data.get("vendor", "").strip(), data.get("product", "").strip()
+        vendor = "" if vendor.lower() in _PLACEHOLDER else vendor
+        product = "" if product.lower() in _PLACEHOLDER else product
+        v, p = vendor.lower(), product.lower()
+        if vendor and product and (p.startswith(v) or p in v.split()):
+            vendor = ""
+        what = " ".join(x for x in (vendor, product) if x)
+    names = {c["id"]: c["name"] for c in cwes if c.get("name")}
+    primary = next(
+        (
+            a["id"]
+            for a in assignments
+            if a.get("source_kind") == "nvd" and a.get("type") == "Primary" and a["id"] in names
+        ),
+        None,
+    )
+    weakness = (
+        names.get(primary) if primary else (next(iter(names.values())) if len(names) == 1 else None)
+    )
+    if what and weakness:
+        return f"{what}: {weakness}"
+    if what:
+        return f"{what} vulnerability"
+    return weakness
 
 
 # ---- IOCs -------------------------------------------------------------------------------------

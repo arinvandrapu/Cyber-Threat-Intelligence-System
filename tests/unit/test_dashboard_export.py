@@ -292,6 +292,28 @@ def test_build_threats_refuses_stale_tiers_and_handles_not_run():
     schema.Threats.model_validate(empty)
 
 
+def test_derived_name():
+    xss = [{"id": "CWE-79", "name": "Cross-site Scripting"}]
+    assert export.derived_name([{"vendor": "getsolus", "product": "eopkg"}], xss) == (
+        "getsolus eopkg: Cross-site Scripting"
+    )
+    linux = [{"vendor": "Linux", "product": "Linux kernel"}]
+    assert export.derived_name(linux, []) == "Linux kernel vulnerability"
+    assert export.derived_name([{"vendor": "n/a", "product": "n/a"}], xss) == "Cross-site Scripting"
+    assert export.derived_name([{"vendor": "unknown", "product": "Widget"}], xss) == (
+        "Widget: Cross-site Scripting"
+    )
+    assert export.derived_name([], []) is None
+    php = [{"vendor": "PHP Group", "product": "PHP"}]
+    two = [
+        {"id": "CWE-1325", "name": "Memory Allocation"},
+        {"id": "CWE-416", "name": "Use After Free"},
+    ]
+    assert export.derived_name(php, two) == "PHP vulnerability"  # several CWEs, none primary
+    primary = [{"source_kind": "nvd", "type": "Primary", "id": "CWE-416"}]
+    assert export.derived_name(php, two, primary) == "PHP: Use After Free"
+
+
 def test_build_iocs():
     docs = [
         doc("CVE-2026-0002", [ioc("url", "ftp://files[.]example/a"), ioc("cve", "CVE-1")]),

@@ -25,6 +25,7 @@ export interface Context {
   cvss_cna: number | null;
   cwes: string[];
   assigner: string | null;
+  name: string | null;
   description: string; // plain text only: never rendered as HTML or linkified
 }
 

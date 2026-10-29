@@ -5,7 +5,7 @@ import { PageHead, TierName } from "../components/ui";
 import { int, signed } from "../format";
 
 const SOURCE_LABEL: Record<ThreatFamily["category_source"], string> = {
-  owner: "hand-labelled",
+  owner: "reviewed label (Claude, for the owner)",
   misp: "MISP galaxy name match",
   none: "no category",
 };
@@ -71,9 +71,9 @@ export function Threats({ data }: { data: Data }) {
           <span className="muted">{int(threats.families.length)} shown: top by priority, plus any with a CVE link</span>
         </div>
         <div className="panel tile">
-          <span className="label">Hand-labelled categories</span>
+          <span className="label">Reviewed categories</span>
           <span className="value">{int(review?.hand_labelled_families ?? 0)}</span>
-          <span className="muted">the rest use MISP name matches, which can collide</span>
+          <span className="muted">labelled by Claude for the owner; the rest use MISP name matches, which can collide</span>
         </div>
         <div className="panel tile">
           <span className="label">CVE links reviewed correct</span>
@@ -144,8 +144,9 @@ export function Threats({ data }: { data: Data }) {
             {rows.length === 0 && <p className="empty">No shown family has this category.</p>}
           </div>
           <p className="caption" style={{ padding: "0 16px 14px" }}>
-            Solid badges: hand-checked category. Dashed: unchecked MISP name match (names can collide). The top of the
-            ranking is always hand-checked (the export refuses otherwise); lower families appear only because of a CVE link
+            Solid badges: reviewed category (labelled by Claude for the owner). Dashed: unreviewed MISP name match (names
+            can collide). The top of the ranking is always reviewed (the export refuses otherwise); lower families appear
+            only because of a CVE link
             not reviewed as wrong.
           </p>
         </div>

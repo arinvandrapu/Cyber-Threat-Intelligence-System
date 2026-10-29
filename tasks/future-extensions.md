@@ -78,9 +78,13 @@ Facts from the 2026-10-26 snapshot (`raw/threatfox/*/full.csv.zip`, already pars
 
 ## E3. Dashboard clarity (owner feedback 2026-10-28)
 
-- [ ] **CVE common name.** The CVE detail shows context but nothing says what the CVE is.
+- [x] **CVE common name.** The CVE detail shows context but nothing says what the CVE is.
       Show a one-line name, not a summary: KEV `vulnerabilityName` when present (e.g.
       "Apache Log4j2 Remote Code Execution Vulnerability"), otherwise a name built from
       data we hold (CWE name + vendor/product), labelled as derived. Exported by `cti export`.
-- [ ] **Overview page.** Add a description for every tab: what it is, why it's there, and
+- [x] **Overview page.** Add a description for every tab: what it is, why it's there, and
       how it's calculated, in plain language. Numbers quoted must come from the export.
+- Done 2026-10-29: KEV CVEs show CISA's name (10c card); queue CVEs a derived name
+  (`export.derived_name`, CNA affected vendor/product + first CWE). Overview opens with
+  the two-lists model and a tab guide; jargon labels replaced ("What moved this CVE up
+  or down", plain signal names).

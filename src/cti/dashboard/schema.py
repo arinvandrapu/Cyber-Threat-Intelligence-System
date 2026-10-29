@@ -45,6 +45,9 @@ class Context(_Model):
     cvss_cna: float | None
     cwes: list[str]
     assigner: str | None
+    # derived, never a model input: "<vendor> <product>: <CWE name>" from the CVE record's
+    # affected data and its first CWE (queue CVEs are not in KEV, so CISA gives no name)
+    name: str | None
     description: str  # spans the IOC extractor recognises defanged, then truncated; plain text
 
 

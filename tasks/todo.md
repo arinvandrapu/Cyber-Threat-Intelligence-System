@@ -311,7 +311,7 @@ Stretch (only if time allows): relation extraction,
 detection-rule generation, a small hand-labeled evaluation set.
 
 After Phase 10, before Phase 9 screenshots: dashboard clarity (E3: CVE name, Overview tab descriptions) in
-[future-extensions.md](future-extensions.md).
+[future-extensions.md](future-extensions.md). Done 2026-10-29 (CVE names, Overview guide, plain labels).
 
 ## Review
 
