@@ -190,11 +190,14 @@ def build(
     owner: Mapping[str, tuple[str, ...]],
     day: date,
     link_review: Mapping[tuple[str, str, str], bool] | None = None,
+    software_cves: Mapping[str, Mapping[str, str]] | None = None,
 ) -> dict:
     """The threat catalog. ``tiers``: queue CVE -> risk tier; ``owner``: blind labels;
     ``link_review``: (family, CVE, via) -> reviewed correct, which decides with
-    ``TRUSTED_LINKS`` which links count toward priority."""
+    ``TRUSTED_LINKS`` which links count toward priority; ``software_cves``: ATT&CK software
+    ID -> CVE -> the ATT&CK sentence citing it (``attack_catalog.software_cves``)."""
     link_review = link_review or {}
+    software_cves = software_cves or {}
     fams = families(iocs)
     named = [f for f in fams if is_named(f)]
     misp = misp_index(clusters)
@@ -231,6 +234,10 @@ def build(
         for (cve, origin), found in mentioned.get(fam.name, {}).items():
             links[(cve, f"mention:{origin}")] = [
                 {"doc_id": d, "surface": s} for d, s in sorted(found)
+            ]
+        for cve, sentence in sorted(software_cves.get(sid, {}).items()) if sid else ():
+            links[(cve, "attack:software")] = [
+                {"doc_id": f"attack:{sid}", "surface": software[sid]["name"], "text": sentence}
             ]
         cves = [
             {

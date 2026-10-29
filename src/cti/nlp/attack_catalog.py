@@ -116,6 +116,47 @@ def uses_from_bundle(objects: list[dict]) -> dict[str, set[str]]:
     return uses
 
 
+_CVE_ID = re.compile(r"\bCVE-\d{4}-\d{4,}\b")
+_SENTENCE = re.compile(r"(?<=[.!?])\s+")
+EVIDENCE_CHARS = 300
+
+
+def software_cves_from_bundle(objects: list[dict]) -> dict[str, dict[str, str]]:
+    """Software ID -> CVE -> the ATT&CK sentence citing it, for live malware and tools.
+
+    CVEs are taken from ATT&CK's own prose only: the software's description and the
+    descriptions of its ``uses`` relationships, after removing ``(Citation: ...)``
+    markers. Citation names and external-reference titles often contain a CVE about a
+    campaign ("Palo Alto CVE-2015-3113 July 2015") without saying the software used it,
+    so they are not evidence. Campaigns and groups are not software, so they are left out.
+    """
+
+    def live(o: dict) -> bool:
+        return not o.get("revoked") and not o.get("x_mitre_deprecated")
+
+    software = {o["id"]: o for o in objects if o.get("type") in ("malware", "tool") and live(o)}
+    texts: list[tuple[str, str]] = [(o["id"], o.get("description", "")) for o in software.values()]
+    texts += [
+        (o["source_ref"], o.get("description", ""))
+        for o in objects
+        if o.get("type") == "relationship"
+        and o.get("relationship_type") == "uses"
+        and live(o)
+        and o.get("source_ref") in software
+    ]
+    out: dict[str, dict[str, str]] = {}
+    for ref, text in sorted(texts):
+        sid = _external_id(software[ref])
+        if not sid:
+            continue
+        # clean first (citations, then markdown links, then whitespace), so a CVE inside a
+        # link target or citation is never read and sentences split on clean prose
+        for sentence in _SENTENCE.split(clean(text)):
+            for cve in _CVE_ID.findall(sentence):
+                out.setdefault(sid, {}).setdefault(cve, sentence.strip()[:EVIDENCE_CHARS])
+    return out
+
+
 def _bundle(snapshot: Snapshot) -> list[dict]:
     for entry in snapshot.entries(AttackSource.name):
         return json.load(gunzip_stream(snapshot.read_raw(entry)))["objects"]
@@ -128,3 +169,7 @@ def revocations(snapshot: Snapshot) -> dict[str, str]:
 
 def uses(snapshot: Snapshot) -> dict[str, set[str]]:
     return uses_from_bundle(_bundle(snapshot))
+
+
+def software_cves(snapshot: Snapshot) -> dict[str, dict[str, str]]:
+    return software_cves_from_bundle(_bundle(snapshot))

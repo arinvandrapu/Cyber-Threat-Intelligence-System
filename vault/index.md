@@ -29,6 +29,7 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
 - [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts
+- [[threat-links]] — CVE link sources (ThreatFox tags, reference pages, ATT&CK software), review results, owner decisions
 - [[threat-layer]] — Phase 10a: family categories (MISP galaxies, STIX
   malware types), CVE links, priority heuristic; abuse.ch §7.3 no-AI-training rule
 - [[attack-mapping-v2-results]] — 10b run: combiner passes narrowly (+0.035 hit@5), gain from the CVSS rule at T1189

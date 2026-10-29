@@ -307,6 +307,11 @@ Secure by construction:
 - **Responsible data use.** Raw feed data is never redistributed; feed terms of use are
   respected.
 
+**Attribution.** MITRE ATT&CK®, CWE™ and CAPEC™ content: © The MITRE Corporation. This work
+is reproduced and distributed with the permission of The MITRE Corporation. CTID mappings:
+Apache-2.0 (`data/reference/ctid/`). MISP galaxy: CC0/BSD. abuse.ch data appears only as
+aggregates, under its terms of use.
+
 ## Setup
 
 Requirements: Python 3.12+, Node.js 20.19+ (dashboard), an AWS account (S3 only), and a

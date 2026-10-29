@@ -17,6 +17,7 @@ const REVIEW_LABEL: Record<ThreatLink["review"], string> = {
 const VIA_LABEL: Record<ThreatLink["via"], string> = {
   threatfox_tag: "ThreatFox CVE tag",
   "mention:reference_page": "named on a CVE reference page",
+  "attack:software": "cited by MITRE ATT&CK for this software",
 };
 
 export function Threats({ data }: { data: Data }) {
@@ -174,7 +175,9 @@ export function Threats({ data }: { data: Data }) {
         ))}
         <p className="caption">
           Unlabelled rows belong to families with no category yet; unknown rows were submitted without a family. Counts
-          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves.
+          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves. ATT&amp;CK techniques and
+          quoted ATT&amp;CK sentences: © The MITRE Corporation. This work is reproduced and distributed with the
+          permission of The MITRE Corporation.
         </p>
       </section>
     </>
@@ -252,6 +255,12 @@ export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }
         {l.surface.length ? ` ("${l.surface.join('", "')}")` : ""} · {REVIEW_LABEL[l.review]}
         {l.counts_for_priority ? "" : " · not counted in the ranking"}
       </span>
+      {/* MITRE's sentence: plain text, never HTML or a link */}
+      {l.evidence_text && (
+        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--text-2)", overflowWrap: "anywhere" }}>
+          “{l.evidence_text}”
+        </span>
+      )}
     </div>
   );
 }

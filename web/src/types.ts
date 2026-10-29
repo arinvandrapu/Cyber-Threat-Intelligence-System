@@ -242,8 +242,9 @@ export interface TechniqueRef {
 
 export interface ThreatLink {
   cve: string;
-  via: "threatfox_tag" | "mention:reference_page";
+  via: "threatfox_tag" | "mention:reference_page" | "attack:software";
   surface: string[];
+  evidence_text: string | null;
   review: "correct" | "rejected" | "unreviewed";
   counts_for_priority: boolean;
   in_kev: boolean;

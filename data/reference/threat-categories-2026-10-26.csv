@@ -50,3 +50,8 @@ rank,family,malware_ids,ioc_rows,categories,notes
 395,Irc16,elf.backdoor_irc16,2,backdoor;bot,IRC-controlled Linux backdoor
 211,BlackMatter,win.blackmatter,10,ransomware,DarkSide successor RaaS
 286,GoGoogle,win.gogoogle,4,ransomware,low confidence: recalled as a Go-written ransomware; not verified
+38,Agent Tesla,win.agent_tesla,371,infostealer;keylogger,commodity .NET stealer/keylogger
+173,PoshC2,win.poshc2,20,c2-framework,open-source post-exploitation C2
+204,Xloader,osx.xloader,12,infostealer,osx.xloader: macOS build of XLoader (Formbook successor)
+352,Ramsay,win.ramsay,3,spyware;worm,espionage framework that spreads to air-gapped networks
+404,XLoader,apk.xloader,2,spyware;banker,"apk.xloader: Android XLoader (MoqHao/Roaming Mantis), not the Formbook successor"

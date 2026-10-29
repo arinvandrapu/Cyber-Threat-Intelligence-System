@@ -42,3 +42,8 @@ Reviewed at the start of each session.
 - **Mistake:** Phase 10-0 committed MISP's `ransomware.json` as an unmodified copy. It held ransom notes, one with a victim's portal login, plus leak-site .onion links; CI gitleaks failed the PR.
 - **Trigger:** Committing any upstream data file, however reputable the source.
 - **Rule:** Run `gitleaks dir <path>` locally and scan for fields you don't need (victims, notes, live URLs) before the first push; commit only the fields used, via a tested, idempotent trim.
+
+### Check identity, not just names, before marking a link correct
+- **Mistake:** Reviewing ATT&CK software links, I marked ThreatFox "XLoader" and "Xloader" correct because the names matched ATT&CK S1207; their IDs were `apk.xloader` (Android, a different malware) and `osx.xloader` (macOS build), so the Windows Office-exploit sentence didn't apply. An audit caught it.
+- **Trigger:** Any review or join that connects records by name across sources (ThreatFox, ATT&CK, MISP, reference pages).
+- **Rule:** Before marking a name-based link correct, check the source's own ID (platform prefix, Malpedia ID) and that the evidence describes the same variant; note any mismatch.
