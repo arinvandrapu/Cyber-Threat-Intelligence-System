@@ -281,7 +281,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           had MISP `ransomware`): 17 families added, converged, top 20 all manual
     - [ ] Follow-up: Phase 5a alias index merges ThreatFox families into ATT&CK software
           via their aliases (Bashlite → S0650 QakBot through "Qbot"); fix + re-run extract
-  - [ ] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +
+  - [x] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +
         git state in output) before any test score; disclose that test label counts were
         seen while planning. Train: all 419 CTID KEV CVEs. Test: CTID `attack_to_cve`
         (839 CVEs, 2008–2020) minus 27 overlaps; exploitation primary (~195), impact
@@ -294,6 +294,9 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         capec-chain row; methodology-replay reference row (not a baseline). Decision:
         combiner vs prior+biencoder, paired bootstrap hit@5 (MDE ≈ 0.08–0.10). Also hit@1,
         MRR, per technique, per CVSS version, near-duplicate check.
+    - Done 2026-10-29: pre-registered (`2a34423`), audited twice, run once. Combiner
+      passes: hit@5 +0.035 [+0.005, +0.070] vs prior+biencoder (= majority, β=1.0);
+      gain is the CVSS rule at T1189. See vault/attack-mapping-v2-results.md.
   - [ ] **10c. Dashboard** — `threats.json` (schema, types, fixture, vite/smoke lists);
         Threats view (categories, priority table with "why", family detail); "Linked
         threats" in the CVE detail; predicted techniques only if the combiner passes,

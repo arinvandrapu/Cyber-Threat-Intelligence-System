@@ -5,7 +5,7 @@ tags: [nlp, attack, evaluation, phase-10]
 # ATT&CK Mapping v2 (Phase 10b)
 
 Status 2026-10-29: pre-registered (commit `2a34423`, config alone); `cti attack-eval2`
-built; implementation audited before the single test run. Plan: `tasks/todo.md` § 10.
+built; implementation audited, then run once: [[attack-mapping-v2-results]]. Plan: `tasks/todo.md` § 10.
 Why: Phase 5b's mapping is weak and its test split is spent ([[attack-mapping]]).
 
 ## Test set
