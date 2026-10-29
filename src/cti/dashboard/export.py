@@ -699,6 +699,18 @@ def disclosures(
     return [d.format(**values) for d in DISCLOSURES]
 
 
+def load_threats(path: Path, day: str) -> dict | None:
+    """The ``cti threats`` document for ``day``, or ``None`` if it has not been run."""
+    import json
+
+    if not path.exists():
+        return None
+    doc = json.loads(path.read_text())
+    if doc["snapshot_date"] != day:
+        raise ConfigError(f"{path} is for {doc['snapshot_date']}, not {day}")
+    return doc
+
+
 def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict[str, str]):
     """``threats.json`` from a ``cti threats`` document (or ``None``: not yet run).
 
@@ -723,7 +735,18 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
             f"threats.json tiers differ from this export for {stale[:5]}; "
             "rerun `cti threats`, then `cti export`"
         )
-    shown = [f for f in doc["families"] if f["rank"] <= TOP_THREATS or f["cves"]]
+    top = [f for f in doc["families"] if f["rank"] <= TOP_THREATS]
+    if unchecked := [f["family"] for f in top if f["category_source"] != "owner"]:
+        raise ConfigError(
+            f"priority top {TOP_THREATS} must be hand-labelled; not yet: {unchecked}; "
+            "run `cti threats-sheet --priority`, label, then `cti threats`"
+        )
+    # below the top, a family appears only for a link that was not reviewed as wrong
+    shown = top + [
+        f
+        for f in doc["families"]
+        if f["rank"] > TOP_THREATS and any(c["review"] != "rejected" for c in f["cves"])
+    ]
     families = [
         {
             "rank": f["rank"],
@@ -756,7 +779,6 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
         }
         for f in shown
     ]
-    per_category = Counter(c for f in doc["families"] for c in f["categories"])
     review = doc["review"]
     precision = (review["links"].get("precision") or {}).get("all")
     return {
@@ -765,7 +787,7 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
         "families_total": len(doc["families"]),
         "families": families,
         "categories": [
-            {"category": cat, "ioc_rows": rows, "families": per_category[cat]}
+            {"category": cat, "ioc_rows": rows}
             for cat, rows in sorted(doc["category_rows"].items(), key=lambda kv: (-kv[1], kv[0]))
         ],
         "kev_ransomware_cves": len(doc["kev_ransomware_cves"]),
@@ -856,9 +878,7 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             read_jsonl(paths["iocs"]), tier_lookup(scored), scored["in_kev"]
         ),
     }
-    threats_doc = json.loads(paths["threats"].read_text()) if paths["threats"].exists() else None
-    if threats_doc and threats_doc["snapshot_date"] != day:
-        raise ConfigError(f"threats.json is for {threats_doc['snapshot_date']}, not {day}")
+    threats_doc = load_threats(paths["threats"], day)
     shown_tiers = {c: t for c, t in tier_lookup(scored).items() if t != "baseline"}
     names = {t.id: t.name for t in load_techniques(paths["nvd"].parent)}
     threats = build_threats(threats_doc, shown_tiers, names)

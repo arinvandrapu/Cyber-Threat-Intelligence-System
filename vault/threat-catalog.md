@@ -69,7 +69,8 @@ Decisions and licence: [[threat-layer]].
 
 - `cti export` reads `data/threats/<date>/threats.json` as an **optional** input (order:
   export → threats → export); missing → `available: false`; stale tiers → export fails.
-- Ships the priority top `PRIORITY_REVIEW_TOP_N` (hand-checked) + any linked family; no IOC
+- Ships the priority top `PRIORITY_REVIEW_TOP_N` (export refuses if any is not hand-labelled)
+  + families with a link not reviewed as wrong (none today: 20 shown); no IOC
   values, URLs or evidence doc IDs. Threats view + "Linked threats" in the CVE detail;
   unchecked MISP labels are dashed. No predicted techniques ([[attack-mapping-v2-results]]).
 

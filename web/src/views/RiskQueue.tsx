@@ -36,7 +36,9 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const threatsByCve = useMemo(() => {
     const m = new Map<string, { family: string; link: ThreatLink }[]>();
     for (const f of data.threats.families)
-      for (const l of f.links) m.set(l.cve, [...(m.get(l.cve) ?? []), { family: f.family, link: l }]);
+      for (const l of f.links)
+        // a link reviewed as wrong is not evidence about this CVE
+        if (l.review !== "rejected") m.set(l.cve, [...(m.get(l.cve) ?? []), { family: f.family, link: l }]);
     return m;
   }, [data.threats.families]);
 

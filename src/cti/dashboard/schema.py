@@ -218,7 +218,6 @@ class ThreatFamily(_Model):
 class CategoryCount(_Model):
     category: str
     ioc_rows: int  # overlapping: a multi-category family counts in each
-    families: int
 
 
 class ThreatReview(_Model):
@@ -233,7 +232,8 @@ class Threats(_Model):
     available: bool  # False when `cti threats` has not run for this snapshot
     snapshot_date: str | None
     families_total: int
-    families: list[ThreatFamily]  # the top families by priority plus any with a CVE link
+    families: list[ThreatFamily]  # hand-checked priority top N, plus families with a link
+    # that was not reviewed as wrong
     categories: list[CategoryCount]
     kev_ransomware_cves: int  # KEV entries with known ransomware use (category-level link)
     review: ThreatReview | None

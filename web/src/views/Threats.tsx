@@ -24,9 +24,10 @@ export function Threats({ data }: { data: Data }) {
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<string | null>(threats.families[0]?.family ?? null);
 
+  // only categories some shown family has, so no filter leads to an empty table
   const categories = useMemo(
-    () => ["all", ...threats.categories.map((c) => c.category).filter((c) => c !== "unlabelled")],
-    [threats.categories],
+    () => ["all", ...[...new Set(threats.families.flatMap((f) => f.categories))].sort()],
+    [threats.families],
   );
   const rows = useMemo(
     () => threats.families.filter((f) => category === "all" || f.categories.includes(category)),
@@ -46,7 +47,8 @@ export function Threats({ data }: { data: Data }) {
   }
 
   const review = threats.review;
-  const detail = threats.families.find((f) => f.family === selected) ?? null;
+  // keep the side panel on a family the table still shows
+  const detail = rows.find((f) => f.family === selected) ?? rows[0] ?? null;
   const maxRows = Math.max(1, ...threats.categories.map((c) => c.ioc_rows));
 
   return (
@@ -80,7 +82,7 @@ export function Threats({ data }: { data: Data }) {
           </span>
           <span className="muted">
             {review?.link_precision_ci95
-              ? `95% CI ${Math.round(review.link_precision_ci95[0] * 100)}–${Math.round(review.link_precision_ci95[1] * 100)}% · only correct links or ThreatFox tags rank`
+              ? `95% CI ${Math.round(review.link_precision_ci95[0] * 100)}–${Math.round(review.link_precision_ci95[1] * 100)}% · ranking counts reviewed-correct links and unreviewed ThreatFox tags`
               : ""}
           </span>
         </div>
@@ -110,15 +112,15 @@ export function Threats({ data }: { data: Data }) {
                   <th>Category</th>
                   <th>Why it ranks here</th>
                   <th>KEV CVEs</th>
-                  <th>IOCs (30 d)</th>
+                  <th>IOCs (30-day change)</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((f) => (
-                  <tr key={f.family} className={f.family === selected ? "selected" : undefined}>
+                  <tr key={f.family} className={f.family === detail?.family ? "selected" : undefined}>
                     <td className="mono muted">{f.rank}</td>
                     <td>
-                      <button type="button" className="linkish" onClick={() => setSelected(f.family)} aria-pressed={f.family === selected}>
+                      <button type="button" className="linkish" onClick={() => setSelected(f.family)} aria-pressed={f.family === detail?.family}>
                         {f.family}
                       </button>
                     </td>
@@ -142,8 +144,9 @@ export function Threats({ data }: { data: Data }) {
             {rows.length === 0 && <p className="empty">No shown family has this category.</p>}
           </div>
           <p className="caption" style={{ padding: "0 16px 14px" }}>
-            Solid badges: hand-checked category. Dashed: unchecked MISP name match (names can collide). Families at the
-            top of the ranking are hand-checked; lower ones appear only because a CVE links to them.
+            Solid badges: hand-checked category. Dashed: unchecked MISP name match (names can collide). The top of the
+            ranking is always hand-checked (the export refuses otherwise); lower families appear only because of a CVE link
+            not reviewed as wrong.
           </p>
         </div>
 

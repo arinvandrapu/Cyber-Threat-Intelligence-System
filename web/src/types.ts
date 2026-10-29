@@ -269,7 +269,6 @@ export interface ThreatFamily {
 export interface CategoryCount {
   category: string;
   ioc_rows: number;
-  families: number;
 }
 
 export interface ThreatReview {

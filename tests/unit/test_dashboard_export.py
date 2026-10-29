@@ -236,8 +236,10 @@ def _threats_doc(tier="critical"):
             "why": ["ransomware"],
         }
 
-    fams = [fam(i, f"Family {i}") for i in range(1, export.TOP_THREATS + 3)]
-    fams[-1] = fam(export.TOP_THREATS + 2, "Linked", [link])  # below the top, but linked
+    fams = [fam(i, f"Family {i}") for i in range(1, export.TOP_THREATS + 4)]
+    fams[-2] = fam(export.TOP_THREATS + 2, "Linked", [link])  # below the top, but linked
+    rejected = dict(link, cve="CVE-2026-0002", tier=None, review="rejected")
+    fams[-1] = fam(export.TOP_THREATS + 3, "Rejected only", [rejected])  # never shown
     return {
         "snapshot_date": "2026-10-26",
         "families": fams,
@@ -263,7 +265,23 @@ def test_build_threats_shows_top_and_linked_families_without_evidence_ids():
     assert "references:abc" not in json.dumps(out)  # no evidence document IDs shipped
     assert out["families"][0]["techniques"] == [{"id": "T1486", "name": "Data Encrypted"}]
     assert out["kev_ransomware_cves"] == 2 and out["review"]["links_correct"] == 22
-    assert out["categories"][0] == {"category": "ransomware", "ioc_rows": 10, "families": 22}
+    assert out["categories"][0] == {"category": "ransomware", "ioc_rows": 10}
+    assert "Rejected only" not in names
+
+
+def test_build_threats_requires_a_hand_labelled_top():
+    doc = _threats_doc()
+    doc["families"][0]["category_source"] = "misp"
+    with pytest.raises(ConfigError, match="must be hand-labelled"):
+        export.build_threats(doc, {"CVE-2026-0001": "critical"}, {})
+
+
+def test_load_threats_is_optional_and_date_checked(tmp_path):
+    path = tmp_path / "threats.json"
+    assert export.load_threats(path, "2026-10-26") is None
+    path.write_text(json.dumps({"snapshot_date": "2026-10-25"}))
+    with pytest.raises(ConfigError, match="not 2026-10-26"):
+        export.load_threats(path, "2026-10-26")
 
 
 def test_build_threats_refuses_stale_tiers_and_handles_not_run():
