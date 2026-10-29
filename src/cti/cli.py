@@ -563,20 +563,31 @@ def cmd_threats(args, settings: Settings) -> int:
         for r in read_jsonl(processed / "attack.jsonl.gz")
         if r["metadata"]["stix_type"] == "attack-pattern"
     }
-    result = catalog.build(
-        iocs=list(read_jsonl(processed / "threatfox.jsonl.gz")),
-        clusters=clusters,
-        attack_docs=read_jsonl(processed / "attack.jsonl.gz"),
-        uses=attack_catalog.uses(snap),
-        tactics=tactics,
-        alias_rows=read_jsonl(aliases),
-        kev=read_jsonl(processed / "kev.jsonl.gz"),
-        tiers={r["cve"]: r["tier"] for r in json.loads(risk.read_text())["rows"]},
-        owner=owner,
-        day=date.fromisoformat(args.date),
-    )
-    auto = {f["family"]: tuple(f["misp_categories"]) for f in result["families"]}
+    iocs = list(read_jsonl(processed / "threatfox.jsonl.gz"))
+    alias_rows = list(read_jsonl(aliases))
+    tiers = {r["cve"]: r["tier"] for r in json.loads(risk.read_text())["rows"]}
+    uses = attack_catalog.uses(snap)
+
+    def build(link_review):
+        return catalog.build(
+            iocs=iocs,
+            clusters=clusters,
+            attack_docs=read_jsonl(processed / "attack.jsonl.gz"),
+            uses=uses,
+            tactics=tactics,
+            alias_rows=alias_rows,
+            kev=read_jsonl(processed / "kev.jsonl.gz"),
+            tiers=tiers,
+            owner=owner,
+            day=date.fromisoformat(args.date),
+            link_review=link_review,
+        )
+
     link_sheet = settings.data_dir / "reference" / f"threat-links-{args.date}.csv"
+    link_status = review.status(link_sheet, "correct")
+    link_labels = review.read_link_labels(link_sheet) if link_status == "labelled" else {}
+    result = build(link_labels)
+    auto = {f["family"]: tuple(f["misp_categories"]) for f in result["families"]}
     if not link_sheet.exists():
         urls = {
             r["id"]: r["final_url"]
@@ -595,12 +606,14 @@ def cmd_threats(args, settings: Settings) -> int:
             for c in f["cves"]
         ]
         print(f"wrote {link_sheet}: {review.write_link_sheet(link_sheet, links)} links to review")
-    link_status = review.status(link_sheet, "correct")
+        link_status = review.status(link_sheet, "correct")
     current = {(f["family"], c["cve"], c["via"]) for f in result["families"] for c in f["cves"]}
     if review.link_keys(link_sheet) != current:
-        # written by an earlier run with other links: its marks would score other links
-        link_status = "stale"
-        print(f"  warning: {link_sheet} lists other links than this run; not scored")
+        # written by an earlier run with other links: its marks would score and rank
+        # other links, so they are ignored entirely
+        link_status, link_labels = "stale", {}
+        result = build({})
+        print(f"  warning: {link_sheet} lists other links than this run; not used")
     result["review"] = {
         "labeller": threat_cfg.REVIEW_LABELLER,
         "categories": {
@@ -612,9 +625,7 @@ def cmd_threats(args, settings: Settings) -> int:
         "links": {
             "sheet": str(link_sheet.relative_to(settings.data_dir)),
             "status": link_status,
-            "precision": catalog.link_precision(review.read_link_labels(link_sheet))
-            if link_status == "labelled"
-            else None,
+            "precision": catalog.link_precision(link_labels) if link_labels else None,
         },
     }
     result["provenance"] = {
@@ -630,7 +641,7 @@ def cmd_threats(args, settings: Settings) -> int:
     print(f"wrote {out}")
     print(f"  {s['named_families']} named families, {s['ioc_rows']:,} IOC rows")
     print(f"  category source {s['category_source']}; category review: {review_status}")
-    print(f"  link review: {link_status}")
+    print(f"  link review: {link_status}; links counted for priority {s['cve_links_ranked']}")
     print(f"  ATT&CK software {s['with_attack_software']}; CVE links {s['cve_links']}")
     return 0
 

@@ -55,6 +55,13 @@ Decisions and licence: [[threat-layer]].
   29–65%): name collisions (Hermes AI agent, MEDUSA rootkit, Plexor), "Mirai" as a
   generic example, product-bug lists, PoC demos. ThreatFox tags 10 / 10 (accepted as
   reporter attributions, not verified).
-- Rejected links still rank (NetSupportManager RAT, Hermes in the top 10).
+- Owner decision after the review (`TRUSTED_LINKS`, own commit): only links reviewed
+  correct, or unreviewed ThreatFox tags, count toward priority; all stay in the output
+  with `review` + `counts_for_priority`. Not chosen: weighting by per-source precision
+  (n = 26; reviewed links are known, not averaged). 22 of 36 links now rank.
+- New top 5: Mirai, RedTail, XMRIG, Meterpreter, MimiKatz (NetSupportManager RAT and
+  Hermes dropped out).
+- Open issue: MISP name collisions also hit categories outside the reviewed 34. Havoc
+  (C2 framework, rank 6) gets `ransomware` from an unrelated MISP "Havoc" ransomware.
 
 Related: [[threat-layer]], [[ioc-extraction]], [[data-sources]].

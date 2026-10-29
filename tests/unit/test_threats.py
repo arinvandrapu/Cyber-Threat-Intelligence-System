@@ -112,7 +112,7 @@ USES = {"S0650": {"T1059", "T1055"}, "S1129": {"T1486"}}
 TACTICS = {"T1059": ("execution",), "T1055": ("privilege-escalation",), "T1486": ("impact",)}
 
 
-def _build(iocs, mentions=(), kev=(), tiers=None, owner=None):
+def _build(iocs, mentions=(), kev=(), tiers=None, owner=None, link_review=None):
     return catalog.build(
         iocs=iocs,
         clusters=CLUSTERS,
@@ -124,6 +124,7 @@ def _build(iocs, mentions=(), kev=(), tiers=None, owner=None):
         tiers=tiers or {},
         owner=owner or {},
         day=DAY,
+        link_review=link_review,
     )
 
 
@@ -173,6 +174,8 @@ def test_mentions_link_only_reference_pages_and_names_one_family_claims():
         "evidence": [{"doc_id": "references:a", "surface": "Gafgyt"}],
         "tier": "high",
         "in_kev": False,
+        "review": "unreviewed",
+        "counts_for_priority": False,  # unreviewed mention: not a trusted source
     }
     assert _fam(result, "QakBot")["cves"] == []
     assert [c["cve"] for c in _fam(result, "Mimikatz")["cves"]] == ["CVE-2026-0005"]
@@ -264,6 +267,35 @@ def test_linked_kev_cves_rank_first():
     assert exploits["priority_keys"]["linked_kev_cves"] == 2
     assert exploits["why"][0] == "linked to 2 CVEs in CISA KEV (confirmed exploited)"
     assert _fam(result, "Queue")["priority_keys"]["linked_kev_cves"] == 0
+
+
+def test_only_reviewed_correct_or_trusted_links_rank():
+    kev = [{"source_id": f"CVE-2024-000{i}", "metadata": {}} for i in range(1, 6)]
+    iocs = [
+        _tf("Tagged", "w.t", tags=["CVE-2024-0001"]),  # unreviewed ThreatFox tag: counts
+        _tf("Rejected", "w.r", tags=["CVE-2024-0002"]),  # reviewed "no": never counts
+        _tf("Mentioned", "w.m"),
+        _tf("Confirmed", "w.c"),
+    ]
+    mentions = [
+        _mention("CVE-2024-0003", "Mentioned"),  # unreviewed mention: does not count
+        _mention("CVE-2024-0004", "Confirmed"),  # reviewed "yes": counts
+    ]
+    review = {
+        ("Rejected", "CVE-2024-0002", "threatfox_tag"): False,
+        ("Confirmed", "CVE-2024-0004", "mention:reference_page"): True,
+    }
+    result = _build(iocs, mentions=mentions, kev=kev, link_review=review)
+    counted = {f["family"]: f["priority_keys"]["linked_kev_cves"] for f in result["families"]}
+    assert counted == {"Tagged": 1, "Rejected": 0, "Mentioned": 0, "Confirmed": 1}
+    states = {(f["family"], c["review"]) for f in result["families"] for c in f["cves"]}
+    assert states == {
+        ("Tagged", "unreviewed"),
+        ("Rejected", "rejected"),
+        ("Mentioned", "unreviewed"),
+        ("Confirmed", "correct"),
+    }  # every link stays in the output
+    assert result["summary"]["cve_links_ranked"] == 2
 
 
 def test_growth_and_volume_break_ties_in_that_order():

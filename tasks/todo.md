@@ -274,8 +274,11 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           only (alias fallback merged Bashlite into QakBot); mentions from reference pages
           only (NVD text names the vulnerable product); "banker" added to the vocabulary;
           `linked_kev_cves` added as the first priority key (owner decision)
-    - [ ] **Owner:** fill `data/reference/threat-categories-2026-10-26.csv` (blind) and
-          `data/reference/threat-links-2026-10-26.csv` (yes/no), then re-run `cti threats`
+    - [x] Review sheets filled (owner delegated to Claude; disclosed in `REVIEW_LABELLER`):
+          links 22/36 correct (mentions 12/26, tags 10/10); ranking now uses only
+          reviewed-correct or ThreatFox-tag links (`TRUSTED_LINKS`)
+    - [ ] Decide: manual category check for every family in the priority top 20 (MISP
+          name collision: Havoc C2 labelled ransomware at rank 6)
     - [ ] Follow-up: Phase 5a alias index merges ThreatFox families into ATT&CK software
           via their aliases (Bashlite → S0650 QakBot through "Qbot"); fix + re-run extract
   - [ ] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +

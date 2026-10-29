@@ -155,6 +155,10 @@ def category_rows(fams: list[Family], labels: Mapping[str, tuple[str, ...]]) -> 
     return dict(sorted(rows.items()))
 
 
+def _review_state(correct: bool | None) -> str:
+    return {True: "correct", False: "rejected", None: "unreviewed"}[correct]
+
+
 def _why(keys: dict[str, int], recent: int, prior: int) -> list[str]:
     why = []
     if keys["linked_kev_cves"]:
@@ -185,8 +189,12 @@ def build(
     tiers: Mapping[str, str],
     owner: Mapping[str, tuple[str, ...]],
     day: date,
+    link_review: Mapping[tuple[str, str, str], bool] | None = None,
 ) -> dict:
-    """The threat catalog. ``tiers``: queue CVE -> risk tier; ``owner``: blind labels."""
+    """The threat catalog. ``tiers``: queue CVE -> risk tier; ``owner``: blind labels;
+    ``link_review``: (family, CVE, via) -> reviewed correct, which decides with
+    ``TRUSTED_LINKS`` which links count toward priority."""
+    link_review = link_review or {}
     fams = families(iocs)
     named = [f for f in fams if is_named(f)]
     misp = misp_index(clusters)
@@ -231,13 +239,19 @@ def build(
                 "evidence": links[(cve, via)],
                 "tier": tiers.get(cve),
                 "in_kev": cve in in_kev,
+                "review": _review_state(link_review.get((fam.name, cve, via))),
             }
             for cve, via in sorted(links)
         ]
+        for c in cves:
+            c["counts_for_priority"] = c["review"] == "correct" or (
+                c["review"] == "unreviewed" and c["via"] in cfg.TRUSTED_LINKS
+            )
+        ranked = [c for c in cves if c["counts_for_priority"]]
         recent, prior = grown.get(fam.name, (0, 0))
-        high = {c["cve"] for c in cves if c["tier"] in cfg.HIGH_TIERS}
+        high = {c["cve"] for c in ranked if c["tier"] in cfg.HIGH_TIERS}
         keys = {
-            "linked_kev_cves": len({c["cve"] for c in cves if c["in_kev"]}),
+            "linked_kev_cves": len({c["cve"] for c in ranked if c["in_kev"]}),
             "linked_high_tier_cves": len(high),
             "ransomware": int("ransomware" in cats),
             "ioc_growth": recent - prior,
@@ -282,6 +296,8 @@ def build(
             "with_attack_software": sum(f["attack"]["software"] is not None for f in out),
             "with_cve_links": sum(bool(f["cves"]) for f in out),
             "cve_links": dict(Counter(c["via"] for f in out for c in f["cves"])),
+            "cve_links_by_review": dict(Counter(c["review"] for f in out for c in f["cves"])),
+            "cve_links_ranked": sum(c["counts_for_priority"] for f in out for c in f["cves"]),
         },
     }
 
