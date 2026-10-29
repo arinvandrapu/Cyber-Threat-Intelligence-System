@@ -33,3 +33,20 @@ rank,family,malware_ids,ioc_rows,categories,notes
 32,Nanocore RAT,win.nanocore,482,remote-access-trojan,
 33,Overlord RAT,win.overlord,423,remote-access-trojan,
 34,Akira,elf.akira;win.akira,408,ransomware,
+42,Havoc,win.havoc,294,c2-framework,open-source post-exploitation C2; MISP's 'Havoc' is an unrelated ransomware
+43,RedTail,elf.redtail,281,resource-exploitation,cryptomining malware spread by exploiting edge devices
+44,XMRIG,elf.xmrig,278,resource-exploitation,legitimate Monero miner deployed by attackers
+51,Bashlite,elf.bashlite,256,bot;ddos,aka Gafgyt
+66,Coruna,ios.coruna,132,exploit-kit,iOS exploit kit (GTIG)
+67,Meterpreter,win.meterpreter,130,backdoor,Metasploit payload; post-exploitation
+73,Chaos,elf.chaos;win.chaos,91,bot;ddos;ransomware,name spans two families: elf.chaos Go botnet and win.chaos ransomware builder
+97,Hermes,win.hermes,60,unknown,"Malpedia win.hermes is a 2017 ransomware, but these are 2026 C2 indicators; identity unclear"
+112,Medusa,win.medusa,47,ransomware,moderate confidence: assumes Medusa ransomware (a Medusa DDoS bot and an Android banker also exist)
+119,GHOSTBLADE,js.ghostblade,42,spyware;infostealer,iOS data miner deployed via DarkSword (GTIG)
+133,Venom RAT,win.venom,35,remote-access-trojan,
+212,MimiKatz,win.mimikatz,10,unknown,"credential-dumping tool, not malware; no fitting category"
+250,CryptoMix,win.cryptomix,6,ransomware,
+363,Stormous,py.stormous,3,ransomware,extortion group's ransomware
+395,Irc16,elf.backdoor_irc16,2,backdoor;bot,IRC-controlled Linux backdoor
+211,BlackMatter,win.blackmatter,10,ransomware,DarkSide successor RaaS
+286,GoGoogle,win.gogoogle,4,ransomware,low confidence: recalled as a Go-written ransomware; not verified

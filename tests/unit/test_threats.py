@@ -355,3 +355,23 @@ def test_link_sheet_round_trip_and_precision(tmp_path):
     prec = catalog.link_precision(labels)
     assert prec["all"]["n"] == 2 and prec["all"]["precision"] == 0.5
     assert prec["threatfox_tag"]["correct"] == 1
+
+
+def test_append_families_adds_missing_rows_only(tmp_path):
+    path = tmp_path / "sheet.csv"
+    fams = review.families(IOCS)
+    review.write_sheet(path, fams, top_n=1)  # Mirai
+    path.write_text(path.read_text().replace(",4,,", ",4,bot,"))  # labelled already
+    named = [f for f in fams if review.is_named(f)]
+    ranks = {f.name: i for i, f in enumerate(named, 1)}
+    added = review.append_families(path, named, ranks)
+    assert [f.name for f in added] == ["AMOS", "Vidar"]
+    rows = list(csv.DictReader(path.open()))
+    assert [(r["rank"], r["family"], r["categories"]) for r in rows] == [
+        ("1", "Mirai", "bot"),
+        ("2", "AMOS", ""),
+        ("3", "Vidar", ""),
+    ]
+    assert review.append_families(path, named, ranks) == []  # idempotent
+    with pytest.raises(ValueError, match="no category"):  # blank appended rows are refused
+        review.read_labels(path)

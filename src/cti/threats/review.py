@@ -60,6 +60,23 @@ def write_sheet(path: Path, fams: list[Family], top_n: int = REVIEW_TOP_N) -> li
     return top
 
 
+def append_families(path: Path, fams: list[Family], ranks: dict[str, int]) -> list[Family]:
+    """Add blank rows for families the sheet lacks; existing rows are never touched.
+
+    ``ranks``: family -> its frequency rank among named families (the ``rank`` column).
+    """
+    with path.open(newline="", encoding="utf-8") as fh:
+        present = {row["family"] for row in csv.DictReader(fh)}
+    new = [f for f in fams if f.name not in present]
+    with path.open("a", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        for fam in new:
+            writer.writerow(
+                [ranks[fam.name], fam.name, LABEL_SEPARATOR.join(fam.ids), fam.rows, "", ""]
+            )
+    return new
+
+
 def status(path: Path, column: str = "categories") -> str:
     """``missing``, ``blank`` (written, not yet labelled) or ``labelled``."""
     if not path.exists():

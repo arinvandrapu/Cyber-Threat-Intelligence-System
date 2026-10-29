@@ -523,12 +523,26 @@ def cmd_risk_eval(args, settings: Settings) -> int:
 
 
 def cmd_threats_sheet(args, settings: Settings) -> int:
+    from cti.threats import config as threat_cfg
     from cti.threats import review
     from cti.threats.config import CATEGORIES, LABEL_SEPARATOR
 
     iocs = settings.data_dir / "processed" / args.date / "threatfox.jsonl.gz"
     path = settings.data_dir / "reference" / f"threat-categories-{args.date}.csv"
     fams = review.families(read_jsonl(iocs))
+    if args.priority:
+        threats = settings.data_dir / "threats" / args.date / "threats.json"
+        if not threats.exists():
+            raise ConfigError(f"missing {threats}; run `cti threats --date {args.date}` first")
+        top_n = threat_cfg.PRIORITY_REVIEW_TOP_N
+        wanted = {f["family"] for f in json.loads(threats.read_text())["families"][:top_n]}
+        named = [f for f in fams if review.is_named(f)]
+        ranks = {f.name: i for i, f in enumerate(named, 1)}
+        added = review.append_families(path, [f for f in named if f.name in wanted], ranks)
+        print(f"added {len(added)} families from the priority top {top_n} to {path}")
+        for fam in added:
+            print(f"  {fam.name}")
+        return 0
     top = review.write_sheet(path, fams)
     named = sum(f.rows for f in fams if review.is_named(f))
     share = sum(f.rows for f in top) / named if named else 0.0
@@ -877,6 +891,11 @@ def build_parser() -> argparse.ArgumentParser:
         "threats-sheet", help="blank blind-review sheet of the top ThreatFox families (10a)"
     )
     p.add_argument("--date", required=True)
+    p.add_argument(
+        "--priority",
+        action="store_true",
+        help="append unlisted families from the priority top N of threats.json",
+    )
     p.set_defaults(func=cmd_threats_sheet)
 
     p = sub.add_parser("threats", help="threat catalog: categories, ATT&CK, CVE links, priority")

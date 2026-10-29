@@ -61,7 +61,13 @@ Decisions and licence: [[threat-layer]].
   (n = 26; reviewed links are known, not averaged). 22 of 36 links now rank.
 - New top 5: Mirai, RedTail, XMRIG, Meterpreter, MimiKatz (NetSupportManager RAT and
   Hermes dropped out).
-- Open issue: MISP name collisions also hit categories outside the reviewed 34. Havoc
-  (C2 framework, rank 6) gets `ransomware` from an unrelated MISP "Havoc" ransomware.
+- MISP name collisions hit categories too: Havoc (C2 framework) got `ransomware` from an
+  unrelated MISP entry. Owner decision (`PRIORITY_REVIEW_TOP_N` = 20, own commit): every
+  family in the priority top 20 is labelled by hand (`cti threats-sheet --priority`,
+  repeated until no new family enters: 15 + 2 added). 51 families labelled; top 20 all
+  manual. On 24 families both sides label, MISP's extra `ransomware` hit 3 (Havoc,
+  Hermes, …); otherwise differences are MISP being single-label.
+- Labels change the ranking (ransomware is a key), so the top 20 must be re-checked
+  after any label change. Ranks 13–20 are ransomware families with no CVE link.
 
 Related: [[threat-layer]], [[ioc-extraction]], [[data-sources]].

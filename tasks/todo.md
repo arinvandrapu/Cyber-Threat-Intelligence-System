@@ -277,8 +277,8 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
     - [x] Review sheets filled (owner delegated to Claude; disclosed in `REVIEW_LABELLER`):
           links 22/36 correct (mentions 12/26, tags 10/10); ranking now uses only
           reviewed-correct or ThreatFox-tag links (`TRUSTED_LINKS`)
-    - [ ] Decide: manual category check for every family in the priority top 20 (MISP
-          name collision: Havoc C2 labelled ransomware at rank 6)
+    - [x] Manual categories for the priority top 20 (`PRIORITY_REVIEW_TOP_N`; Havoc C2
+          had MISP `ransomware`): 17 families added, converged, top 20 all manual
     - [ ] Follow-up: Phase 5a alias index merges ThreatFox families into ATT&CK software
           via their aliases (Bashlite → S0650 QakBot through "Qbot"); fix + re-run extract
   - [ ] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +
