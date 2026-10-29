@@ -1,11 +1,11 @@
 """Pre-declared configuration for the threat layer (Phase 10a).
 
-Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N`` and
-``REVIEW_LABELLER`` was committed before the review sheets were labelled
+Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N``, ``LINK_SOURCES``
+and ``REVIEW_LABELLER`` was committed before the review sheets were labelled
 (``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` and the
-``linked_kev_cves`` key were added after the first ``cti threats`` run, and
-``TRUSTED_LINKS`` and ``PRIORITY_REVIEW_TOP_N`` after the link review, each in its own
-commit. Any later change must be disclosed in ``vault/threat-catalog.md``.
+``linked_kev_cves`` key were added after the first ``cti threats`` run; ``TRUSTED_LINKS``,
+``PRIORITY_REVIEW_TOP_N`` and the ``attack:software`` link source after the link review,
+each in its own commit. Any later change must be disclosed in ``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.
@@ -80,6 +80,14 @@ THREATFOX_UNKNOWN_IDS: dict[str, str] = {
 # (CVE-2024-41111 is a bug in Sliver, CVE-2024-45163 one in Mirai's C2), not the exploiter.
 # Decided 2026-10-29 from the first run's link list, before any owner label or link review.
 MENTION_ORIGINS = ("reference_page",)
+# Owner decision 2026-10-29 (own commit, after the link review): a third link source,
+# "attack:software" — CVEs that MITRE ATT&CK's own prose says a software exploits ("Agent
+# Tesla has exploited ... CVE-2017-11882"), via the family's ATT&CK software (own-name
+# join). Citation names and reference titles are not evidence (attack_catalog). Rejected
+# after research: ATT&CK campaigns (campaign x software cross product), MISP descriptions
+# (2 pairs, "observed alongside" wording), KEV text and Metasploit names (only product-name
+# collisions).
+LINK_SOURCES = ("threatfox_tag", "mention:reference_page", "attack:software")
 
 # ---- owner review (blind) ----------------------------------------------------------------
 # The owner labels the most frequent named families without seeing any automatic label,
@@ -126,5 +134,6 @@ HIGH_TIERS = ("critical", "high")
 # The review found ThreatFox tags 10/10 correct but reference-page mentions 12/26 (46%),
 # so an unreviewed mention is more likely wrong than right. Every link stays in the
 # output with its review state; this only decides what ranks.
-TRUSTED_LINKS = ("threatfox_tag",)
+# ATT&CK's curated statements are trusted like ThreatFox tags (added 2026-10-29).
+TRUSTED_LINKS = ("threatfox_tag", "attack:software")
 GROWTH_DAYS = 30

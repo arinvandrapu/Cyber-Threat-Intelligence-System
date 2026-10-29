@@ -193,8 +193,9 @@ class TechniqueRef(_Model):
 
 class ThreatLink(_Model):
     cve: str
-    via: Literal["threatfox_tag", "mention:reference_page"]
+    via: Literal["threatfox_tag", "mention:reference_page", "attack:software"]
     surface: list[str]  # the names matched on the evidence page (empty for a tag)
+    evidence_text: str | None  # attack:software: the ATT&CK sentence citing the CVE
     review: Literal["correct", "rejected", "unreviewed"]
     counts_for_priority: bool
     in_kev: bool
@@ -218,6 +219,24 @@ class ThreatFamily(_Model):
     why: list[str]
 
 
+class LinkedCve(_Model):
+    """A CVE a shown family links to that is not in the risk queue (already in KEV, older
+    than the queue's window, or below its tiers): its only detail in the dashboard."""
+
+    cve: str
+    source: Literal["kev", "nvd"]  # CISA's KEV entry, else the CVE's NVD record
+    name: str | None  # KEV: CISA's vulnerabilityName; NVD: derived (approximate)
+    vendor: str
+    product: str
+    description: str  # defanged and truncated
+    published: str | None  # NVD only
+    date_added: str | None  # KEV only
+    due_date: str | None  # KEV only
+    ransomware_use: str | None  # KEV only: "Known" | "Unknown"
+    cwes: list[str]
+    families: list[str]  # shown families linking to it (links not reviewed as wrong)
+
+
 class CategoryCount(_Model):
     category: str
     ioc_rows: int  # overlapping: a multi-category family counts in each
@@ -239,6 +258,7 @@ class Threats(_Model):
     # that was not reviewed as wrong
     categories: list[CategoryCount]
     kev_ransomware_cves: int  # KEV entries with known ransomware use (category-level link)
+    linked_cves: list[LinkedCve]
     review: ThreatReview | None
 
 

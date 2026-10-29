@@ -686,6 +686,7 @@ def cmd_threats(args, settings: Settings) -> int:
     alias_rows = list(read_jsonl(aliases))
     tiers = {r["cve"]: r["tier"] for r in json.loads(risk.read_text())["rows"]}
     uses = attack_catalog.uses(snap)
+    software_cves = attack_catalog.software_cves(snap)
 
     def build(link_review):
         return catalog.build(
@@ -700,6 +701,7 @@ def cmd_threats(args, settings: Settings) -> int:
             owner=owner,
             day=date.fromisoformat(args.date),
             link_review=link_review,
+            software_cves=software_cves,
         )
 
     link_sheet = settings.data_dir / "reference" / f"threat-links-{args.date}.csv"
@@ -707,29 +709,32 @@ def cmd_threats(args, settings: Settings) -> int:
     link_labels = review.read_link_labels(link_sheet) if link_status == "labelled" else {}
     result = build(link_labels)
     auto = {f["family"]: tuple(f["misp_categories"]) for f in result["families"]}
-    if not link_sheet.exists():
-        urls = {
-            r["id"]: r["final_url"]
-            for r in read_jsonl(settings.data_dir / "enriched" / args.date / "references.jsonl.gz")
+    urls = {
+        r["id"]: r["final_url"]
+        for r in read_jsonl(settings.data_dir / "enriched" / args.date / "references.jsonl.gz")
+    }
+
+    links = [
+        {
+            "family": f["family"],
+            "cve": c["cve"],
+            "via": c["via"],
+            "surface": " | ".join(sorted({e["surface"] for e in c["evidence"]})),
+            "evidence_url": review.evidence_url(c, urls),
         }
-        links = [
-            {
-                "family": f["family"],
-                "cve": c["cve"],
-                "via": c["via"],
-                "surface": " | ".join(sorted({e["surface"] for e in c["evidence"]})),
-                "evidence_url": " | ".join(sorted(urls[e["doc_id"]] for e in c["evidence"]))
-                or f"https://threatfox.abuse.ch/browse/tag/{c['cve']}/",
-            }
-            for f in result["families"]
-            for c in f["cves"]
-        ]
+        for f in result["families"]
+        for c in f["cves"]
+    ]
+    current = {(x["family"], x["cve"], x["via"]) for x in links}
+    if not link_sheet.exists():
         print(f"wrote {link_sheet}: {review.write_link_sheet(link_sheet, links)} links to review")
-        link_status = review.status(link_sheet, "correct")
-    current = {(f["family"], c["cve"], c["via"]) for f in result["families"] for c in f["cves"]}
+    elif review.link_keys(link_sheet) < current:
+        # only new links (none removed): appended unreviewed; earlier marks are kept
+        print(f"appended {review.append_links(link_sheet, links)} new links to {link_sheet}")
+    link_status = review.status(link_sheet, "correct")
     if review.link_keys(link_sheet) != current:
-        # written by an earlier run with other links: its marks would score and rank
-        # other links, so they are ignored entirely
+        # links the sheet has but this run does not (or vice versa): its marks would
+        # score and rank other links, so they are ignored entirely
         link_status, link_labels = "stale", {}
         result = build({})
         print(f"  warning: {link_sheet} lists other links than this run; not used")
@@ -745,10 +750,39 @@ def cmd_threats(args, settings: Settings) -> int:
             "sheet": str(link_sheet.relative_to(settings.data_dir)),
             "status": link_status,
             "precision": catalog.link_precision(link_labels) if link_labels else None,
+            "unreviewed": len(review.link_keys(link_sheet) - set(link_labels))
+            if link_status != "stale"
+            else None,
         },
     }
+    # NVD records for linked CVEs the dashboard can't open otherwise (not queued, not in
+    # KEV): from the main snapshot and, if fetched, the 2002-2022 archive
+    from cti.nlp import attack_data
+
+    in_kev = {r["source_id"] for r in read_jsonl(processed / "kev.jsonl.gz")}
+    orphans = {
+        c["cve"]
+        for f in result["families"]
+        for c in f["cves"]
+        if c["cve"] not in tiers and c["cve"] not in in_kev
+    }
+    archives = sorted(_reference_snapshots(settings).list_keys(""))
+    archive_ids = sorted({k.split("/", 1)[0] for k in archives if k.endswith("manifest.json")})
+    snaps = [snap] + [Snapshot.open(_reference_snapshots(settings), a) for a in archive_ids[-1:]]
+    records = attack_data.nvd_records(snaps, orphans) if orphans else {}
+    result["nvd_cves"] = {
+        c: {
+            "text": r.text,
+            "cwes": list(r.cwes),
+            "affected": list(r.affected),
+            "published": r.published,
+        }
+        for c, r in sorted(records.items())
+    }
+    result["summary"]["linked_cves_without_nvd"] = sorted(orphans - set(records))
     result["provenance"] = {
         "config_sha256": hashlib.sha256(Path(threat_cfg.__file__).read_bytes()).hexdigest(),
+        "nvd_archive": archive_ids[-1] if archive_ids else None,
         "git": _git_state(),
         "misp_sha256": {n: reference.PINNED[f"misp-galaxy/{n}.json"] for n in clusters},
     }

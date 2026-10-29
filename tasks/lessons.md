@@ -42,3 +42,18 @@ Reviewed at the start of each session.
 - **Mistake:** Phase 10-0 committed MISP's `ransomware.json` as an unmodified copy. It held ransom notes, one with a victim's portal login, plus leak-site .onion links; CI gitleaks failed the PR.
 - **Trigger:** Committing any upstream data file, however reputable the source.
 - **Rule:** Run `gitleaks dir <path>` locally and scan for fields you don't need (victims, notes, live URLs) before the first push; commit only the fields used, via a tested, idempotent trim.
+
+### Check identity, not just names, before marking a link correct
+- **Mistake:** Reviewing ATT&CK software links, I marked ThreatFox "XLoader" and "Xloader" correct because the names matched ATT&CK S1207; their IDs were `apk.xloader` (Android, a different malware) and `osx.xloader` (macOS build), so the Windows Office-exploit sentence didn't apply. An audit caught it.
+- **Trigger:** Any review or join that connects records by name across sources (ThreatFox, ATT&CK, MISP, reference pages).
+- **Rule:** Before marking a name-based link correct, check the source's own ID (platform prefix, Malpedia ID) and that the evidence describes the same variant; note any mismatch.
+
+### Check a PR is still open before pushing more work to it
+- **Mistake:** I pushed the KEV-card commit to PR #34's branch after the owner had merged #34 at the previous commit. The commit never reached `main`, the local branch was deleted, and the feature silently vanished until the owner noticed links were dead again.
+- **Trigger:** Pushing to any feature branch whose PR the owner might already have merged (especially right after saying "ready to merge").
+- **Rule:** Run `gh pr view <n> --json state,headRefOid` before pushing; if merged, put new work on a fresh branch from `main`. Before deleting a merged branch, check `git log main..<branch>` is empty.
+
+### Don't stack PRs; make "is it open?" a real gate
+- **Mistake:** PR #37 was stacked on #36; the owner merged #36 to `main`, then #37 into #36's finished branch, so #37 never reached `main`. Separately, my pre-push check printed `MERGED` but didn't stop the push (`gh ... -q .state && git push` only tests the exit code).
+- **Trigger:** Work that depends on an unmerged PR; any push to an existing PR branch.
+- **Rule:** Wait for the base PR to merge and branch from `main` instead of stacking (or say plainly "merge #A first, then retarget #B"). Gate pushes on the value: `[ "$(gh pr view N --json state -q .state)" = OPEN ] && git push`.

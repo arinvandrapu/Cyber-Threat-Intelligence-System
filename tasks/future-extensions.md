@@ -88,3 +88,19 @@ Facts from the 2026-10-26 snapshot (`raw/threatfox/*/full.csv.zip`, already pars
   (`export.derived_name`, CNA affected vendor/product + first CWE). Overview opens with
   the two-lists model and a tab guide; jargon labels replaced ("What moved this CVE up
   or down", plain signal names).
+
+## E4. Phishing source (researched 2026-10-29, deferred by the owner)
+
+The capstone's sixth category has no source here (PhishTank closed registrations).
+Licences checked 2026-10-29:
+
+- **CERT Polska warning list** (`hole.cert.pl/domains/v2/domains.json`, ~22 MB): "may be
+  used by any user for any purpose, including commercial purposes". Domains with
+  `InsertDate`/`DeleteDate`, so a point-in-time view is possible. **Only phishing aimed at
+  Polish users**: label it that way. Best licence of the options.
+- **OpenPhish community**: global, but terms forbid displaying or sharing derived data.
+- **Phishing.Database** (MIT): global lists, no timestamps, upstream provenance unclear.
+- **PhishStats**: site down (HTTP 502) at check time; terms unknown.
+- If built: a separate reference snapshot (like `cti fetch-nvd-archive`), aggregates on the
+  Indicators view, not a malware category in the threat catalog.
+

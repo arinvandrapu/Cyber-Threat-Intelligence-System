@@ -257,7 +257,7 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Eight views:
 |---|---|
 | Overview | The question and how the two linked lists (vulnerabilities, threats) answer it, headline numbers, tier sizes with historical KEV rates, top of the queue, a plain-language guide to every tab (what, why, how it's calculated), and every disclosure |
 | Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families |
-| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state |
+| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
@@ -306,6 +306,11 @@ Secure by construction:
   internal and cloud-metadata addresses.
 - **Responsible data use.** Raw feed data is never redistributed; feed terms of use are
   respected.
+
+**Attribution.** MITRE ATT&CK®, CWE™ and CAPEC™ content: © The MITRE Corporation. This work
+is reproduced and distributed with the permission of The MITRE Corporation. CTID mappings:
+Apache-2.0 (`data/reference/ctid/`). MISP galaxy: CC0/BSD. abuse.ch data appears only as
+aggregates, under its terms of use.
 
 ## Setup
 

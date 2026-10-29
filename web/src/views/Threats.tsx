@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Data, ThreatFamily, ThreatLink } from "../types";
+import type { Data, LinkedCve, ThreatFamily, ThreatLink } from "../types";
 import { cveHref } from "../App";
 import { PageHead, TierName } from "../components/ui";
 import { int, signed } from "../format";
@@ -17,6 +17,7 @@ const REVIEW_LABEL: Record<ThreatLink["review"], string> = {
 const VIA_LABEL: Record<ThreatLink["via"], string> = {
   threatfox_tag: "ThreatFox CVE tag",
   "mention:reference_page": "named on a CVE reference page",
+  "attack:software": "cited by MITRE ATT&CK for this software",
 };
 
 export function Threats({ data }: { data: Data }) {
@@ -29,6 +30,7 @@ export function Threats({ data }: { data: Data }) {
     () => ["all", ...[...new Set(threats.families.flatMap((f) => f.categories))].sort()],
     [threats.families],
   );
+  const cardByCve = useMemo(() => new Map(threats.linked_cves.map((k) => [k.cve, k])), [threats.linked_cves]);
   const rows = useMemo(
     () => threats.families.filter((f) => category === "all" || f.categories.includes(category)),
     [threats.families, category],
@@ -152,7 +154,7 @@ export function Threats({ data }: { data: Data }) {
         </div>
 
         <aside className="panel side" style={{ flexBasis: 360 }} aria-label="Selected family">
-          {detail ? <FamilyDetail family={detail} /> : <p className="muted">Select a family.</p>}
+          {detail ? <FamilyDetail key={detail.family} family={detail} cards={cardByCve} /> : <p className="muted">Select a family.</p>}
         </aside>
       </section>
 
@@ -174,14 +176,16 @@ export function Threats({ data }: { data: Data }) {
         ))}
         <p className="caption">
           Unlabelled rows belong to families with no category yet; unknown rows were submitted without a family. Counts
-          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves.
+          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves. ATT&amp;CK techniques and
+          quoted ATT&amp;CK sentences: © The MITRE Corporation. This work is reproduced and distributed with the
+          permission of The MITRE Corporation.
         </p>
       </section>
     </>
   );
 }
 
-function FamilyDetail({ family: f }: { family: ThreatFamily }) {
+function FamilyDetail({ family: f, cards }: { family: ThreatFamily; cards: Map<string, LinkedCve> }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -226,13 +230,20 @@ function FamilyDetail({ family: f }: { family: ThreatFamily }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
         <span className="label">Linked CVEs</span>
         {f.links.length === 0 && <span className="muted" style={{ fontSize: 13 }}>None found.</span>}
-        {f.links.map((l) => <LinkRow key={`${l.cve}-${l.via}`} link={l} />)}
+        {f.links.map((l) => <LinkRow key={`${l.cve}-${l.via}`} link={l} card={cards.get(l.cve)} />)}
+        {f.links.some((l) => !l.tier) && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            Blue CVEs are in the risk queue and open there. The others are not ranked (KEV CVEs are already confirmed
+            exploited; older CVEs predate the queue's 2024 window): open one for its CISA or NVD record.
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }) {
+export function LinkRow({ link: l, label, card }: { link: ThreatLink; label?: string; card?: LinkedCve }) {
+  const [open, setOpen] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, opacity: l.review === "rejected" ? 0.55 : 1 }}>
       <span style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
@@ -240,6 +251,10 @@ export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }
           <span style={{ fontWeight: 600 }}>{label}</span>
         ) : l.tier ? (
           <a className="mono" href={cveHref(l.cve)}>{l.cve}</a>
+        ) : card ? (
+          <button type="button" className="linkish" style={{ textDecoration: "underline dotted" }} aria-expanded={open} onClick={() => setOpen(!open)}>
+            {l.cve} {open ? "▾" : "▸"}
+          </button>
         ) : (
           <span className="mono">{l.cve}</span>
         )}
@@ -251,6 +266,45 @@ export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }
         {VIA_LABEL[l.via]}
         {l.surface.length ? ` ("${l.surface.join('", "')}")` : ""} · {REVIEW_LABEL[l.review]}
         {l.counts_for_priority ? "" : " · not counted in the ranking"}
+      </span>
+      {/* MITRE's sentence: plain text, never HTML or a link */}
+      {l.evidence_text && (
+        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--text-2)", overflowWrap: "anywhere" }}>
+          “{l.evidence_text}”
+        </span>
+      )}
+      {open && card && <CveCard entry={card} />}
+    </div>
+  );
+}
+
+/** A linked CVE that is not in the risk queue: CISA's KEV entry, else its NVD record. */
+export function CveCard({ entry: k }: { entry: LinkedCve }) {
+  const what = [k.vendor, k.product].filter(Boolean).join(" ");
+  return (
+    <div className="note" style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+      {/* CISA/NVD text: plain text only, never HTML or a link */}
+      <span style={{ fontWeight: 600, color: "var(--text)" }}>
+        {k.name ?? k.cve}
+        {k.source === "nvd" && k.name && <span className="faint" style={{ fontSize: 12, fontWeight: 400 }}> (derived name)</span>}
+      </span>
+      <span className="muted" style={{ fontSize: 12.5 }}>
+        {k.source === "kev" ? (
+          <>
+            In CISA KEV (confirmed exploited){what ? ` · ${what}` : ""} · added {k.date_added}
+            {k.due_date ? ` · federal due date ${k.due_date}` : ""}
+            {k.ransomware_use === "Known" ? " · known ransomware use" : ""}
+          </>
+        ) : (
+          <>
+            Not in KEV and not in the risk queue (published {k.published ?? "?"}
+            {k.published && k.published < "2024" ? ", before the queue's 2024 window" : ""}){what ? ` · ${what}` : ""}
+          </>
+        )}
+      </span>
+      <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>{k.description}</span>
+      <span className="mono muted" style={{ fontSize: 12 }}>
+        {k.cwes.join(", ") || "no CWE"} · linked threats: {k.families.join(", ") || "none (link reviewed as wrong)"}
       </span>
     </div>
   );

@@ -267,6 +267,73 @@ def test_build_threats_shows_top_and_linked_families_without_evidence_ids():
     assert out["kev_ransomware_cves"] == 2 and out["review"]["links_correct"] == 22
     assert out["categories"][0] == {"category": "ransomware", "ioc_rows": 10}
     assert "Rejected only" not in names
+    assert out["linked_cves"] == []  # no KEV rows or NVD records passed
+
+
+def test_build_threats_cards_for_every_linked_cve_outside_the_queue():
+    doc = _threats_doc()
+    kev_link = {
+        "cve": "CVE-2024-0001",
+        "via": "threatfox_tag",
+        "evidence": [],
+        "tier": None,
+        "in_kev": True,
+        "review": "unreviewed",
+        "counts_for_priority": True,
+    }
+    old = dict(kev_link, cve="CVE-2013-2460", in_kev=False, via="attack:software")
+    doc["families"][0]["cves"] = [
+        kev_link,
+        dict(kev_link, cve="CVE-2024-0002", review="rejected"),
+        old,  # not in KEV, before the queue's window: an NVD card
+        dict(old, cve="CVE-2012-0001"),  # no NVD record: no card
+    ]
+    for c in doc["families"][0]["cves"]:
+        c.setdefault("evidence", [])
+    doc["nvd_cves"] = {
+        "CVE-2013-2460": {
+            "text": "Unspecified vulnerability in Java SE.",
+            "cwes": ["CWE-20"],
+            "affected": [{"vendor": "Oracle", "product": "Java SE"}],
+            "published": "2013-06-18",
+        }
+    }
+
+    def kev(cve):
+        return {
+            "source_id": cve,
+            "title": f"{cve} Example RCE Vulnerability",
+            "text": "Example product lets attackers run code via http://evil.example.com/x.",
+            "metadata": {
+                "vendor": "Example",
+                "product": "Widget",
+                "date_added": "2024-05-01",
+                "due_date": "2024-05-22",
+                "ransomware_use": "Known",
+                "cwes": ["CWE-78"],
+            },
+        }
+
+    rows = [kev("CVE-2024-0002"), kev("CVE-2024-0001"), kev("CVE-2024-9999")]
+    out = export.build_threats(
+        doc, {"CVE-2026-0001": "critical"}, {}, rows, {"CWE-20": "Improper Input Validation"}
+    )
+    schema.Threats.model_validate(out)
+    # the unlinked KEV CVE and the CVE without an NVD record get no card; the rejected
+    # link's CVE gets one, with no family listed
+    old_card, entry, rejected = out["linked_cves"]
+    assert rejected["cve"] == "CVE-2024-0002" and rejected["families"] == []
+    assert (old_card["cve"], old_card["source"], old_card["published"]) == (
+        "CVE-2013-2460",
+        "nvd",
+        "2013-06-18",
+    )
+    assert old_card["name"] == "Oracle Java SE: Improper Input Validation"
+    assert old_card["date_added"] is None and old_card["ransomware_use"] is None
+    assert entry["cve"] == "CVE-2024-0001" and entry["families"] == ["Family 1"]
+    assert entry["source"] == "kev" and entry["published"] is None
+    assert entry["name"] == "CVE-2024-0001 Example RCE Vulnerability"
+    assert "http://" not in entry["description"] and "evil[.]example[.]com" in entry["description"]
 
 
 def test_build_threats_requires_a_hand_labelled_top():

@@ -242,8 +242,9 @@ export interface TechniqueRef {
 
 export interface ThreatLink {
   cve: string;
-  via: "threatfox_tag" | "mention:reference_page";
+  via: "threatfox_tag" | "mention:reference_page" | "attack:software";
   surface: string[];
+  evidence_text: string | null;
   review: "correct" | "rejected" | "unreviewed";
   counts_for_priority: boolean;
   in_kev: boolean;
@@ -267,6 +268,21 @@ export interface ThreatFamily {
   why: string[];
 }
 
+export interface LinkedCve {
+  cve: string;
+  source: "kev" | "nvd";
+  name: string | null;
+  vendor: string;
+  product: string;
+  description: string;
+  published: string | null;
+  date_added: string | null;
+  due_date: string | null;
+  ransomware_use: string | null;
+  cwes: string[];
+  families: string[];
+}
+
 export interface CategoryCount {
   category: string;
   ioc_rows: number;
@@ -287,6 +303,7 @@ export interface Threats {
   families: ThreatFamily[];
   categories: CategoryCount[];
   kev_ransomware_cves: number;
+  linked_cves: LinkedCve[];
   review: ThreatReview | null;
 }
 

@@ -29,7 +29,7 @@ from cti.snapshot import Snapshot
 from cti.sources.base import gunzip_stream
 from cti.sources.cwe import NS as CWE_NS
 from cti.sources.cwe import CWESource
-from cti.sources.nvd import NO_CWE, NVD_SOURCE
+from cti.sources.nvd import NO_CWE, NVD_SOURCE, _affected
 
 CAPEC_NS = "{http://capec.mitre.org/capec-3}"
 _V3_KEYS = ("cvssMetricV31", "cvssMetricV30")
@@ -42,6 +42,8 @@ class NvdRecord:
     text: str
     cwes: tuple[str, ...]
     cvss: dict | None  # {"family": "v3"|"v2", "vector": {...}, "flags": {...}, "source"}
+    published: str | None = None  # display only (threat-link CVE cards)
+    affected: tuple[dict, ...] = ()  # display only: CNA vendor/product
 
 
 def _vector(text: str) -> dict[str, str]:
@@ -80,7 +82,12 @@ def _record(cve: dict) -> NvdRecord | None:
         }
     )
     return NvdRecord(
-        cve["id"], text, tuple(cwes), _cvss(cve.get("metrics", {}), cve.get("sourceIdentifier"))
+        cve["id"],
+        text,
+        tuple(cwes),
+        _cvss(cve.get("metrics", {}), cve.get("sourceIdentifier")),
+        (cve.get("published") or "")[:10] or None,
+        tuple(_affected(cve.get("affected", []))),
     )
 
 
