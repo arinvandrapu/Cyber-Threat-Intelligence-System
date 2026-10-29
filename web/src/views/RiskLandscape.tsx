@@ -132,7 +132,10 @@ export function RiskLandscape({ data }: { data: Data }) {
         <figure className="panel side" style={{ margin: 0 }}>
           <div className="panel-head"><h2>What drives the model</h2></div>
           <div className="legend" style={{ marginBottom: 8 }}>
-            <span>Standardized coefficients: refit (bar, value) · evaluated last fold (in brackets)</span>
+            <span>
+              How much each signal counts, per standard deviation: the model ranking the queue (bar, value) · the last
+              tested version (in brackets)
+            </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[...risk.coefficients].sort((a, b) => Math.abs(b.refit) - Math.abs(a.refit)).map((c) => (

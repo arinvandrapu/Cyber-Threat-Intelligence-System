@@ -79,6 +79,17 @@ def _best_cvss(metrics: dict, keep: Callable[[dict], bool]) -> dict | None:
     return None
 
 
+def _affected(entries: list[dict]) -> list[dict]:
+    """Vendor/product pairs from the CVE record's ``affected`` data, in record order, unique."""
+    out: list[dict] = []
+    for entry in entries:
+        for data in entry.get("affectedData", []):
+            pair = {"vendor": data.get("vendor") or "", "product": data.get("product") or ""}
+            if (pair["vendor"] or pair["product"]) and pair not in out:
+                out.append(pair)
+    return out[:5]
+
+
 def _ts(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value) if value else None
 
@@ -163,6 +174,8 @@ class NVDSource(Source):
                 "cvss_nvd": _best_cvss(metrics, lambda m: m.get("source") == NVD_SOURCE),
                 "cvss_cna": _best_cvss(metrics, lambda m: m.get("source") == cna),
                 "assigner": cna,  # the CNA of record (sourceIdentifier)
+                # display only (a CVE's common name), never a model input
+                "affected": _affected(cve.get("affected", [])),
                 "cwes": cwes,
                 "cwe_assignments": [
                     {"source_kind": k, "type": t, "id": i} for k, t, i in assignments

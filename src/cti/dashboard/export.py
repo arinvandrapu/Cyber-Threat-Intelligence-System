@@ -272,6 +272,10 @@ def build_risk(
                     "cvss_cna": (ctx_snap.get("cvss_cna") or {}).get("base_score"),
                     "cwes": [c["id"] for c in ctx_snap.get("cwes", [])],
                     "assigner": nvd.get("assigner"),
+                    "name": defang_text(
+                        derived_name(nvd.get("affected", []), ctx_snap.get("cwes", [])) or ""
+                    )
+                    or None,
                     "description": nvd.get("description", ""),
                 },
             }
@@ -316,16 +320,44 @@ def build_risk(
 
 
 def nvd_context(nvd_rows: Iterable[dict], cves: set[str]) -> dict[str, dict]:
-    """Assigner and defanged, truncated description for each of ``cves``."""
+    """Assigner, affected vendor/product and defanged, truncated description for ``cves``."""
     out = {}
     for row in nvd_rows:
         cve = row["source_id"]
         if cve in cves:
             out[cve] = {
                 "assigner": row["metadata"].get("assigner"),
+                "affected": row["metadata"].get("affected", []),
                 "description": truncate(defang_text(row.get("text") or "")),
             }
     return out
+
+
+_PLACEHOLDER = frozenset({"", "n/a", "na", "unknown", "unspecified", "-"})
+
+
+def derived_name(affected: list[dict], cwes: list[dict]) -> str | None:
+    """A CVE's common name from data we hold: "<vendor> <product>: <CWE name>".
+
+    The first affected entry and the first CWE with a name; placeholder vendors ("n/a",
+    "unknown") are skipped, and a product that already starts with the vendor is not
+    repeated ("Linux" + "Linux kernel" -> "Linux kernel").
+    """
+    parts = []
+    for data in affected[:1]:
+        vendor, product = data.get("vendor", "").strip(), data.get("product", "").strip()
+        vendor = "" if vendor.lower() in _PLACEHOLDER else vendor
+        product = "" if product.lower() in _PLACEHOLDER else product
+        if vendor and product.lower().startswith(vendor.lower()):
+            vendor = ""
+        parts = [p for p in (vendor, product) if p]
+    what = " ".join(parts)
+    weakness = next((c["name"] for c in cwes if c.get("name")), None)
+    if what and weakness:
+        return f"{what}: {weakness}"
+    if what:
+        return f"{what} vulnerability"
+    return weakness
 
 
 # ---- IOCs -------------------------------------------------------------------------------------

@@ -152,6 +152,22 @@ def test_nvd_archive_is_not_a_registered_source(settings):
     assert not any(isinstance(s, nvd.NVDArchiveSource) for s in all_sources(settings))
 
 
+def test_nvd_keeps_affected_vendor_and_product():
+    cve = nvd_cve("CVE-2026-0001", "2026-03-01T10:00:00.000")
+    cve["affected"] = [
+        {
+            "source": "cna@vendor.example",
+            "affectedData": [
+                {"vendor": "getsolus", "product": "eopkg", "versions": []},
+                {"vendor": "getsolus", "product": "eopkg", "versions": []},  # duplicate
+                {"vendor": "", "product": ""},  # empty: dropped
+            ],
+        }
+    ]
+    [doc] = nvd.NVDSource._document(cve, nvd.date(2024, 1, 1))
+    assert doc.metadata["affected"] == [{"vendor": "getsolus", "product": "eopkg"}]
+
+
 def test_nvd_skips_cvss_v4_with_threat_metric():
     v4 = {
         "source": "nvd@nist.gov",

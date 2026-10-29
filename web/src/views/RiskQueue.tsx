@@ -134,7 +134,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
                   <th>CVE</th>
                   <th>Tier</th>
                   {header("epss", "EPSS")}
-                  <th>SSVC E / A / TI</th>
+                  <th title="CISA's SSVC assessment: exploitation status / automatable / technical impact">SSVC E / A / I</th>
                   <th>Exploit evidence</th>
                   {header("age", "Age")}
                   {header("cvss", "CVSS (NVD, else CNA)", "ctx")}
@@ -194,14 +194,18 @@ function Detail({
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span className="label">Rank {row.rank} · {TIER_LABEL[row.tier]}</span>
         <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>{row.cve}</span>
+        {row.context.name && (
+          <span style={{ fontSize: 14, color: "var(--text-2)", overflowWrap: "anywhere" }}>
+            {row.context.name} <span className="faint" style={{ fontSize: 12 }}>(derived name)</span>
+          </span>
+        )}
         <span className="muted" style={{ fontSize: 13 }}>
           published {row.published} ({row.age_days} d before the snapshot)
         </span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div className="panel-head" style={{ marginBottom: 0 }}>
-          <h2 style={{ fontSize: 15 }}>Why it ranks here</h2>
-          <span className="muted" style={{ fontSize: 12 }}>log-odds vs training mean</span>
+          <h2 style={{ fontSize: 15 }}>What moved this CVE up or down</h2>
         </div>
         {contrib.map(([f, v]) => (
           <div key={f} className="bar-row">
@@ -211,8 +215,9 @@ function Detail({
           </div>
         ))}
         <span className="muted" style={{ fontSize: 12 }}>
-          Blue raises the rank, grey lowers it. Intercept excluded. † imputed: the value was missing, so the training
-          median was used.
+          Each bar is how much one signal pushed this CVE's score up (blue) or down (grey), compared with an average
+          CVE the model was trained on. Bars add up, in model score units (log-odds). † no value at the snapshot, so a
+          typical (median) value was used.
         </span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
