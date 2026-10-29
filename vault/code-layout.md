@@ -23,7 +23,7 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
 | `web/` (repo root) | Vite + React + TS dashboard: `src/types.ts` (schema mirror), `src/views/` (7 views), `fixtures/` (from `tests/web_fixture.py`), `scripts/check.mjs` + `scripts/smoke.py` (see [[dashboard-web]]) |
 | `upload.py` | Finished snapshot → S3, write-once: local SHA-256 re-check, keys already present compared via `sha256()` (S3 HEAD checksum, no download), manifest last and only overwritten if the remote one is a subset, final key listing; gold to `gold/` |
 | `references/` | `classifier.py` (ported rule-based URL typing; `EXPLOIT` for exploit-db/Packet Storm, never scraped; added after the 2026-10-26 scrape, so re-running selection on that snapshot no longer reproduces `targets.json`, which stays authoritative), `selection.py` (KEV-first, then EPSS; capped), `scraper.py` (robots + throttle + SafeFetcher), `text.py` (stdlib HTML→text) |
-| `gold.py` | `cti gold-import` → frozen fixture; `read_verified` / `load_gold` check the committed SHA-256 |
+| `gold.py` | `cti gold-import` → frozen fixture; `read_verified` / `load_gold` check the committed SHA-256; `NO_TRAINING_SOURCES` + `trainable()` keep abuse.ch records out of any model fit (licence, guarded by `test_licence_guard.py`) |
 | `defang.py` | `hxxp://evil[.]com`, `203.0.113[.]7`, IPv6 `2001[:]db8…`; `refang` undoes `(.)`, `{.}`, `[dot]`, `[:]`, `[@]`, `hxxp`/`fxp` anywhere |
 | `storage/` | `LocalStorage`, `S3Storage`, `MirroredStorage`; no delete, no overwrite by default; `sha256(key)` without download on S3; see [[aws-cost-and-security]] |
 

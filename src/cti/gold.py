@@ -20,6 +20,11 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+# abuse.ch terms of use §7.3 (updated 2026-10-21): ThreatFox and URLhaus data may not be
+# used to train or improve AI models. Counting, lookup and evaluation are fine; fitting
+# is not. tests/unit/test_licence_guard.py enforces this.
+NO_TRAINING_SOURCES = frozenset({"threatfox", "urlhaus"})
+
 # SHA-256 of the frozen fixture produced by `cti gold-import`; set when it was frozen.
 GOLD_SHA256: str | None = "4a612d2fb579351d8788b1f6605bce9d286bf6829d0963b96fd091bf5687ceb5"
 
@@ -139,3 +144,8 @@ def read_verified(path: Path, expected_sha256: str | None = GOLD_SHA256) -> byte
 def load_gold(path: Path, expected_sha256: str | None = GOLD_SHA256) -> list[GoldRecord]:
     data = read_verified(path, expected_sha256)
     return [GoldRecord.model_validate_json(line) for line in gzip.decompress(data).splitlines()]
+
+
+def trainable(records: list[GoldRecord]) -> list[GoldRecord]:
+    """The records a model may be fitted on (drops ``NO_TRAINING_SOURCES``)."""
+    return [r for r in records if r.source not in NO_TRAINING_SOURCES]

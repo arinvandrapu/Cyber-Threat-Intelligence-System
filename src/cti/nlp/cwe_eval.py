@@ -28,6 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
+from cti import gold
 from cti.enrich import read_jsonl
 from cti.enrich.cwe import CweEntry
 from cti.nlp import cwe_config as cfg
@@ -451,9 +452,14 @@ def run(
 
 
 def gold_check(records) -> dict:
-    """The circular gold-set row: per-source majority vs TF-IDF + LR, stratified k-fold."""
+    """The circular gold-set row: per-source majority vs TF-IDF + LR, stratified k-fold.
+
+    abuse.ch records are dropped first: their terms forbid fitting models on them.
+    """
     from sklearn.model_selection import StratifiedKFold
 
+    excluded = Counter(r.source for r in records if r.source in gold.NO_TRAINING_SOURCES)
+    records = gold.trainable(records)
     labels = np.array([r.primary_label for r in records])
     names = sorted(set(labels))
     y = np.array([names.index(lab) for lab in labels])
@@ -474,6 +480,7 @@ def gold_check(records) -> dict:
         tfidf_hits[test] = pred == y[test]
     return {
         "records": len(records),
+        "excluded_no_training": dict(sorted(excluded.items())),
         "primary_label_equals_source_share": round(
             float(np.mean([r.primary_label == _SOURCE_LABEL.get(r.source) for r in records])), 4
         ),
@@ -488,7 +495,6 @@ def gold_check(records) -> dict:
 _SOURCE_LABEL = {
     "nvd_ref": "vulnerability",
     "cisa_kev": "vulnerability",
-    "threatfox": "ioc",
     "mitre_attack": "threat_actor",
     "phishtank": "phishing",
     "ransomwatch": "ransomware",

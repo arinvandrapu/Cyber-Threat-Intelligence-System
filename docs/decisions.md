@@ -19,6 +19,7 @@ pipeline (a university capstone), referred to below as *the prototype*.
 9. [Drop sources that are stale, closed, or ethically problematic](#9-drop-sources-that-are-stale-closed-or-ethically-problematic)
 10. [Evaluate classification on CWE labels, with choices fixed before scoring](#10-evaluate-classification-on-cwe-labels-with-choices-fixed-before-scoring)
 11. [A local dashboard: Vite + React, served by Python with a strict CSP](#11-a-local-dashboard-vite--react-served-by-python-with-a-strict-csp)
+12. [Never train a model on abuse.ch data](#12-never-train-a-model-on-abusech-data)
 
 ---
 
@@ -193,3 +194,21 @@ about half the npm packages. Serving from Python sends the CSP as a real HTTP he
 rebinding, and serves only a fixed allowlist of files built at startup, so path tricks
 and directory listings can't happen. The dashboard shows rank and tier, never a
 probability, and labels tier hit rates as historical results from the evaluation folds.
+
+## 12. Never train a model on abuse.ch data
+
+**Decision.** No model is fitted on ThreatFox or URLhaus data. abuse.ch data is used only
+for counting, published aggregates, and the family-name lookup list behind alias
+matching. `cti.gold.NO_TRAINING_SOURCES` names the two feeds, and
+`tests/unit/test_licence_guard.py` fails CI if a new module names them or loads the gold
+set for fitting without `gold.trainable()`.
+
+**Why.** The abuse.ch terms of use (updated 2026-10-21, §7.3) forbid using their data to
+train or improve AI models without Spamhaus's consent. An audit on 2026-10-28 found one
+breach: the gold-set sanity check in `cti cwe-eval` fitted TF-IDF + logistic regression
+on all 299 gold documents, 50 of them ThreatFox records. That check now drops them first
+and reports the exclusion. No headline result used abuse.ch data.
+
+**Cost.** A planned classifier over the threat reports that ThreatFox links to was
+dropped. Threat categories come from MISP galaxies (CC0) instead.
+

@@ -122,9 +122,8 @@ def test_run_end_to_end(monkeypatch):
     assert set(result["label_facts"]) == {"train", "dev", "test"}
 
 
-def test_gold_check_reports_the_circular_baseline(monkeypatch):
-    monkeypatch.setattr(cwe_config, "GOLD_FOLDS", 2)
-    recs = [
+def _gold(*sources):
+    return [
         GoldRecord(
             id=f"{src}:{i}",
             source=src,
@@ -135,13 +134,42 @@ def test_gold_check_reports_the_circular_baseline(monkeypatch):
             label_signals=[],
             entities=[GoldEntity(type="x", value="y", start=0, end=1, derivation="regex")],
         )
-        for src, lab, word in (("threatfox", "ioc", "botnet"), ("phishtank", "phishing", "login"))
+        for src, lab, word in sources
         for i in range(4)
     ]
+
+
+def test_gold_check_reports_the_circular_baseline(monkeypatch):
+    monkeypatch.setattr(cwe_config, "GOLD_FOLDS", 2)
+    recs = _gold(("exploitdb", "exploit", "overflow"), ("phishtank", "phishing", "login"))
     out = cwe_eval.gold_check(recs)
     assert out["accuracy"]["source_only"] == 1.0
     assert out["primary_label_equals_source_share"] == 1.0
+    assert out["excluded_no_training"] == {}
     assert "circular" in out["note"]
+
+
+def test_gold_check_never_fits_on_abusech_records(monkeypatch):
+    """abuse.ch terms §7.3: no model may be fitted on ThreatFox or URLhaus data."""
+    monkeypatch.setattr(cwe_config, "GOLD_FOLDS", 2)
+    seen: list[str] = []
+    real_fit = cwe_eval.fit_tfidf
+
+    def spy(texts, y, c):
+        seen.extend(texts)
+        return real_fit(texts, y, c)
+
+    monkeypatch.setattr(cwe_eval, "fit_tfidf", spy)
+    recs = _gold(
+        ("exploitdb", "exploit", "overflow"),
+        ("phishtank", "phishing", "login"),
+        ("threatfox", "ioc", "botnet"),
+        ("urlhaus", "ioc", "payload"),
+    )
+    out = cwe_eval.gold_check(recs)
+    assert seen and not any(t.startswith(("botnet", "payload")) for t in seen)
+    assert out["records"] == 8
+    assert out["excluded_no_training"] == {"threatfox": 4, "urlhaus": 4}
 
 
 def test_cli_cwe_eval_needs_inputs(tmp_path, monkeypatch, capsys):
