@@ -43,4 +43,16 @@ is reused from an earlier prototype **as-is**, by owner decision.
   ("3.1" in `CVSS:3.1/`) and 33 label sub-scores. Domains are labelled only in ThreatFox
   records. IOC extraction is scored around this ([[ioc-extraction]]).
 
+## The six categories vs this project (2026-10-29)
+
+- Labels (n): vulnerability 59, ioc 50, threat_actor 49, phishing 49, ransomware 47,
+  exploit 45; each tracks its source feed, so a 6-way classifier would learn the source.
+  They mix document types (vulnerability, exploit, IOC) with threat types.
+- Replaced by real signals: vulnerability → risk queue + CWE ([[risk-eval]],
+  [[cwe-classification]]); exploit → ExploitDB/Metasploit/Nuclei risk features; IOC →
+  [[ioc-extraction]]; threat actor → ATT&CK alias links; ransomware → [[threat-layer]]
+  category + KEV ransomware use. **Phishing is a gap**: PhishTank closed registrations;
+  only lure families (`fake-update`) are covered. Options offered: source-based
+  "document type" column (routing, not ML); a new open phishing feed post-Phase 10.
+
 Related: [[data-sources]], [[risk-scoring-design]] (the stronger evaluation in this project).
