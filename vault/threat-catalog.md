@@ -44,4 +44,17 @@ Decisions and licence: [[threat-layer]].
 - Name collisions remain (ThreatFox "Medusa" vs ATT&CK MEDUSA rootkit vs Medusa
   ransomware): the link review measures this.
 
+## Reviews (2026-10-29, labelled by Claude: owner delegated; see `REVIEW_LABELLER`)
+
+- Categories: MISP labels 13 of the 34 top families; the other 21 (AMOS, Stealc, XWorm,
+  ClearFake, …) have none, so manual labels carry the top of the list. On the 13: no
+  contradictions; differences are MISP being single-label (Mirai etc. lack `ddos`,
+  Formbook lacks `keylogger`) plus Cobalt Strike (MISP `rat`, review `c2-framework`).
+  n is too small for informative CIs.
+- Links: 22 / 36 correct (61%, Wilson 45–75%). Reference-page mentions 12 / 26 (46%,
+  29–65%): name collisions (Hermes AI agent, MEDUSA rootkit, Plexor), "Mirai" as a
+  generic example, product-bug lists, PoC demos. ThreatFox tags 10 / 10 (accepted as
+  reporter attributions, not verified).
+- Rejected links still rank (NetSupportManager RAT, Hermes in the top 10).
+
 Related: [[threat-layer]], [[ioc-extraction]], [[data-sources]].

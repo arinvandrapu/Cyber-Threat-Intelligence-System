@@ -87,6 +87,13 @@ MENTION_ORIGINS = ("reference_page",)
 # named rows (22 / 46 / 79 / 197 families reach 80 / 90 / 95 / 99%). The planning
 # estimate of 99% was a miscount; 34 is kept as a feasible hand-labelling load.
 REVIEW_TOP_N = 34
+# Who filled the 2026-10-26 sheets (recorded after labelling; reported in threats.json).
+# The owner delegated both reviews, so agreement measures Claude vs MISP, not owner vs MISP.
+REVIEW_LABELLER = (
+    "Claude, delegated by the owner on 2026-10-29; not fully blind (MISP name matches "
+    "for some top families appeared in earlier tool output); links judged from evidence "
+    "page text, ThreatFox tags accepted as reporter attributions"
+)
 # A family is "named" unless its printable name contains "unknown" (case-insensitive).
 UNKNOWN_MARKER = "unknown"
 

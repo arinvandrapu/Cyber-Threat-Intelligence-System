@@ -602,6 +602,7 @@ def cmd_threats(args, settings: Settings) -> int:
         link_status = "stale"
         print(f"  warning: {link_sheet} lists other links than this run; not scored")
     result["review"] = {
+        "labeller": threat_cfg.REVIEW_LABELLER,
         "categories": {
             "sheet": str(sheet.relative_to(settings.data_dir)),
             "status": review_status,
