@@ -149,11 +149,11 @@ def software_cves_from_bundle(objects: list[dict]) -> dict[str, dict[str, str]]:
         sid = _external_id(software[ref])
         if not sid:
             continue
-        prose = _CITATION.sub("", text)
-        for sentence in _SENTENCE.split(prose):
+        # clean first (citations, then markdown links, then whitespace), so a CVE inside a
+        # link target or citation is never read and sentences split on clean prose
+        for sentence in _SENTENCE.split(clean(text)):
             for cve in _CVE_ID.findall(sentence):
-                evidence = _MD_LINK.sub(r"\1", sentence).strip()
-                out.setdefault(sid, {}).setdefault(cve, evidence[:EVIDENCE_CHARS])
+                out.setdefault(sid, {}).setdefault(cve, sentence.strip()[:EVIDENCE_CHARS])
     return out
 
 

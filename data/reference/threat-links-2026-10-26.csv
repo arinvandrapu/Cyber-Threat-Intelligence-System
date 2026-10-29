@@ -48,7 +48,7 @@ PoshC2,CVE-2016-9192,attack:software,PoshC2,https://attack.mitre.org/software/S0
 Ramsay,CVE-2017-0199,attack:software,Ramsay,https://attack.mitre.org/software/S0458/,yes,ATT&CK sentence states the software exploits this CVE
 Ramsay,CVE-2017-11882,attack:software,Ramsay,https://attack.mitre.org/software/S0458/,yes,ATT&CK sentence states the software exploits this CVE
 Ramsay,CVE-2017-8570,attack:software,Ramsay,https://attack.mitre.org/software/S0458/,yes,ATT&CK sentence states the software exploits this CVE
-XLoader,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,yes,ATT&CK sentence states the software exploits this CVE
-XLoader,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,yes,ATT&CK sentence states the software exploits this CVE
-Xloader,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,yes,ATT&CK sentence states the software exploits this CVE
-Xloader,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,yes,ATT&CK sentence states the software exploits this CVE
+XLoader,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,no,"name collision: ThreatFox XLoader is apk.xloader (Android XLoader/MoqHao), not ATT&CK S1207"
+XLoader,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,no,"name collision: ThreatFox XLoader is apk.xloader (Android XLoader/MoqHao), not ATT&CK S1207"
+Xloader,CVE-2017-11882,attack:software,XLoader,https://attack.mitre.org/software/S1207/,no,"osx.xloader (macOS build): ATT&CK's Office exploits are the Windows build's, not these IOCs'"
+Xloader,CVE-2018-0798,attack:software,XLoader,https://attack.mitre.org/software/S1207/,no,"osx.xloader (macOS build): ATT&CK's Office exploits are the Windows build's, not these IOCs'"

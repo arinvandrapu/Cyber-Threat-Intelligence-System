@@ -175,7 +175,9 @@ export function Threats({ data }: { data: Data }) {
         ))}
         <p className="caption">
           Unlabelled rows belong to families with no category yet; unknown rows were submitted without a family. Counts
-          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves.
+          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves. ATT&amp;CK techniques and
+          quoted ATT&amp;CK sentences: © The MITRE Corporation. This work is reproduced and distributed with the
+          permission of The MITRE Corporation.
         </p>
       </section>
     </>

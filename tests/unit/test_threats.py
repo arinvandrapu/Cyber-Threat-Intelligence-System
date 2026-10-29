@@ -415,3 +415,17 @@ def test_link_sheet_appends_new_links_and_skips_blank_rows(tmp_path):
         ("A", "CVE-1", "threatfox_tag"),
         ("A", "CVE-2", "attack:software"),
     }
+
+
+def test_evidence_url_per_link_source():
+    tag = {"via": "threatfox_tag", "cve": "CVE-1", "evidence": []}
+    attack = {"via": "attack:software", "cve": "CVE-1", "evidence": [{"doc_id": "attack:S0331"}]}
+    page = {
+        "via": "mention:reference_page",
+        "cve": "CVE-1",
+        "evidence": [{"doc_id": "r:2"}, {"doc_id": "r:1"}],
+    }
+    urls = {"r:1": "https://a.example/1", "r:2": "https://b.example/2"}
+    assert review.evidence_url(tag, urls) == "https://threatfox.abuse.ch/browse/tag/CVE-1/"
+    assert review.evidence_url(attack, urls) == "https://attack.mitre.org/software/S0331/"
+    assert review.evidence_url(page, urls) == "https://a.example/1 | https://b.example/2"

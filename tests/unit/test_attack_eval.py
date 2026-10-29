@@ -321,7 +321,16 @@ def test_software_cves_come_from_attack_prose_not_citations():
             "relationship_type": "uses",
             "source_ref": "malware--2",
             "target_ref": "attack-pattern--1",
-            "description": "SHOTPUT lists files.(Citation: Palo Alto CVE-2015-3113 July 2015)",
+            "description": "SHOTPUT lists files.(Citation: Palo Alto CVE-2015-3113 July 2015) "
+            "See [the report](https://example.com/CVE-2099-0004), e.g. its appendix.",
+        },
+        {  # a revoked relationship is not evidence
+            "type": "relationship",
+            "relationship_type": "uses",
+            "source_ref": "malware--2",
+            "target_ref": "attack-pattern--1",
+            "revoked": True,
+            "description": "SHOTPUT has exploited CVE-2099-0005.",
         },
     ]
     out = software_cves_from_bundle([tesla, shotput, gone, *rels])

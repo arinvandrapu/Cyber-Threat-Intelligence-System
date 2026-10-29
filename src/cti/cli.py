@@ -714,21 +714,13 @@ def cmd_threats(args, settings: Settings) -> int:
         for r in read_jsonl(settings.data_dir / "enriched" / args.date / "references.jsonl.gz")
     }
 
-    def evidence_url(c: dict) -> str:
-        if c["via"] == "threatfox_tag":
-            return f"https://threatfox.abuse.ch/browse/tag/{c['cve']}/"
-        if c["via"] == "attack:software":
-            sid = c["evidence"][0]["doc_id"].removeprefix("attack:")
-            return f"https://attack.mitre.org/software/{sid}/"
-        return " | ".join(sorted(urls[e["doc_id"]] for e in c["evidence"]))
-
     links = [
         {
             "family": f["family"],
             "cve": c["cve"],
             "via": c["via"],
             "surface": " | ".join(sorted({e["surface"] for e in c["evidence"]})),
-            "evidence_url": evidence_url(c),
+            "evidence_url": review.evidence_url(c, urls),
         }
         for f in result["families"]
         for c in f["cves"]
@@ -736,8 +728,8 @@ def cmd_threats(args, settings: Settings) -> int:
     current = {(x["family"], x["cve"], x["via"]) for x in links}
     if not link_sheet.exists():
         print(f"wrote {link_sheet}: {review.write_link_sheet(link_sheet, links)} links to review")
-    elif current - review.link_keys(link_sheet):
-        # links a newer source found: appended unreviewed; earlier marks are kept
+    elif review.link_keys(link_sheet) < current:
+        # only new links (none removed): appended unreviewed; earlier marks are kept
         print(f"appended {review.append_links(link_sheet, links)} new links to {link_sheet}")
     link_status = review.status(link_sheet, "correct")
     if review.link_keys(link_sheet) != current:
@@ -758,6 +750,9 @@ def cmd_threats(args, settings: Settings) -> int:
             "sheet": str(link_sheet.relative_to(settings.data_dir)),
             "status": link_status,
             "precision": catalog.link_precision(link_labels) if link_labels else None,
+            "unreviewed": len(review.link_keys(link_sheet) - set(link_labels))
+            if link_status != "stale"
+            else None,
         },
     }
     result["provenance"] = {

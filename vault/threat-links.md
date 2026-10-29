@@ -36,12 +36,18 @@ owner decisions that followed. Catalog overview: [[threat-catalog]].
 ## ATT&CK software links (2026-10-29)
 
 - Third source `attack:software` (trusted): CVEs ATT&CK's own prose says a software
-  exploits (`attack_catalog.software_cves_from_bundle`; citation names and reference
-  titles ignored: they name campaign CVEs). 54 pairs / 30 software; 17 links on 7 families
-  (Cobalt Strike, Agent Tesla, Formbook/XLoader/Xloader, Ramsay, PoshC2), all reviewed
-  correct. Links now 39 / 53 correct (74%, 60–84%). 5 families entered the top 20 and
-  were labelled; top 1 is now Cobalt Strike (4 KEV CVEs, old Java bugs).
-- Rejected: campaigns (cross product), MISP descriptions, KEV text, Metasploit names.
-- The link sheet is append-only: new links arrive blank (unreviewed, not an error).
+  exploits (`attack_catalog.software_cves_from_bundle`; prose cleaned first, so citation
+  names, link targets and reference titles are never read). 54 pairs / 30 software;
+  17 links on 7 families.
+- Review per source: ThreatFox tags 10/10, ATT&CK 13/17, reference pages 12/26; all
+  35/53 (66%). The 4 rejected ATT&CK links are a **platform name collision**: ThreatFox
+  "XLoader" is `apk.xloader` (Android, MoqHao) and "Xloader" `osx.xloader` (macOS build),
+  but ATT&CK's sentence is the Windows XLoader's Office exploits. Lesson: the own-name join
+  ignores platform; check `malware_ids` when a family links.
+- Cobalt Strike is now rank 1 on a **capability** statement ("can exploit" four 2011–2013
+  Java CVEs via modules), not observed use; recorded in the sheet notes.
+- Rejected sources: campaigns (cross product), MISP descriptions, KEV text, Metasploit names.
+- The link sheet is append-only (new links blank = unreviewed, only when none removed);
+  `review.links.unreviewed` counts them. Quoted MITRE text carries MITRE's attribution.
 
 Related: [[threat-catalog]], [[threat-layer]], [[attack-mapping]].

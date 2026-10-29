@@ -119,6 +119,17 @@ def write_link_sheet(path: Path, links: list[dict]) -> int:
     return len(rows)
 
 
+def evidence_url(link: dict, page_urls: dict[str, str]) -> str:
+    """Where the review sheet sends the reviewer for a catalog link (sheet only: the
+    dashboard ships no URLs). ``page_urls``: reference doc ID -> its final URL."""
+    if link["via"] == "threatfox_tag":
+        return f"https://threatfox.abuse.ch/browse/tag/{link['cve']}/"
+    if link["via"] == "attack:software":
+        sid = link["evidence"][0]["doc_id"].removeprefix("attack:")
+        return f"https://attack.mitre.org/software/{sid}/"
+    return " | ".join(sorted(page_urls[e["doc_id"]] for e in link["evidence"]))
+
+
 def append_links(path: Path, links: list[dict]) -> int:
     """Add blank rows for links the sheet lacks; existing rows (and marks) are untouched."""
     present = link_keys(path)
