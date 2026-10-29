@@ -2,9 +2,10 @@
 tags: [threats, design, licensing, phase-10]
 ---
 
-# Threat Layer (Phase 10a, planned)
+# Threat Layer (Phase 10a)
 
-Status 2026-10-28: planned, owner-approved; plan of record `tasks/todo.md` § 10.
+Status 2026-10-29: `cti threats` built ([[threat-catalog]]); owner reviews pending.
+Plan of record `tasks/todo.md` § 10.
 Why: the system classified bugs ([[cwe-classification]]), not threats.
 
 ## Decisions

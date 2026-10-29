@@ -538,6 +538,102 @@ def cmd_threats_sheet(args, settings: Settings) -> int:
     return 0
 
 
+def cmd_threats(args, settings: Settings) -> int:
+    from cti import reference
+    from cti.nlp import attack_catalog
+    from cti.threats import catalog, review
+    from cti.threats import config as threat_cfg
+
+    processed = settings.data_dir / "processed" / args.date
+    aliases = settings.data_dir / "extracted" / args.date / "aliases.jsonl.gz"
+    risk = settings.data_dir / "export" / args.date / "risk.json"
+    sheet = settings.data_dir / "reference" / f"threat-categories-{args.date}.csv"
+    for path, step in ((aliases, "cti extract"), (risk, "cti export")):
+        if not path.exists():
+            raise ConfigError(f"missing {path}; run `{step} --date {args.date}` first")
+    review_status = review.status(sheet)
+    owner = review.read_labels(sheet) if review_status == "labelled" else {}
+    clusters = {
+        name: json.loads(reference.read_pinned(settings.data_dir, f"misp-galaxy/{name}.json"))
+        for name in reference.MISP_CATEGORIES
+    }
+    snap = Snapshot.open(_snapshots(settings), args.date)
+    tactics = {
+        r["source_id"]: tuple(r["metadata"]["tactics"])
+        for r in read_jsonl(processed / "attack.jsonl.gz")
+        if r["metadata"]["stix_type"] == "attack-pattern"
+    }
+    result = catalog.build(
+        iocs=list(read_jsonl(processed / "threatfox.jsonl.gz")),
+        clusters=clusters,
+        attack_docs=read_jsonl(processed / "attack.jsonl.gz"),
+        uses=attack_catalog.uses(snap),
+        tactics=tactics,
+        alias_rows=read_jsonl(aliases),
+        kev=read_jsonl(processed / "kev.jsonl.gz"),
+        tiers={r["cve"]: r["tier"] for r in json.loads(risk.read_text())["rows"]},
+        owner=owner,
+        day=date.fromisoformat(args.date),
+    )
+    auto = {f["family"]: tuple(f["misp_categories"]) for f in result["families"]}
+    link_sheet = settings.data_dir / "reference" / f"threat-links-{args.date}.csv"
+    if not link_sheet.exists():
+        urls = {
+            r["id"]: r["final_url"]
+            for r in read_jsonl(settings.data_dir / "enriched" / args.date / "references.jsonl.gz")
+        }
+        links = [
+            {
+                "family": f["family"],
+                "cve": c["cve"],
+                "via": c["via"],
+                "surface": " | ".join(sorted({e["surface"] for e in c["evidence"]})),
+                "evidence_url": " | ".join(sorted(urls[e["doc_id"]] for e in c["evidence"]))
+                or f"https://threatfox.abuse.ch/browse/tag/{c['cve']}/",
+            }
+            for f in result["families"]
+            for c in f["cves"]
+        ]
+        print(f"wrote {link_sheet}: {review.write_link_sheet(link_sheet, links)} links to review")
+    link_status = review.status(link_sheet, "correct")
+    current = {(f["family"], c["cve"], c["via"]) for f in result["families"] for c in f["cves"]}
+    if review.link_keys(link_sheet) != current:
+        # written by an earlier run with other links: its marks would score other links
+        link_status = "stale"
+        print(f"  warning: {link_sheet} lists other links than this run; not scored")
+    result["review"] = {
+        "categories": {
+            "sheet": str(sheet.relative_to(settings.data_dir)),
+            "status": review_status,
+            "not_in_snapshot": sorted(set(owner) - set(auto)),
+            "agreement": catalog.agreement(owner, auto) if owner else None,
+        },
+        "links": {
+            "sheet": str(link_sheet.relative_to(settings.data_dir)),
+            "status": link_status,
+            "precision": catalog.link_precision(review.read_link_labels(link_sheet))
+            if link_status == "labelled"
+            else None,
+        },
+    }
+    result["provenance"] = {
+        "config_sha256": hashlib.sha256(Path(threat_cfg.__file__).read_bytes()).hexdigest(),
+        "git": _git_state(),
+        "misp_sha256": {n: reference.PINNED[f"misp-galaxy/{n}.json"] for n in clusters},
+    }
+    out = settings.data_dir / "threats" / args.date / "threats.json"
+    write_json(out, result)
+    s = result["summary"]
+    # counts only: per-family categories stay out of the terminal until the owner's blind
+    # labels are committed (vault/threat-layer.md)
+    print(f"wrote {out}")
+    print(f"  {s['named_families']} named families, {s['ioc_rows']:,} IOC rows")
+    print(f"  category source {s['category_source']}; category review: {review_status}")
+    print(f"  link review: {link_status}")
+    print(f"  ATT&CK software {s['with_attack_software']}; CVE links {s['cve_links']}")
+    return 0
+
+
 def cmd_export(args, settings: Settings) -> int:
     if importlib.util.find_spec("sklearn") is None:
         raise ConfigError("the export refits the risk model: pip install -e '.[ml]'")
@@ -770,6 +866,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--date", required=True)
     p.set_defaults(func=cmd_threats_sheet)
+
+    p = sub.add_parser("threats", help="threat catalog: categories, ATT&CK, CVE links, priority")
+    p.add_argument("--date", required=True)
+    p.set_defaults(func=cmd_threats)
 
     p = sub.add_parser("status", help="show a snapshot's manifest")
     p.add_argument("--date", required=True)

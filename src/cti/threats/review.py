@@ -17,6 +17,9 @@ from pathlib import Path
 from cti.threats.config import CATEGORIES, LABEL_SEPARATOR, REVIEW_TOP_N, UNKNOWN_MARKER
 
 COLUMNS = ("rank", "family", "malware_ids", "ioc_rows", "categories", "notes")
+# Link review: does the evidence report this family using or exploiting this CVE?
+LINK_COLUMNS = ("family", "cve", "via", "surface", "evidence_url", "correct", "notes")
+CORRECT = ("yes", "no")
 
 
 @dataclass(frozen=True)
@@ -57,8 +60,18 @@ def write_sheet(path: Path, fams: list[Family], top_n: int = REVIEW_TOP_N) -> li
     return top
 
 
+def status(path: Path, column: str = "categories") -> str:
+    """``missing``, ``blank`` (written, not yet labelled) or ``labelled``."""
+    if not path.exists():
+        return "missing"
+    with path.open(newline="", encoding="utf-8") as fh:
+        filled = any(row[column].strip() for row in csv.DictReader(fh))
+    return "labelled" if filled else "blank"
+
+
 def read_labels(path: Path) -> dict[str, tuple[str, ...]]:
-    """Family -> owner categories. Every row must be labelled from ``CATEGORIES``."""
+    """Family -> owner categories. Every row must be labelled from ``CATEGORIES``, so a
+    half-finished sheet is refused rather than silently mixed with automatic labels."""
     labels: dict[str, tuple[str, ...]] = {}
     with path.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
@@ -71,4 +84,37 @@ def read_labels(path: Path) -> dict[str, tuple[str, ...]]:
             if unknown:
                 raise ValueError(f"{path}: {row['family']!r} has unknown categories {unknown}")
             labels[row["family"]] = tuple(sorted(set(cats)))
+    return labels
+
+
+def write_link_sheet(path: Path, links: list[dict]) -> int:
+    """Every CVE link, one row per (family, CVE, via), for the owner to mark; never overwrites.
+
+    ``links``: dicts with family, cve, via, surface, evidence_url. Rows are sorted, so the
+    sheet is the same on every run.
+    """
+    rows = sorted({tuple(link[c] for c in LINK_COLUMNS[:5]) for link in links})
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("x", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        writer.writerow(LINK_COLUMNS)
+        writer.writerows([*row, "", ""] for row in rows)
+    return len(rows)
+
+
+def link_keys(path: Path) -> set[tuple[str, str, str]]:
+    """The (family, CVE, via) rows a link sheet lists."""
+    with path.open(newline="", encoding="utf-8") as fh:
+        return {(r["family"], r["cve"], r["via"]) for r in csv.DictReader(fh)}
+
+
+def read_link_labels(path: Path) -> dict[tuple[str, str, str], bool]:
+    """(family, CVE, via) -> correct. Every row must be marked yes or no."""
+    labels = {}
+    with path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            mark = row["correct"].strip().lower()
+            if mark not in CORRECT:
+                raise ValueError(f"{path}: {row['family']} {row['cve']}: correct must be yes/no")
+            labels[(row["family"], row["cve"], row["via"])] = mark == "yes"
     return labels

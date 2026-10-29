@@ -268,6 +268,15 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         malware alias mentions), precision from a blind review sample. Threat priority =
         pre-declared heuristic (linked high-tier CVEs, ransomware, 30-day IOC growth, then
         volume) with a "why" per row, labelled unvalidated. `cti threats`, deterministic.
+    - [x] Pre-declared `threats/config.py`; `fk_malware` kept; blank blind sheet committed
+    - [x] `cti threats`: catalog, ATT&CK `uses`, CVE links + evidence, priority, link sheet
+          (36 links). Deviations, decided before any owner label: ATT&CK join by own name
+          only (alias fallback merged Bashlite into QakBot); mentions from reference pages
+          only (NVD text names the vulnerable product); "banker" added to the vocabulary
+    - [ ] **Owner:** fill `data/reference/threat-categories-2026-10-26.csv` (blind) and
+          `data/reference/threat-links-2026-10-26.csv` (yes/no), then re-run `cti threats`
+    - [ ] Follow-up: Phase 5a alias index merges ThreatFox families into ATT&CK software
+          via their aliases (Bashlite → S0650 QakBot through "Qbot"); fix + re-run extract
   - [ ] **10b. Mapping re-evaluation** — pre-register `nlp/attack2_config.py` (config SHA +
         git state in output) before any test score; disclose that test label counts were
         seen while planning. Train: all 419 CTID KEV CVEs. Test: CTID `attack_to_cve`

@@ -19,6 +19,7 @@ FEED_READERS = {
     "nlp/aliases.py": "tags lookup-list entities that come from ThreatFox family names",
     "nlp/extract.py": "builds the alias lookup list from family names",
     "dashboard/export.py": "publishes aggregate counts only",
+    "threats/catalog.py": "counts families and looks them up; nothing is fitted",
     "cli.py": "checks `cti extract` inputs; `cti threats-sheet` counts families (lookup)",
 }
 

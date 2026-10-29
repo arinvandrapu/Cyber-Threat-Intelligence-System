@@ -13,6 +13,7 @@ from cti.nlp.attack_catalog import (  # noqa: E402
     clean,
     parent,
     revocations_from_bundle,
+    uses_from_bundle,
 )
 from cti.snapshot import Snapshot  # noqa: E402
 from cti.storage import LocalStorage  # noqa: E402
@@ -58,6 +59,37 @@ def test_revocations_follow_chains():
 
     objects = [pattern(1, "T1"), pattern(2, "T2"), pattern(3, "T3"), revoked(1, 2), revoked(2, 3)]
     assert revocations_from_bundle(objects) == {"T1": "T3", "T2": "T3"}
+
+
+def test_uses_from_bundle_keeps_live_software_and_techniques():
+    def obj(kind, i, ext, **extra):
+        refs = [{"source_name": "mitre-attack", "external_id": ext}]
+        return {"type": kind, "id": f"{kind}--{i}", "external_references": refs, **extra}
+
+    def uses(src, dst, **extra):
+        return {
+            "type": "relationship",
+            "relationship_type": "uses",
+            "source_ref": src,
+            "target_ref": dst,
+            **extra,
+        }
+
+    objects = [
+        obj("malware", 1, "S1"),
+        obj("tool", 2, "S2"),
+        obj("malware", 3, "S3", revoked=True),
+        obj("intrusion-set", 4, "G1"),
+        obj("attack-pattern", 5, "T1"),
+        obj("attack-pattern", 6, "T2", x_mitre_deprecated=True),
+        uses("malware--1", "attack-pattern--5"),
+        uses("tool--2", "attack-pattern--5"),
+        uses("malware--1", "attack-pattern--6"),  # deprecated technique
+        uses("malware--3", "attack-pattern--5"),  # revoked software
+        uses("intrusion-set--4", "attack-pattern--5"),  # groups are not software
+        uses("tool--2", "attack-pattern--5", revoked=True),  # revoked relationship (dup)
+    ]
+    assert uses_from_bundle(objects) == {"S1": {"T1"}, "S2": {"T1"}}
 
 
 def ctid_file(tmp_path, mappings):

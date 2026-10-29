@@ -88,8 +88,43 @@ def revocations_from_bundle(objects: list[dict]) -> dict[str, str]:
     return resolved
 
 
-def revocations(snapshot: Snapshot) -> dict[str, str]:
+def uses_from_bundle(objects: list[dict]) -> dict[str, set[str]]:
+    """Software ID (S####) -> technique IDs it ``uses``, current objects only.
+
+    Revoked or deprecated software, techniques and relationships are skipped, so every
+    technique returned is in the current matrix.
+    """
+
+    def live(o: dict) -> bool:
+        return not o.get("revoked") and not o.get("x_mitre_deprecated")
+
+    software = {
+        o["id"]: _external_id(o)
+        for o in objects
+        if o.get("type") in ("malware", "tool") and live(o)
+    }
+    techniques = {
+        o["id"]: _external_id(o) for o in objects if o.get("type") == "attack-pattern" and live(o)
+    }
+    uses: dict[str, set[str]] = {}
+    for o in objects:
+        if o.get("type") != "relationship" or o.get("relationship_type") != "uses" or not live(o):
+            continue
+        sid, tid = software.get(o.get("source_ref")), techniques.get(o.get("target_ref"))
+        if sid and tid:
+            uses.setdefault(sid, set()).add(tid)
+    return uses
+
+
+def _bundle(snapshot: Snapshot) -> list[dict]:
     for entry in snapshot.entries(AttackSource.name):
-        bundle = json.load(gunzip_stream(snapshot.read_raw(entry)))
-        return revocations_from_bundle(bundle["objects"])
+        return json.load(gunzip_stream(snapshot.read_raw(entry)))["objects"]
     raise FileNotFoundError(f"snapshot {snapshot.id} has no ATT&CK bundle")
+
+
+def revocations(snapshot: Snapshot) -> dict[str, str]:
+    return revocations_from_bundle(_bundle(snapshot))
+
+
+def uses(snapshot: Snapshot) -> dict[str, set[str]]:
+    return uses_from_bundle(_bundle(snapshot))
