@@ -266,6 +266,19 @@ export interface ThreatFamily {
   why: string[];
 }
 
+export interface KevEntry {
+  cve: string;
+  name: string;
+  vendor: string;
+  product: string;
+  description: string;
+  date_added: string;
+  due_date: string | null;
+  ransomware_use: string;
+  cwes: string[];
+  families: string[];
+}
+
 export interface CategoryCount {
   category: string;
   ioc_rows: number;
@@ -286,6 +299,7 @@ export interface Threats {
   families: ThreatFamily[];
   categories: CategoryCount[];
   kev_ransomware_cves: number;
+  kev: KevEntry[];
   review: ThreatReview | null;
 }
 

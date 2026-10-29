@@ -257,7 +257,7 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Eight views:
 |---|---|
 | Overview | Ranked CVE count, tier sizes with their historical KEV rates (Wilson CIs), top of the queue, data versions and every disclosure |
 | Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families |
-| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state |
+| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |

@@ -267,6 +267,44 @@ def test_build_threats_shows_top_and_linked_families_without_evidence_ids():
     assert out["kev_ransomware_cves"] == 2 and out["review"]["links_correct"] == 22
     assert out["categories"][0] == {"category": "ransomware", "ioc_rows": 10}
     assert "Rejected only" not in names
+    assert out["kev"] == []  # no KEV rows passed
+
+
+def test_build_threats_kev_entries_for_linked_kev_cves_only():
+    doc = _threats_doc()
+    kev_link = {
+        "cve": "CVE-2024-0001",
+        "via": "threatfox_tag",
+        "evidence": [],
+        "tier": None,
+        "in_kev": True,
+        "review": "unreviewed",
+        "counts_for_priority": True,
+    }
+    doc["families"][0]["cves"] = [kev_link, dict(kev_link, cve="CVE-2024-0002", review="rejected")]
+
+    def kev(cve):
+        return {
+            "source_id": cve,
+            "title": f"{cve} Example RCE Vulnerability",
+            "text": "Example product lets attackers run code via http://evil.example.com/x.",
+            "metadata": {
+                "vendor": "Example",
+                "product": "Widget",
+                "date_added": "2024-05-01",
+                "due_date": "2024-05-22",
+                "ransomware_use": "Known",
+                "cwes": ["CWE-78"],
+            },
+        }
+
+    rows = [kev("CVE-2024-0002"), kev("CVE-2024-0001"), kev("CVE-2024-9999")]
+    out = export.build_threats(doc, {"CVE-2026-0001": "critical"}, {}, rows)
+    schema.Threats.model_validate(out)
+    [entry] = out["kev"]  # the rejected link and the unlinked KEV CVE are left out
+    assert entry["cve"] == "CVE-2024-0001" and entry["families"] == ["Family 1"]
+    assert entry["name"] == "CVE-2024-0001 Example RCE Vulnerability"
+    assert "http://" not in entry["description"] and "evil[.]example[.]com" in entry["description"]
 
 
 def test_build_threats_requires_a_hand_labelled_top():

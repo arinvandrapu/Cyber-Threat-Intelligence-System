@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Data, ThreatFamily, ThreatLink } from "../types";
+import type { Data, KevEntry, ThreatFamily, ThreatLink } from "../types";
 import { cveHref } from "../App";
 import { PageHead, TierName } from "../components/ui";
 import { int, signed } from "../format";
@@ -29,6 +29,7 @@ export function Threats({ data }: { data: Data }) {
     () => ["all", ...[...new Set(threats.families.flatMap((f) => f.categories))].sort()],
     [threats.families],
   );
+  const kevByCve = useMemo(() => new Map(threats.kev.map((k) => [k.cve, k])), [threats.kev]);
   const rows = useMemo(
     () => threats.families.filter((f) => category === "all" || f.categories.includes(category)),
     [threats.families, category],
@@ -151,7 +152,7 @@ export function Threats({ data }: { data: Data }) {
         </div>
 
         <aside className="panel side" style={{ flexBasis: 360 }} aria-label="Selected family">
-          {detail ? <FamilyDetail family={detail} /> : <p className="muted">Select a family.</p>}
+          {detail ? <FamilyDetail key={detail.family} family={detail} kev={kevByCve} /> : <p className="muted">Select a family.</p>}
         </aside>
       </section>
 
@@ -180,7 +181,7 @@ export function Threats({ data }: { data: Data }) {
   );
 }
 
-function FamilyDetail({ family: f }: { family: ThreatFamily }) {
+function FamilyDetail({ family: f, kev }: { family: ThreatFamily; kev: Map<string, KevEntry> }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -225,13 +226,20 @@ function FamilyDetail({ family: f }: { family: ThreatFamily }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
         <span className="label">Linked CVEs</span>
         {f.links.length === 0 && <span className="muted" style={{ fontSize: 13 }}>None found.</span>}
-        {f.links.map((l) => <LinkRow key={`${l.cve}-${l.via}`} link={l} />)}
+        {f.links.map((l) => <LinkRow key={`${l.cve}-${l.via}`} link={l} kev={kev.get(l.cve)} />)}
+        {f.links.some((l) => !l.tier) && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            Blue CVEs are in the risk queue. KEV CVEs are confirmed exploited, so they are never ranked: open one for its
+            CISA entry.
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }) {
+export function LinkRow({ link: l, label, kev }: { link: ThreatLink; label?: string; kev?: KevEntry }) {
+  const [open, setOpen] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, opacity: l.review === "rejected" ? 0.55 : 1 }}>
       <span style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
@@ -239,6 +247,10 @@ export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }
           <span style={{ fontWeight: 600 }}>{label}</span>
         ) : l.tier ? (
           <a className="mono" href={cveHref(l.cve)}>{l.cve}</a>
+        ) : kev ? (
+          <button type="button" className="linkish" style={{ textDecoration: "underline dotted" }} aria-expanded={open} onClick={() => setOpen(!open)}>
+            {l.cve} {open ? "▾" : "▸"}
+          </button>
         ) : (
           <span className="mono">{l.cve}</span>
         )}
@@ -250,6 +262,26 @@ export function LinkRow({ link: l, label }: { link: ThreatLink; label?: string }
         {VIA_LABEL[l.via]}
         {l.surface.length ? ` ("${l.surface.join('", "')}")` : ""} · {REVIEW_LABEL[l.review]}
         {l.counts_for_priority ? "" : " · not counted in the ranking"}
+      </span>
+      {open && kev && <KevCard entry={kev} />}
+    </div>
+  );
+}
+
+/** A KEV CVE's CISA entry: its only detail, since KEV CVEs are never in the risk queue. */
+export function KevCard({ entry: k }: { entry: KevEntry }) {
+  return (
+    <div className="note" style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+      {/* CISA text: plain text only, never HTML or a link */}
+      <span style={{ fontWeight: 600, color: "var(--text)" }}>{k.name}</span>
+      <span className="muted" style={{ fontSize: 12.5 }}>
+        {k.vendor} {k.product} · added to KEV {k.date_added}
+        {k.due_date ? ` · federal due date ${k.due_date}` : ""}
+        {k.ransomware_use === "Known" ? " · known ransomware use" : ""}
+      </span>
+      <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>{k.description}</span>
+      <span className="mono muted" style={{ fontSize: 12 }}>
+        {k.cwes.join(", ") || "no CWE"} · linked threats: {k.families.join(", ")}
       </span>
     </div>
   );
