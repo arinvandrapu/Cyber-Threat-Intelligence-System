@@ -37,3 +37,8 @@ Reviewed at the start of each session.
 - **Trigger:** Any evaluation whose result goes in the README.
 - **Rule:** Check that the labels can answer the question first, then commit a config fixing every choice before any test score (Phase 6 `cwe_config.py` is the pattern).
 
+
+### Read third-party data before committing it
+- **Mistake:** Phase 10-0 committed MISP's `ransomware.json` as an unmodified copy. It held ransom notes, one with a victim's portal login, plus leak-site .onion links; CI gitleaks failed the PR.
+- **Trigger:** Committing any upstream data file, however reputable the source.
+- **Rule:** Run `gitleaks dir <path>` locally and scan for fields you don't need (victims, notes, live URLs) before the first push; commit only the fields used, via a tested, idempotent trim.
