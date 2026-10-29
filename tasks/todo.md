@@ -272,7 +272,8 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
     - [x] `cti threats`: catalog, ATT&CK `uses`, CVE links + evidence, priority, link sheet
           (36 links). Deviations, decided before any owner label: ATT&CK join by own name
           only (alias fallback merged Bashlite into QakBot); mentions from reference pages
-          only (NVD text names the vulnerable product); "banker" added to the vocabulary
+          only (NVD text names the vulnerable product); "banker" added to the vocabulary;
+          `linked_kev_cves` added as the first priority key (owner decision)
     - [ ] **Owner:** fill `data/reference/threat-categories-2026-10-26.csv` (blind) and
           `data/reference/threat-links-2026-10-26.csv` (yes/no), then re-run `cti threats`
     - [ ] Follow-up: Phase 5a alias index merges ThreatFox families into ATT&CK software

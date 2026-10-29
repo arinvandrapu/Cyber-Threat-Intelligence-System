@@ -20,7 +20,8 @@ Why: the system classified bugs ([[cwe-classification]]), not threats.
   galaxy file. Malpedia has no category field and is CC BY-NC-SA: not used for labels.
 - Owner labels the top 34 families **blind** (`cti threats-sheet` →
   `data/reference/threat-categories-2026-10-26.csv`), then compares with the auto labels.
-- Threat priority is a pre-declared heuristic, not ML: linked high-tier CVEs, ransomware,
+- Threat priority is a pre-declared heuristic, not ML: linked KEV CVEs (added 2026-10-29,
+  see [[threat-catalog]]), linked high-tier queue CVEs, ransomware,
   30-day IOC growth, then volume; every row says why. Raw IOC volume mostly reflects who
   submits to ThreatFox (ClearFake, Mirai), not priority.
 

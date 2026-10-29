@@ -251,6 +251,21 @@ def test_build_is_deterministic():
     ]
 
 
+def test_linked_kev_cves_rank_first():
+    iocs = [
+        _tf("Queue", "w.q", tags=["CVE-2026-0001"]),  # critical-tier queue CVE
+        _tf("Exploits", "w.e", "2026-08-01T00:00:00", tags=["CVE-2024-0001", "CVE-2024-0002"]),
+        _tf("Akira", "win.akira"),  # ransomware
+    ]
+    kev = [{"source_id": c, "metadata": {}} for c in ("CVE-2024-0001", "CVE-2024-0002")]
+    result = _build(iocs, kev=kev, tiers={"CVE-2026-0001": "critical"})
+    assert [f["family"] for f in result["families"]] == ["Exploits", "Queue", "Akira"]
+    exploits = _fam(result, "Exploits")
+    assert exploits["priority_keys"]["linked_kev_cves"] == 2
+    assert exploits["why"][0] == "linked to 2 CVEs in CISA KEV (confirmed exploited)"
+    assert _fam(result, "Queue")["priority_keys"]["linked_kev_cves"] == 0
+
+
 def test_growth_and_volume_break_ties_in_that_order():
     iocs = (
         [_tf("Big", "win.big", "2026-08-01T00:00:00")] * 9  # most rows, no growth

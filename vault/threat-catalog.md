@@ -36,8 +36,11 @@ Decisions and licence: [[threat-layer]].
 
 - 467 named families; categories: MISP 99, none 368 (owner review pending).
 - 36 CVE links on 18 families: 26 reference-page mentions, 10 ThreatFox tags. 32 of 36
-  are KEV CVEs, which the risk queue excludes, so only 4 families meet the
-  "linked high-tier queue CVE" rule. KEV ransomware-use CVEs: 361 (category link only).
+  are KEV CVEs, which the risk queue excludes (it predicts KEV listing), so only 4
+  families met the "linked high-tier queue CVE" rule. Owner decision 2026-10-29: new
+  first key `linked_kev_cves` (own commit, before any label); 18 families have one.
+  It ranks by unreviewed links, so link precision now drives the top of the list.
+- KEV ransomware-use CVEs: 361 (category link only).
 - Name collisions remain (ThreatFox "Medusa" vs ATT&CK MEDUSA rootkit vs Medusa
   ransomware): the link review measures this.
 

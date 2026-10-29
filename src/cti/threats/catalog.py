@@ -157,6 +157,9 @@ def category_rows(fams: list[Family], labels: Mapping[str, tuple[str, ...]]) -> 
 
 def _why(keys: dict[str, int], recent: int, prior: int) -> list[str]:
     why = []
+    if keys["linked_kev_cves"]:
+        n = keys["linked_kev_cves"]
+        why.append(f"linked to {n} CVE{'s' * (n != 1)} in CISA KEV (confirmed exploited)")
     if keys["linked_high_tier_cves"]:
         n = keys["linked_high_tier_cves"]
         why.append(f"linked to {n} critical/high-tier CVE{'s' * (n != 1)} in the queue")
@@ -234,6 +237,7 @@ def build(
         recent, prior = grown.get(fam.name, (0, 0))
         high = {c["cve"] for c in cves if c["tier"] in cfg.HIGH_TIERS}
         keys = {
+            "linked_kev_cves": len({c["cve"] for c in cves if c["in_kev"]}),
             "linked_high_tier_cves": len(high),
             "ransomware": int("ransomware" in cats),
             "ioc_growth": recent - prior,
