@@ -3,7 +3,8 @@
 Every choice here was committed before the owner labelled the review sheets
 (``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` was added
 after the first ``cti threats`` run, in its own commit, from that run's link list (see
-its comment). Any later change must be disclosed in ``vault/threat-catalog.md``.
+its comment), and so was the ``linked_kev_cves`` priority key. Any later change must be
+disclosed in ``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.
@@ -93,8 +94,13 @@ UNKNOWN_MARKER = "unknown"
 # Families are ordered by these keys, highest first, in this order. Each row lists the
 # rules it met as its "why". Raw IOC volume mostly reflects who submits to ThreatFox, so
 # it only breaks ties.
+# "linked_kev_cves" was added on 2026-10-29, after the first run and before any owner
+# label, in its own commit: 32 of the first run's 36 links are to KEV CVEs, which the
+# risk queue excludes by design (it predicts KEV listing), so without this key the
+# strongest evidence a family is exploiting known bugs never reached the ranking.
 PRIORITY_KEYS = (
-    "linked_high_tier_cves",  # CVEs linked to the family with risk tier critical or high
+    "linked_kev_cves",  # CVEs linked to the family that are in CISA KEV (confirmed exploited)
+    "linked_high_tier_cves",  # linked non-KEV queue CVEs with risk tier critical or high
     "ransomware",  # 1 if a category is ransomware
     "ioc_growth",  # IOCs first seen in the last GROWTH_DAYS minus the GROWTH_DAYS before
     "ioc_rows",  # total IOC rows
