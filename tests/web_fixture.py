@@ -417,6 +417,19 @@ def build() -> dict[str, dict]:
     }
     shown_tiers = {c: t for c, t in export.tier_lookup(scored).items() if t != "baseline"}
     kev_cve = next(iter(sorted(scored["in_kev"])), _cve(99999))
+    kev_row = {
+        "source_id": kev_cve,
+        "title": "Example Vendor Example Product Remote Code Execution Vulnerability",
+        "text": "Synthetic fixture: an example product lets a remote attacker run commands.",
+        "metadata": {
+            "vendor": "Example Vendor",
+            "product": "Example Product",
+            "date_added": "2026-01-15",
+            "due_date": "2026-02-05",
+            "ransomware_use": "Known",
+            "cwes": ["CWE-78"],
+        },
+    }
     threats = export.build_threats(
         _threats_doc(shown_tiers, kev_cve),
         shown_tiers,
@@ -424,6 +437,7 @@ def build() -> dict[str, dict]:
             "T1190": "Exploit Public-Facing Application",
             "T1059": "Command and Scripting Interpreter",
         },
+        [kev_row],
     )
     evals = export.build_eval(results)
     evals["sources_sha256"] = {n: "0" * 64 for n in export.EVALS}

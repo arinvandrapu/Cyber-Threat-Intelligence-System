@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Data, RiskRow, ThreatLink, Tier } from "../types";
 import { DivergingBar, PageHead, Pager, TierDot, TierName } from "../components/ui";
 import { FEATURE_LABEL, TIER_LABEL, epss, int, signed } from "../format";
-import { LinkRow } from "./Threats";
+import { KevCard, LinkRow } from "./Threats";
 
 const PAGE = 100;
 const EVIDENCE: Record<string, string> = { exploitdb: "EDB", metasploit: "MSF", nuclei: "Nuclei" };
@@ -79,6 +79,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const shown = rows.slice(page * PAGE, (page + 1) * PAGE);
   const detail = risk.rows.find((r) => r.cve === selected) ?? null;
   const notRanked = focus && !risk.rows.some((r) => r.cve === focus);
+  const focusKev = focus ? data.threats.kev.find((k) => k.cve === focus) : undefined;
   const reset = () => setPage(0);
 
   const header = (key: SortKey, text: string, className?: string) => (
@@ -95,7 +96,15 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
         title="Risk queue"
         lede={`${int(risk.rows.length)} CVEs in the critical, high and elevated tiers, best first. Grey columns are context only and were never model inputs.`}
       />
-      {notRanked && (
+      {notRanked && focusKev && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <p className="note">
+            {focus} is in CISA KEV: it is already confirmed exploited, so it is not ranked here. Patch KEV CVEs first.
+          </p>
+          <KevCard entry={focusKev} />
+        </div>
+      )}
+      {notRanked && !focusKev && (
         <p className="note">
           {focus} is not in the ranked tiers: it is already in KEV, below the elevated tier, or published before the
           ranked window.

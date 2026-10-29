@@ -219,6 +219,22 @@ class ThreatFamily(_Model):
     why: list[str]
 
 
+class KevEntry(_Model):
+    """A KEV CVE linked to a shown family. KEV CVEs are never in the risk queue (already
+    confirmed exploited), so this is their only detail in the dashboard."""
+
+    cve: str
+    name: str  # CISA's vulnerabilityName
+    vendor: str
+    product: str
+    description: str  # CISA's short description, defanged and truncated
+    date_added: str
+    due_date: str | None
+    ransomware_use: str  # "Known" | "Unknown" (CISA's field)
+    cwes: list[str]
+    families: list[str]  # shown families linking to it (links not reviewed as wrong)
+
+
 class CategoryCount(_Model):
     category: str
     ioc_rows: int  # overlapping: a multi-category family counts in each
@@ -240,6 +256,7 @@ class Threats(_Model):
     # that was not reviewed as wrong
     categories: list[CategoryCount]
     kev_ransomware_cves: int  # KEV entries with known ransomware use (category-level link)
+    kev: list[KevEntry]
     review: ThreatReview | None
 
 

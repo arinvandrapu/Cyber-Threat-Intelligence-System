@@ -50,5 +50,7 @@ Moved to [[threat-links]] (review results, owner decisions on links, ATT&CK link
   + families with a link not reviewed as wrong (none today: 20 shown); no IOC
   values, URLs or evidence doc IDs. Threats view + "Linked threats" in the CVE detail;
   unchecked MISP labels are dashed. No predicted techniques ([[attack-mapping-v2-results]]).
+- Linked KEV CVEs (never queued) open a CISA card: name, vendor/product, dates,
+  ransomware use, description (`threats.kev`); also shown when such a CVE is opened in the queue.
 
 Related: [[threat-layer]], [[dashboard]], [[ioc-extraction]], [[data-sources]].

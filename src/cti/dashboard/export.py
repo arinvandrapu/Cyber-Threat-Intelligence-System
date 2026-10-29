@@ -764,11 +764,17 @@ def load_threats(path: Path, day: str) -> dict | None:
     return doc
 
 
-def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict[str, str]):
+def build_threats(
+    doc: dict | None,
+    tiers: dict[str, str],
+    technique_names: dict[str, str],
+    kev_rows: Iterable[dict] = (),
+):
     """``threats.json`` from a ``cti threats`` document (or ``None``: not yet run).
 
     ``tiers``: this export's tier per ranked CVE (baseline excluded), checked against the
     tier ``cti threats`` recorded on every link, so a stale threats file fails the export.
+    ``kev_rows``: parsed KEV records; linked KEV CVEs get a detail entry from them.
     """
     if doc is None:
         return {
@@ -778,6 +784,7 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
             "families": [],
             "categories": [],
             "kev_ransomware_cves": 0,
+            "kev": [],
             "review": None,
         }
     stale = sorted(
@@ -847,6 +854,7 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
             for cat, rows in sorted(doc["category_rows"].items(), key=lambda kv: (-kv[1], kv[0]))
         ],
         "kev_ransomware_cves": len(doc["kev_ransomware_cves"]),
+        "kev": _kev_entries(families, kev_rows),
         "review": {
             "labeller": review["labeller"],
             "hand_labelled_families": doc["summary"]["category_source"].get("owner", 0),
@@ -855,6 +863,35 @@ def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict
             "link_precision_ci95": tuple(precision["ci95"]) if precision else None,
         },
     }
+
+
+def _kev_entries(families: list[dict], kev_rows: Iterable[dict]) -> list[dict]:
+    linked: dict[str, set[str]] = defaultdict(set)
+    for f in families:
+        for link in f["links"]:
+            if link["in_kev"] and link["review"] != "rejected":
+                linked[link["cve"]].add(f["family"])
+    out = []
+    for r in kev_rows:
+        cve = r["source_id"]
+        if cve not in linked:
+            continue
+        m = r["metadata"]
+        out.append(
+            {
+                "cve": cve,
+                "name": r["title"],
+                "vendor": m.get("vendor") or "",
+                "product": m.get("product") or "",
+                "description": truncate(defang_text(r.get("text") or "")),
+                "date_added": m["date_added"],
+                "due_date": m.get("due_date"),
+                "ransomware_use": m.get("ransomware_use") or "Unknown",
+                "cwes": sorted(m.get("cwes") or []),
+                "families": sorted(linked[cve]),
+            }
+        )
+    return sorted(out, key=lambda e: cve_sort_key(e["cve"]))
 
 
 def tier_lookup(scored: dict) -> dict[str, str]:
@@ -876,6 +913,7 @@ def inputs(data_dir: Path, day: str) -> dict[str, Path]:
         "urlhaus": processed / "urlhaus.jsonl.gz",
         "iocs": extracted / "iocs.jsonl.gz",
         "ctid": data_dir / CTID_FILE,
+        "kev": processed / "kev.jsonl.gz",
         **{f"{name}_eval": evals / f"{name}-eval.json" for name in EVALS},
         "threats": data_dir / "threats" / day / "threats.json",  # optional
     }
@@ -937,7 +975,7 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
     threats_doc = load_threats(paths["threats"], day)
     shown_tiers = {c: t for c, t in tier_lookup(scored).items() if t != "baseline"}
     names = {t.id: t.name for t in load_techniques(paths["nvd"].parent)}
-    threats = build_threats(threats_doc, shown_tiers, names)
+    threats = build_threats(threats_doc, shown_tiers, names, read_jsonl(paths["kev"]))
     shown = f"{len(threats['families'])} families shown" if threats_doc else "not run"
     log(f"  threats: {shown}")
     evals = build_eval(results)
