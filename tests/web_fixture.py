@@ -267,7 +267,16 @@ def _threats_doc(tiers: dict[str, str], kev_cve: str) -> dict:
         return {
             "cve": cve,
             "via": via,
-            "evidence": [] if via == "threatfox_tag" else [{"doc_id": "x", "surface": "Family A"}],
+            "evidence": {
+                "threatfox_tag": [],
+                "attack:software": [
+                    {
+                        "doc_id": "attack:S9999",
+                        "surface": "Example Software",
+                        "text": "Example Software has exploited this synthetic CVE.",
+                    }
+                ],
+            }.get(via, [{"doc_id": "x", "surface": "Family A"}]),
             "tier": tiers.get(cve),
             "in_kev": cve == kev_cve,
             "review": review,
@@ -306,6 +315,7 @@ def _threats_doc(tiers: dict[str, str], kev_cve: str) -> dict:
                 "owner",
                 [
                     link(kev_cve, "threatfox_tag", "unreviewed", True),
+                    link(kev_cve, "attack:software", "correct", True),
                     link(queued[0], "mention:reference_page", "correct", True),
                 ],
                 1,

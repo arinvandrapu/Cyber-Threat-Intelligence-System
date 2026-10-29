@@ -112,7 +112,7 @@ USES = {"S0650": {"T1059", "T1055"}, "S1129": {"T1486"}}
 TACTICS = {"T1059": ("execution",), "T1055": ("privilege-escalation",), "T1486": ("impact",)}
 
 
-def _build(iocs, mentions=(), kev=(), tiers=None, owner=None, link_review=None):
+def _build(iocs, mentions=(), kev=(), tiers=None, owner=None, link_review=None, software_cves=None):
     return catalog.build(
         iocs=iocs,
         clusters=CLUSTERS,
@@ -125,6 +125,7 @@ def _build(iocs, mentions=(), kev=(), tiers=None, owner=None, link_review=None):
         owner=owner or {},
         day=DAY,
         link_review=link_review,
+        software_cves=software_cves,
     )
 
 
@@ -375,3 +376,42 @@ def test_append_families_adds_missing_rows_only(tmp_path):
     assert review.append_families(path, named, ranks) == []  # idempotent
     with pytest.raises(ValueError, match="no category"):  # blank appended rows are refused
         review.read_labels(path)
+
+
+def test_attack_software_links_use_the_own_name_join_and_carry_the_sentence():
+    iocs = [_tf("QakBot", "win.qakbot"), _tf("Bashlite", "elf.bashlite", alias="Qbot")]
+    cites = {"S0650": {"CVE-2017-0199": "QakBot has exploited CVE-2017-0199."}}
+    kev = [{"source_id": "CVE-2017-0199", "metadata": {}}]
+    result = _build(iocs, kev=kev, software_cves=cites)
+    [link] = _fam(result, "QakBot")["cves"]
+    assert link["via"] == "attack:software" and link["counts_for_priority"]  # trusted
+    assert link["evidence"] == [
+        {
+            "doc_id": "attack:S0650",
+            "surface": "QakBot",
+            "text": "QakBot has exploited CVE-2017-0199.",
+        }
+    ]
+    assert _fam(result, "QakBot")["priority_keys"]["linked_kev_cves"] == 1
+    assert _fam(result, "Bashlite")["cves"] == []  # no own-name ATT&CK software
+
+
+def test_link_sheet_appends_new_links_and_skips_blank_rows(tmp_path):
+    path = tmp_path / "links.csv"
+    first = {
+        "family": "A",
+        "cve": "CVE-1",
+        "via": "threatfox_tag",
+        "surface": "",
+        "evidence_url": "u",
+    }
+    review.write_link_sheet(path, [first])
+    path.write_text(path.read_text().replace("u,,", "u,yes,", 1))
+    second = dict(first, cve="CVE-2", via="attack:software")
+    assert review.append_links(path, [first, second]) == 1  # only the new one
+    assert review.append_links(path, [first, second]) == 0  # idempotent
+    assert review.read_link_labels(path) == {("A", "CVE-1", "threatfox_tag"): True}
+    assert review.link_keys(path) == {
+        ("A", "CVE-1", "threatfox_tag"),
+        ("A", "CVE-2", "attack:software"),
+    }

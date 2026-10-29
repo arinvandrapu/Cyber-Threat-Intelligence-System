@@ -13,6 +13,7 @@ from cti.nlp.attack_catalog import (  # noqa: E402
     clean,
     parent,
     revocations_from_bundle,
+    software_cves_from_bundle,
     uses_from_bundle,
 )
 from cti.snapshot import Snapshot  # noqa: E402
@@ -287,3 +288,42 @@ def test_cli_attack_eval(tmp_path, monkeypatch, capsys):
     assert result["ctid"]["cves"] == 2 and result["splits"] == {"dev": 1, "test": 1}
     assert "tfidf" in capsys.readouterr().out
     assert main(["attack-eval", "--date", DAY, "--methods", "nope"]) == 2
+
+
+def test_software_cves_come_from_attack_prose_not_citations():
+    def obj(kind, i, ext, **extra):
+        refs = [{"source_name": "mitre-attack", "external_id": ext}]
+        return {"type": kind, "id": f"{kind}--{i}", "external_references": refs, **extra}
+
+    tesla = obj(
+        "malware",
+        1,
+        "S0331",
+        description="[Agent Tesla](https://attack.mitre.org/software/S0331) is a RAT.",
+        external_references=[
+            {"source_name": "mitre-attack", "external_id": "S0331"},
+            {"source_name": "Report", "description": "Campaign exploiting CVE-2099-0001."},
+        ],
+    )
+    shotput = obj("malware", 2, "S0063")
+    gone = obj("malware", 3, "S9999", revoked=True, description="Exploits CVE-2099-0003.")
+    rels = [
+        {
+            "type": "relationship",
+            "relationship_type": "uses",
+            "source_ref": "malware--1",
+            "target_ref": "attack-pattern--1",
+            "description": "[Agent Tesla](https://x) has exploited CVE-2017-11882 and "
+            "CVE-2017-8570.(Citation: Vendor Aug 2020) It also logs keys.",
+        },
+        {
+            "type": "relationship",
+            "relationship_type": "uses",
+            "source_ref": "malware--2",
+            "target_ref": "attack-pattern--1",
+            "description": "SHOTPUT lists files.(Citation: Palo Alto CVE-2015-3113 July 2015)",
+        },
+    ]
+    out = software_cves_from_bundle([tesla, shotput, gone, *rels])
+    sentence = "Agent Tesla has exploited CVE-2017-11882 and CVE-2017-8570."
+    assert out == {"S0331": {"CVE-2017-11882": sentence, "CVE-2017-8570": sentence}}
