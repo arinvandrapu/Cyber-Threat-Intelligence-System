@@ -2,9 +2,10 @@
 tags: [nlp, attack, evaluation, phase-10]
 ---
 
-# ATT&CK Mapping v2 (Phase 10b, planned)
+# ATT&CK Mapping v2 (Phase 10b)
 
-Status 2026-10-28: planned, owner-approved; plan of record `tasks/todo.md` § 10.
+Status 2026-10-29: pre-registered (commit `2a34423`, config alone); `cti attack-eval2`
+built; implementation audited, then run once: [[attack-mapping-v2-results]]. Plan: `tasks/todo.md` § 10.
 Why: Phase 5b's mapping is weak and its test split is spent ([[attack-mapping]]).
 
 ## Test set
@@ -47,5 +48,17 @@ Why: Phase 5b's mapping is weak and its test split is spent ([[attack-mapping]])
 - Literature: CWE → CAPEC → ATT&CK fans out with low precision (BRON critiques);
   Bonhomme & Dulaunoy 2026 report recall@5 0.673 on 1,207 CTID CVEs (other set, not
   comparable).
+
+## Pre-registration notes (2026-10-29)
+
+- Adversarial review before commit (10 findings, all fixed): CVSS rule is the author's
+  heuristic written after test counts were seen (disclosed; ablations without it
+  pre-registered); v2 `obtain*Privilege` dropped (impact, not exploitation); per-fold
+  leakage rules; exclusion order; closed CWE list; sub-technique report for T1204/T1566.
+- Disclosed test counts re-derived from the test file: correct; T1189 21 and T1566 18
+  coincide with training counts.
+- Train-only feasibility: 419/419 training CVEs have NVD text; 392 a CWE; 125 (30%) a
+  CAPEC path; CVSS v3 399 / v2 12 / none 8 (test is mostly v2: disclosed shift); the
+  CVSS rule hits a label for 218 / 405 exploitation CVEs.
 
 Related: [[nlp-design]], [[cwe-classification]], [[threat-layer]].

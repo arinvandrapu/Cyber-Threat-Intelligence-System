@@ -127,6 +127,31 @@ CVE's NVD description. From `cti attack-eval`:
   diagnostics are written by `cti attack-eval` (`diagnostics` in its output); details in
   [`vault/attack-mapping.md`](vault/attack-mapping.md).
 
+#### Re-evaluation on a fresh test set (pre-registered, Phase 10b)
+
+The test split above is spent, so all 419 KEV mappings became training data and the
+methods were re-tested once on CTID's separate `attack_to_cve` mappings (200 non-KEV
+CVEs from 2008–2020 with an exploitation label). Every choice was committed in
+`src/cti/nlp/attack2_config.py` before any test score. From `cti attack-eval2`:
+
+| Method | hit@1 | hit@5 (95% CI) |
+|---|---|---|
+| Majority | 0.26 | 0.69 (0.62–0.75) |
+| Label prior + bi-encoder (Phase 5b method) | 0.26 | 0.69 |
+| **Combiner** (prior, bi-encoder, TF-IDF, CWE→CAPEC→ATT&CK paths, CVSS rule) | **0.29** | **0.72 (0.66–0.78)** |
+| CTID methodology replay (reference only) | 0.56 | 0.82 |
+
+- **Pre-registered decision: passes, narrowly.** Combiner minus the Phase 5b method:
+  hit@5 +0.035 (95% CI +0.005 to +0.070). Cross-validation set the prior weight so high
+  that the Phase 5b method equals majority here.
+- **Where the gain comes from:** a CVSS heuristic (user interaction → drive-by /
+  user execution), mostly at T1189. It was written after the test label counts were
+  seen, which is disclosed; without it the gain is +0.015 and not significant. The
+  CWE→CAPEC→ATT&CK chain adds nothing, and text similarity alone is weak on this set.
+- **Replay** of CTID's own vulnerability-type rules scores far higher, which shows how much
+  the labels follow that method; it is a reference row, not a competitor. Details:
+  [`vault/attack-mapping-v2-results.md`](vault/attack-mapping-v2-results.md).
+
 ### CWE classification of CVE descriptions
 
 Each 2024+ CVE description with a usable CWE label is classified into one of 118 CWE
@@ -322,6 +347,7 @@ cti extract --date 2026-10-25   # offline: regex IOCs + alias mentions -> data/e
 cti extract-eval --date 2026-10-25 --labels data/reference/ioc-review-2026-10-26.csv  # precision
 cti models verify                   # weights match their pinned SHA-256 (nlp env)
 cti attack-eval --date 2026-10-25   # grade CVE -> ATT&CK ranking on MITRE CTID's KEV mappings
+.venv-nlp/bin/cti attack-eval2 --date 2026-10-26 --archive-date 2026-10-29  # pre-registered re-evaluation (10b)
 cti ner --date 2026-10-25           # SecureBERT NER over the reference pages (~10 min CPU)
 cti ner-eval --date 2026-10-25      # NER sanity check on the gold set
 cti embed --date 2026-10-25         # bi-encoder embeddings of NVD descriptions (~50 min CPU)
