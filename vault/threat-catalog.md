@@ -22,10 +22,9 @@ Decisions and licence: [[threat-layer]].
 
 ## Rules found on the first run (2026-10-29, before any owner label)
 
-- **ATT&CK join by the family's own name only.** The Phase 5a alias index falls back to
-  ThreatFox aliases: Bashlite lists "Qbot" (QakBot's ATT&CK alias), so 5a merges Bashlite
-  into S0650. Catalog: 82 families with software (96 with the fallback). The 5a index
-  itself is unchanged (follow-up in `tasks/todo.md`).
+- **ATT&CK join by the family's own name only.** The Phase 5a index's alias fallback
+  merged Bashlite into QakBot (via "Qbot"); catalog: 82 families with software. The 5a
+  index was fixed on 2026-10-29 ([[ioc-extraction]]); the catalog's own-name rule stays.
 - **Mentions link only from reference pages** (`MENTION_ORIGINS`). A family named in an
   NVD description is the vulnerable product (CVE-2024-41111 is a Sliver bug), not the
   exploiter.

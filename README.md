@@ -174,7 +174,7 @@ CVEs. Every choice was committed before any test score existed
   similarity search, and mean pooling may blur the specific bug terms a linear model on
   words keeps. Published work fine-tunes a transformer instead (e.g.
   [V2W-BERT](https://arxiv.org/abs/2102.11498)); that was out of scope for CPU-only compute.
-- **Name leakage is real.** When the description names the CWE, TF-IDF scores 0.91.
+- **Name leakage is real.** When the description names the CWE, TF-IDF scores 0.92.
 - **Both chosen regularization values sit at an edge of their pre-registered grids**, so
   slightly better settings may exist. They were not explored after the fact.
 - **Scores sit below published top-1 accuracy** (roughly 70–88% in work such as

@@ -27,6 +27,8 @@ def index():
             attack("S9001", "INC", "malware", ["INC"]),
             attack("S0085", "S-Type", "malware", ["S-Type"]),
             attack("S0013", "PlugX", "malware", ["PlugX", "Korplug"]),
+            attack("S0650", "QakBot", "malware", ["QakBot", "Qbot", "Pinkslipbot"]),
+            attack("S0366", "WannaCry", "malware", ["WannaCry", "WanaCry"]),
             attack("G0129", "Mustang Panda", "intrusion-set", ["Mustang Panda", "RedDelta"]),
             attack("T1059", "Command and Scripting Interpreter", "attack-pattern"),
         ],
@@ -34,6 +36,8 @@ def index():
             threatfox("Cobalt Strike", "BEACON,CobaltStrike"),
             threatfox("Mirai", "Katana"),
             threatfox("PlugX", "Korplug,RedDelta"),  # an alias list that names a group
+            threatfox("Bashlite", "Gafgyt,qbot"),  # "qbot" is QakBot's secondary alias
+            threatfox("WannaCryptor", "WannaCry"),  # an alias that is S0366's own title
             threatfox("Unknown malware"),
         ],
     )
@@ -93,5 +97,16 @@ def test_offsets(index):
 
 def test_stats(index):
     stats = index.stats()
-    assert stats["ambiguous_names"] == 2  # UAC-0056, RedDelta
-    assert stats["entities"] == {"group": 4, "malware": 4, "threatfox": 1, "tool": 1}
+    assert stats["ambiguous_names"] == 3  # UAC-0056, RedDelta, qbot (QakBot vs Bashlite)
+    assert stats["entities"] == {"group": 4, "malware": 6, "threatfox": 2, "tool": 1}
+
+
+def test_threatfox_alias_joins_attack_only_through_the_entry_title(index):
+    # WannaCryptor's alias is S0366's title: joined
+    assert [e.id for e in index.lookup("WannaCryptor")] == ["S0366"]
+    # Bashlite's alias "qbot" is only a secondary QakBot alias: Bashlite stays separate,
+    # its other names point to it, and "Qbot" is now ambiguous between the two
+    assert [e.id for e in index.lookup("Gafgyt")] == ["threatfox:Bashlite"]
+    assert [e.id for e in index.lookup("Bashlite")] == ["threatfox:Bashlite"]
+    assert sorted(e.id for e in index.lookup("Qbot")) == ["S0650", "threatfox:Bashlite"]
+    assert [e.id for e in index.lookup("QakBot")] == ["S0650"]

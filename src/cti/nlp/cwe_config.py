@@ -68,3 +68,7 @@ TOP_ASSIGNERS = 5  # breakdown of test by the assigning CNA
 # circular row: per-source majority vs TF-IDF + logistic regression, stratified 5-fold CV.
 GOLD_FOLDS = 5
 GOLD_C = 1.0
+# 2026-10-29, disclosed deviation: the TF-IDF LogisticRegression is now seeded with SEED
+# (``cwe_eval.fit_tfidf``). The ``saga`` solver is stochastic and was unseeded, so re-runs
+# differed by about 0.002 at 4 d.p. The seeded run kept the headline and the chosen C;
+# the name-present macro-F1 moved 0.9128 -> 0.9151 (published 0.91 -> 0.92).
