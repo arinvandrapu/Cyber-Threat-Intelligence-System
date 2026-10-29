@@ -125,6 +125,8 @@ class ThreatFoxSource(_AbuseCHSource):
                         "ioc_type": ioc_type,
                         "threat_type": row.get("threat_type"),
                         "malware": malware,
+                        # Malpedia-style ID (e.g. win.qakbot): joins families across sources
+                        "malware_id": row.get("fk_malware") or None,
                         "malware_alias": row.get("malware_alias") or None,
                         "confidence": int(row["confidence_level"])
                         if row.get("confidence_level", "").isdigit()

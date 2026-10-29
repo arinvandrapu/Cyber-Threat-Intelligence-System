@@ -313,6 +313,9 @@ cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old 
 cti ingest --date 2026-10-25 --refetch epss --new-dates-only --reason "..."  # add cutoffs
 cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
 cti fetch-nvd-archive          # NVD 2002-2022 for Phase 10b -> data/reference-snapshots/ (never uploaded)
+cti threats-sheet --date 2026-10-26  # blank blind-review sheet of the top ThreatFox families
+cti threats-sheet --date 2026-10-26 --priority  # add unlabelled families from the priority top 20
+cti threats --date 2026-10-26  # threat catalog: categories, ATT&CK techniques, CVE links, priority
 cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
 cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
 cti extract --date 2026-10-25   # offline: regex IOCs + alias mentions -> data/extracted/<date>/

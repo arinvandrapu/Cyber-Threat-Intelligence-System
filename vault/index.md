@@ -28,7 +28,8 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   127.0.0.1 with strict CSP, seven views incl. three relationship graphs
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
-- [[threat-layer]] — Phase 10a (planned): family categories (MISP galaxies, STIX
+- [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts
+- [[threat-layer]] — Phase 10a: family categories (MISP galaxies, STIX
   malware types), CVE links, priority heuristic; abuse.ch §7.3 no-AI-training rule
 - [[attack-mapping-v2]] — Phase 10b (planned): fresh CTID `attack_to_cve` test,
   population-shift framing, shared-logistic combiner, CAPEC and CVSS data gaps

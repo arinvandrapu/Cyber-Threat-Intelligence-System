@@ -38,6 +38,9 @@ ablation): [[risk-scoring-design]].
 - Text matching is stricter: the known spelling's case and word count, no match after an
   apostrophe, a stoplist, and a threat cue for plain words. Without these, "in C" matched
   INC, "or at" matched oRAT, and "James" matched a malware alias.
+- Known issue (found 2026-10-29): a ThreatFox family whose own name matches no ATT&CK
+  software joins one through its ThreatFox aliases, so Bashlite ("Qbot") was merged into
+  S0650 QakBot. [[threat-catalog]] avoids this; the 5a index is not yet fixed.
 
 ## Evaluation (2026-10-26)
 

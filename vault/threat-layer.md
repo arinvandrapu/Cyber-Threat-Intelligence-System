@@ -2,9 +2,10 @@
 tags: [threats, design, licensing, phase-10]
 ---
 
-# Threat Layer (Phase 10a, planned)
+# Threat Layer (Phase 10a)
 
-Status 2026-10-28: planned, owner-approved; plan of record `tasks/todo.md` § 10.
+Status 2026-10-29: `cti threats` built ([[threat-catalog]]); owner reviews pending.
+Plan of record `tasks/todo.md` § 10.
 Why: the system classified bugs ([[cwe-classification]]), not threats.
 
 ## Decisions
@@ -17,8 +18,10 @@ Why: the system classified bugs ([[cwe-classification]]), not threats.
   → botnet).
 - Category source: MISP galaxies (CC0/BSD; licence checked per file), category = the
   galaxy file. Malpedia has no category field and is CC BY-NC-SA: not used for labels.
-- Owner labels the top 34 families **blind**, then compares with the auto labels.
-- Threat priority is a pre-declared heuristic, not ML: linked high-tier CVEs, ransomware,
+- Owner labels the top 34 families **blind** (`cti threats-sheet` →
+  `data/reference/threat-categories-2026-10-26.csv`), then compares with the auto labels.
+- Threat priority is a pre-declared heuristic, not ML: linked KEV CVEs (added 2026-10-29,
+  see [[threat-catalog]]), linked high-tier queue CVEs, ransomware,
   30-day IOC growth, then volume; every row says why. Raw IOC volume mostly reflects who
   submits to ThreatFox (ClearFake, Mirai), not priority.
 
@@ -34,8 +37,11 @@ Why: the system classified bugs ([[cwe-classification]]), not threats.
 
 ## ThreatFox facts (2026-10-26 snapshot)
 
-- 126,917 IOCs, 481 families. Names containing "unknown": 32,044 rows. Of the rest, the
-  top 11 / 20 / 26 / 34 families cover 80 / 90 / 95 / 99%.
+- 126,917 IOCs, 472 names / 481 IDs (one family can span platform IDs: `elf.mirai` +
+  `win.mirai`, so family = printable name). Names containing "unknown": 18,201 rows,
+  incl. role IDs `unknown_loader` 2,342, `_stealer` 1,246, `_rat` 719, `_webinject` 51.
+- 467 named families, 108,716 rows: top 22 / 46 / 79 / 197 cover 80 / 90 / 95 / 99%.
+  The planning figures (32,044 unknown; top 34 = 99%) were a miscount; top 34 = 86.6%.
 - Parse keeps `malware_printable`; Malpedia `fk_malware` only as fallback (10a keeps both).
 - CVE tags: 166 rows, 16 CVEs. KEV `knownRansomwareCampaignUse` names no family, so it
   links a CVE to the ransomware category only.
