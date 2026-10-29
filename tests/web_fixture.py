@@ -259,6 +259,104 @@ def _feeds() -> tuple[list[dict], list[dict]]:
     return threatfox, urlhaus
 
 
+def _threats_doc(tiers: dict[str, str], kev_cve: str) -> dict:
+    """A synthetic ``cti threats`` document: three families, links to fixture CVEs."""
+    queued = sorted(tiers)[:2]
+
+    def link(cve, via, review, counts):
+        return {
+            "cve": cve,
+            "via": via,
+            "evidence": [] if via == "threatfox_tag" else [{"doc_id": "x", "surface": "Family A"}],
+            "tier": tiers.get(cve),
+            "in_kev": cve == kev_cve,
+            "review": review,
+            "counts_for_priority": counts,
+        }
+
+    def family(rank, name, cats, source, cves, kev, high, rows, growth, why, sw=None):
+        return {
+            "rank": rank,
+            "family": name,
+            "categories": cats,
+            "category_source": source,
+            "attack": {
+                "software": sw,
+                "name": "Example Software" if sw else None,
+                "techniques": ["T1190", "T1059"] if sw else [],
+                "tactics": ["execution", "initial-access"] if sw else [],
+            },
+            "cves": cves,
+            "priority_keys": {
+                "linked_kev_cves": kev,
+                "linked_high_tier_cves": high,
+                "ioc_rows": rows,
+                "ioc_growth": growth,
+            },
+            "why": why,
+        }
+
+    return {
+        "snapshot_date": DATES["snapshot"],
+        "families": [
+            family(
+                1,
+                "Example Family A",
+                ["ransomware"],
+                "owner",
+                [
+                    link(kev_cve, "threatfox_tag", "unreviewed", True),
+                    link(queued[0], "mention:reference_page", "correct", True),
+                ],
+                1,
+                1,
+                40,
+                12,
+                ["linked to 1 CVE in CISA KEV (confirmed exploited)", "ransomware", "40 IOCs"],
+                sw="S9999",
+            ),
+            family(
+                2,
+                "Example Family B",
+                ["bot", "ddos"],
+                "owner",
+                [link(queued[1], "mention:reference_page", "rejected", False)],
+                0,
+                0,
+                40,
+                3,
+                ["IOCs up +3 in the last 30 days (9 vs 6)", "40 IOCs"],
+            ),
+            family(3, "Example Family C", ["unknown"], "owner", [], 0, 0, 40, -2, ["40 IOCs"]),
+            family(
+                30,
+                "Example Family D",
+                ["remote-access-trojan"],
+                "misp",
+                [link(queued[1], "mention:reference_page", "correct", True)],
+                0,
+                1,
+                12,
+                0,
+                ["linked to 1 critical/high-tier CVE in the queue", "12 IOCs"],
+            ),
+        ],
+        "category_rows": {
+            "bot": 40,
+            "ddos": 40,
+            "ransomware": 40,
+            "remote-access-trojan": 12,
+            "unknown": 40,
+        },
+        "kev_ransomware_cves": ["CVE-2099-0001", "CVE-2099-0002"],
+        "summary": {"category_source": {"owner": 3, "misp": 1}},
+        "review": {
+            "labeller": "fixture labeller",
+            "links": {"precision": {"all": {"n": 2, "correct": 1, "ci95": [0.09, 0.91]}}},
+        },
+    }
+
+
 def build() -> dict[str, dict]:
     recs = records()
     results = _evals()
@@ -306,6 +404,16 @@ def build() -> dict[str, dict]:
             docs, export.tier_lookup(scored), scored["in_kev"]
         ),
     }
+    shown_tiers = {c: t for c, t in export.tier_lookup(scored).items() if t != "baseline"}
+    kev_cve = next(iter(sorted(scored["in_kev"])), _cve(99999))
+    threats = export.build_threats(
+        _threats_doc(shown_tiers, kev_cve),
+        shown_tiers,
+        {
+            "T1190": "Exploit Public-Facing Application",
+            "T1059": "Command and Scripting Interpreter",
+        },
+    )
     evals = export.build_eval(results)
     evals["sources_sha256"] = {n: "0" * 64 for n in export.EVALS}
     versions = export.epss_versions(recs)
@@ -337,6 +445,7 @@ def build() -> dict[str, dict]:
             "iocs.json": iocs,
             "graphs.json": graphs,
             "eval.json": evals,
+            "threats.json": threats,
         }
     )
 

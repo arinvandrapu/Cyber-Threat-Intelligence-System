@@ -1,8 +1,8 @@
 """``cti export``: the dashboard's data, from pipeline outputs only (Phase 8).
 
-Writes ``data/export/<date>/{meta,risk,iocs,graphs,eval}.json`` (gitignored: the IOC file
-holds abuse.ch-derived aggregates). Nothing here is recomputed by hand: every number is a
-pipeline output or is derived from one in code below.
+Writes ``data/export/<date>/{meta,risk,iocs,graphs,eval,threats}.json`` (gitignored: the
+IOC and threat files hold abuse.ch-derived aggregates). Nothing here is recomputed by hand:
+every number is a pipeline output or is derived from one in code below.
 
 - **Risk.** The pre-registered logistic model (``risk_config``, unchanged and SHA-checked
   against ``risk-eval.json``) refit on all four labelled windows, then used to rank the
@@ -15,6 +15,10 @@ pipeline output or is derived from one in code below.
 - **IOCs.** Reference-page strings of indicator type (not vetted as malicious); NVD-origin
   as counts only; abuse.ch feeds as aggregates only (no values: licence). Every network
   value is checked to be defanged, failing closed.
+- **Threats** (Phase 10a, optional input). ``cti threats`` reads this export's risk tiers,
+  so the order is ``cti export`` -> ``cti threats`` -> ``cti export``. Without a threats
+  file, ``threats.json`` says ``available: false``; with one, its dates and every linked
+  CVE tier must match this export, or the export stops. Per-family aggregates only.
 """
 
 from __future__ import annotations
@@ -35,6 +39,7 @@ from cti.enrich.cves import cve_sort_key, features_at, known_in_kev
 from cti.nlp import risk_config as cfg
 from cti.nlp import risk_eval
 from cti.nlp.iocs import extract
+from cti.threats.config import PRIORITY_REVIEW_TOP_N
 
 DESCRIPTION_CHARS = 320
 TOP_FAMILIES = 25
@@ -62,6 +67,13 @@ DISCLOSURES = [
     "challenger: it was fixed before scoring and its contributions can be explained.",
 ]
 RECENT_DAYS = 30
+# Families shown: the priority top N, which is hand-labelled by rule (so no MISP name
+# collision reaches the top of the list), plus any family with a CVE link.
+TOP_THREATS = PRIORITY_REVIEW_TOP_N
+THREATS_DISCLOSURE = (
+    "Threat categories and CVE-link reviews were labelled by Claude on the owner's behalf; "
+    "threat priority is a pre-declared heuristic, not a validated model."
+)
 # Registries that every CVE links to: shared by construction, not infrastructure
 HOSTS_EXCLUDED = frozenset({"cve[.]org", "cve[.]mitre[.]org", "nvd[.]nist[.]gov"})
 
@@ -687,6 +699,108 @@ def disclosures(
     return [d.format(**values) for d in DISCLOSURES]
 
 
+def load_threats(path: Path, day: str) -> dict | None:
+    """The ``cti threats`` document for ``day``, or ``None`` if it has not been run."""
+    import json
+
+    if not path.exists():
+        return None
+    doc = json.loads(path.read_text())
+    if doc["snapshot_date"] != day:
+        raise ConfigError(f"{path} is for {doc['snapshot_date']}, not {day}")
+    return doc
+
+
+def build_threats(doc: dict | None, tiers: dict[str, str], technique_names: dict[str, str]):
+    """``threats.json`` from a ``cti threats`` document (or ``None``: not yet run).
+
+    ``tiers``: this export's tier per ranked CVE (baseline excluded), checked against the
+    tier ``cti threats`` recorded on every link, so a stale threats file fails the export.
+    """
+    if doc is None:
+        return {
+            "available": False,
+            "snapshot_date": None,
+            "families_total": 0,
+            "families": [],
+            "categories": [],
+            "kev_ransomware_cves": 0,
+            "review": None,
+        }
+    stale = sorted(
+        c["cve"] for f in doc["families"] for c in f["cves"] if c["tier"] != tiers.get(c["cve"])
+    )
+    if stale:
+        raise ConfigError(
+            f"threats.json tiers differ from this export for {stale[:5]}; "
+            "rerun `cti threats`, then `cti export`"
+        )
+    top = [f for f in doc["families"] if f["rank"] <= TOP_THREATS]
+    if unchecked := [f["family"] for f in top if f["category_source"] != "owner"]:
+        raise ConfigError(
+            f"priority top {TOP_THREATS} must be hand-labelled; not yet: {unchecked}; "
+            "run `cti threats-sheet --priority`, label, then `cti threats`"
+        )
+    # below the top, a family appears only for a link that was not reviewed as wrong
+    shown = top + [
+        f
+        for f in doc["families"]
+        if f["rank"] > TOP_THREATS and any(c["review"] != "rejected" for c in f["cves"])
+    ]
+    families = [
+        {
+            "rank": f["rank"],
+            "family": f["family"],
+            "categories": f["categories"],
+            "category_source": f["category_source"],
+            "attack_software": f["attack"]["software"],
+            "attack_name": f["attack"]["name"],
+            "techniques": [
+                {"id": t, "name": technique_names.get(t, t)} for t in f["attack"]["techniques"]
+            ],
+            "tactics": f["attack"]["tactics"],
+            "links": [
+                {
+                    "cve": c["cve"],
+                    "via": c["via"],
+                    "surface": sorted({e["surface"] for e in c["evidence"]}),
+                    "review": c["review"],
+                    "counts_for_priority": c["counts_for_priority"],
+                    "in_kev": c["in_kev"],
+                    "tier": c["tier"],
+                }
+                for c in f["cves"]
+            ],
+            "linked_kev_cves": f["priority_keys"]["linked_kev_cves"],
+            "linked_high_tier_cves": f["priority_keys"]["linked_high_tier_cves"],
+            "ioc_rows": f["priority_keys"]["ioc_rows"],
+            "ioc_growth": f["priority_keys"]["ioc_growth"],
+            "why": f["why"],
+        }
+        for f in shown
+    ]
+    review = doc["review"]
+    precision = (review["links"].get("precision") or {}).get("all")
+    return {
+        "available": True,
+        "snapshot_date": doc["snapshot_date"],
+        "families_total": len(doc["families"]),
+        "families": families,
+        "categories": [
+            {"category": cat, "ioc_rows": rows}
+            for cat, rows in sorted(doc["category_rows"].items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        "kev_ransomware_cves": len(doc["kev_ransomware_cves"]),
+        "review": {
+            "labeller": review["labeller"],
+            "hand_labelled_families": doc["summary"]["category_source"].get("owner", 0),
+            "links_reviewed": precision["n"] if precision else 0,
+            "links_correct": precision["correct"] if precision else 0,
+            "link_precision_ci95": tuple(precision["ci95"]) if precision else None,
+        },
+    }
+
+
 def tier_lookup(scored: dict) -> dict[str, str]:
     return {r["cve"]: t for r, t in zip(scored["records"], scored["tier"], strict=True)}
 
@@ -707,6 +821,7 @@ def inputs(data_dir: Path, day: str) -> dict[str, Path]:
         "iocs": extracted / "iocs.jsonl.gz",
         "ctid": data_dir / CTID_FILE,
         **{f"{name}_eval": evals / f"{name}-eval.json" for name in EVALS},
+        "threats": data_dir / "threats" / day / "threats.json",  # optional
     }
 
 
@@ -721,7 +836,8 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
     from cti.nlp.attack_catalog import load_techniques
     from cti.nlp.attack_eval import load_ctid
 
-    if missing := [str(p) for p in paths.values() if not p.exists()]:
+    optional = {"threats"}
+    if missing := [str(p) for n, p in paths.items() if n not in optional and not p.exists()]:
         raise ConfigError(f"missing inputs {missing}; run the pipeline through `cti risk-eval`")
     results = {n: json.loads(paths[f"{n}_eval"].read_text()) for n in EVALS}
     config_sha = config_guard(results["risk"])
@@ -762,6 +878,12 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             read_jsonl(paths["iocs"]), tier_lookup(scored), scored["in_kev"]
         ),
     }
+    threats_doc = load_threats(paths["threats"], day)
+    shown_tiers = {c: t for c, t in tier_lookup(scored).items() if t != "baseline"}
+    names = {t.id: t.name for t in load_techniques(paths["nvd"].parent)}
+    threats = build_threats(threats_doc, shown_tiers, names)
+    shown = f"{len(threats['families'])} families shown" if threats_doc else "not run"
+    log(f"  threats: {shown}")
     evals = build_eval(results)
     evals["sources_sha256"] = {n: sha256(paths[f"{n}_eval"]) for n in EVALS}
     versions = epss_versions(cves())
@@ -774,7 +896,9 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
         "git": git,
         "config_sha256": config_sha,
         "inputs_sha256": {
-            name: sha256(p) for name, p in sorted(paths.items()) if not name.endswith("_eval")
+            name: sha256(p)
+            for name, p in sorted(paths.items())
+            if not name.endswith("_eval") and p.exists()
         },
         "disclosures": disclosures(
             versions,
@@ -783,7 +907,8 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             sum(r["age_days"] <= RECENT_DAYS for r in risk["rows"]),
             len(risk["rows"]),
             next(c["refit"] for c in risk["coefficients"] if c["feature"] == "log_age_days"),
-        ),
+        )
+        + ([THREATS_DISCLOSURE] if threats_doc else []),
     }
     return validate(
         {
@@ -792,6 +917,7 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             "iocs.json": iocs,
             "graphs.json": graphs,
             "eval.json": evals,
+            "threats.json": threats,
         }
     )
 

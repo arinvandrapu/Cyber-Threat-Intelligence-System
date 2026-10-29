@@ -34,15 +34,10 @@ Decisions and licence: [[threat-layer]].
 
 ## First run (2026-10-26 snapshot)
 
-- 467 named families; categories: MISP 99, none 368 (owner review pending).
-- 36 CVE links on 18 families: 26 reference-page mentions, 10 ThreatFox tags. 32 of 36
-  are KEV CVEs, which the risk queue excludes (it predicts KEV listing), so only 4
-  families met the "linked high-tier queue CVE" rule. Owner decision 2026-10-29: new
-  first key `linked_kev_cves` (own commit, before any label); 18 families have one.
-  It ranks by unreviewed links, so link precision now drives the top of the list.
-- KEV ransomware-use CVEs: 361 (category link only).
-- Name collisions remain (ThreatFox "Medusa" vs ATT&CK MEDUSA rootkit vs Medusa
-  ransomware): the link review measures this.
+- 467 named families (now: 51 hand-labelled, 75 MISP, 341 none). 36 CVE links on 18
+  families (26 reference-page mentions, 10 ThreatFox tags); 32 are KEV CVEs, which the
+  queue excludes by design, so owner added `linked_kev_cves` as the first priority key
+  (own commit, before any label). KEV ransomware-use CVEs: 361 (category link only).
 
 ## Reviews (2026-10-29, labelled by Claude: owner delegated; see `REVIEW_LABELLER`)
 
@@ -70,4 +65,13 @@ Decisions and licence: [[threat-layer]].
 - Labels change the ranking (ransomware is a key), so the top 20 must be re-checked
   after any label change. Ranks 13–20 are ransomware families with no CVE link.
 
-Related: [[threat-layer]], [[ioc-extraction]], [[data-sources]].
+## Dashboard (10c, 2026-10-29)
+
+- `cti export` reads `data/threats/<date>/threats.json` as an **optional** input (order:
+  export → threats → export); missing → `available: false`; stale tiers → export fails.
+- Ships the priority top `PRIORITY_REVIEW_TOP_N` (export refuses if any is not hand-labelled)
+  + families with a link not reviewed as wrong (none today: 20 shown); no IOC
+  values, URLs or evidence doc IDs. Threats view + "Linked threats" in the CVE detail;
+  unchecked MISP labels are dashed. No predicted techniques ([[attack-mapping-v2-results]]).
+
+Related: [[threat-layer]], [[dashboard]], [[ioc-extraction]], [[data-sources]].

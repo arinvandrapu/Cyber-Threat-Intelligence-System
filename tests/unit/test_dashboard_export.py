@@ -201,6 +201,97 @@ def feeds():
     return tf, uh
 
 
+def _threats_doc(tier="critical"):
+    link = {
+        "cve": "CVE-2026-0001",
+        "via": "mention:reference_page",
+        "evidence": [{"doc_id": "references:abc", "surface": "Akira"}],
+        "tier": tier,
+        "in_kev": False,
+        "review": "correct",
+        "counts_for_priority": True,
+    }
+
+    def fam(rank, name, cves=()):
+        return {
+            "rank": rank,
+            "family": name,
+            "categories": ["ransomware"],
+            "category_source": "owner",
+            "misp_categories": ["ransomware"],
+            "attack": {
+                "software": "S1129",
+                "name": "Akira",
+                "techniques": ["T1486"],
+                "tactics": ["impact"],
+            },
+            "cves": list(cves),
+            "priority_keys": {
+                "linked_kev_cves": 0,
+                "linked_high_tier_cves": len(cves),
+                "ransomware": 1,
+                "ioc_growth": 2,
+                "ioc_rows": 5,
+            },
+            "why": ["ransomware"],
+        }
+
+    fams = [fam(i, f"Family {i}") for i in range(1, export.TOP_THREATS + 4)]
+    fams[-2] = fam(export.TOP_THREATS + 2, "Linked", [link])  # below the top, but linked
+    rejected = dict(link, cve="CVE-2026-0002", tier=None, review="rejected")
+    fams[-1] = fam(export.TOP_THREATS + 3, "Rejected only", [rejected])  # never shown
+    return {
+        "snapshot_date": "2026-10-26",
+        "families": fams,
+        "category_rows": {"ransomware": 10, "unknown": 3},
+        "kev_ransomware_cves": ["CVE-1", "CVE-2"],
+        "summary": {"category_source": {"owner": 51}},
+        "review": {
+            "labeller": "x",
+            "links": {"precision": {"all": {"n": 36, "correct": 22, "ci95": [0.45, 0.75]}}},
+        },
+    }
+
+
+def test_build_threats_shows_top_and_linked_families_without_evidence_ids():
+    out = export.build_threats(
+        _threats_doc(), {"CVE-2026-0001": "critical"}, {"T1486": "Data Encrypted"}
+    )
+    schema.Threats.model_validate(out)
+    names = [f["family"] for f in out["families"]]
+    assert len(names) == export.TOP_THREATS + 1 and names[-1] == "Linked"
+    [link] = out["families"][-1]["links"]
+    assert link["surface"] == ["Akira"] and "evidence" not in link
+    assert "references:abc" not in json.dumps(out)  # no evidence document IDs shipped
+    assert out["families"][0]["techniques"] == [{"id": "T1486", "name": "Data Encrypted"}]
+    assert out["kev_ransomware_cves"] == 2 and out["review"]["links_correct"] == 22
+    assert out["categories"][0] == {"category": "ransomware", "ioc_rows": 10}
+    assert "Rejected only" not in names
+
+
+def test_build_threats_requires_a_hand_labelled_top():
+    doc = _threats_doc()
+    doc["families"][0]["category_source"] = "misp"
+    with pytest.raises(ConfigError, match="must be hand-labelled"):
+        export.build_threats(doc, {"CVE-2026-0001": "critical"}, {})
+
+
+def test_load_threats_is_optional_and_date_checked(tmp_path):
+    path = tmp_path / "threats.json"
+    assert export.load_threats(path, "2026-10-26") is None
+    path.write_text(json.dumps({"snapshot_date": "2026-10-25"}))
+    with pytest.raises(ConfigError, match="not 2026-10-26"):
+        export.load_threats(path, "2026-10-26")
+
+
+def test_build_threats_refuses_stale_tiers_and_handles_not_run():
+    with pytest.raises(ConfigError, match="rerun `cti threats`"):
+        export.build_threats(_threats_doc(), {"CVE-2026-0001": "high"}, {})
+    empty = export.build_threats(None, {}, {})
+    assert empty["available"] is False and empty["families"] == []
+    schema.Threats.model_validate(empty)
+
+
 def test_build_iocs():
     docs = [
         doc("CVE-2026-0002", [ioc("url", "ftp://files[.]example/a"), ioc("cve", "CVE-1")]),

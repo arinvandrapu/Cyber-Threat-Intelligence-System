@@ -5,6 +5,7 @@ import { TIER_LABEL } from "../format";
 export const VIEWS = [
   ["overview", "Overview"],
   ["queue", "Risk queue"],
+  ["threats", "Threats"],
   ["landscape", "Risk landscape"],
   ["weakness", "Weakness graph"],
   ["attack", "ATT&CK graph"],

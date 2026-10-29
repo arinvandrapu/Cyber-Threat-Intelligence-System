@@ -234,10 +234,66 @@ export interface NerCell {
   predicted: number;
 }
 
+export interface TechniqueRef {
+  id: string;
+  name: string;
+}
+
+export interface ThreatLink {
+  cve: string;
+  via: "threatfox_tag" | "mention:reference_page";
+  surface: string[];
+  review: "correct" | "rejected" | "unreviewed";
+  counts_for_priority: boolean;
+  in_kev: boolean;
+  tier: Tier | null;
+}
+
+export interface ThreatFamily {
+  rank: number;
+  family: string;
+  categories: string[];
+  category_source: "owner" | "misp" | "none";
+  attack_software: string | null;
+  attack_name: string | null;
+  techniques: TechniqueRef[];
+  tactics: string[];
+  links: ThreatLink[];
+  linked_kev_cves: number;
+  linked_high_tier_cves: number;
+  ioc_rows: number;
+  ioc_growth: number;
+  why: string[];
+}
+
+export interface CategoryCount {
+  category: string;
+  ioc_rows: number;
+}
+
+export interface ThreatReview {
+  labeller: string;
+  hand_labelled_families: number;
+  links_reviewed: number;
+  links_correct: number;
+  link_precision_ci95: Interval | null;
+}
+
+export interface Threats {
+  available: boolean;
+  snapshot_date: string | null;
+  families_total: number;
+  families: ThreatFamily[];
+  categories: CategoryCount[];
+  kev_ransomware_cves: number;
+  review: ThreatReview | null;
+}
+
 export interface Data {
   meta: Meta;
   risk: Risk;
   iocs: Iocs;
   graphs: Graphs;
   evals: Eval;
+  threats: Threats;
 }

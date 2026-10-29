@@ -6,6 +6,7 @@ const FILES = {
   iocs: "iocs.json",
   graphs: "graphs.json",
   evals: "eval.json",
+  threats: "threats.json",
 } as const;
 
 export class DataError extends Error {}

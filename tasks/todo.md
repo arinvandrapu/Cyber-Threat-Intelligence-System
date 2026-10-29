@@ -297,7 +297,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
     - Done 2026-10-29: pre-registered (`2a34423`), audited twice, run once. Combiner
       passes: hit@5 +0.035 [+0.005, +0.070] vs prior+biencoder (= majority, β=1.0);
       gain is the CVSS rule at T1189. See vault/attack-mapping-v2-results.md.
-  - [ ] **10c. Dashboard** — `threats.json` (schema, types, fixture, vite/smoke lists);
+  - [x] **10c. Dashboard** — `threats.json` (schema, types, fixture, vite/smoke lists);
         Threats view (categories, priority table with "why", family detail); "Linked
         threats" in the CVE detail. No predicted techniques (owner decision 2026-10-29: the
         combiner passed narrowly via a post-hoc-informed rule; results shown on the

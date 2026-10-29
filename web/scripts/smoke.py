@@ -23,6 +23,7 @@ from pathlib import Path
 VIEWS = {
     "overview": "<h1>Which unlisted CVEs",
     "queue": "<h1>Risk queue",
+    "threats": "<h1>Threats",
     "landscape": "<h1>Risk landscape",
     "weakness": "<h1>Weakness graph",
     "attack": "<h1>ATT&amp;CK graph",
