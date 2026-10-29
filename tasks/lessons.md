@@ -52,3 +52,8 @@ Reviewed at the start of each session.
 - **Mistake:** I pushed the KEV-card commit to PR #34's branch after the owner had merged #34 at the previous commit. The commit never reached `main`, the local branch was deleted, and the feature silently vanished until the owner noticed links were dead again.
 - **Trigger:** Pushing to any feature branch whose PR the owner might already have merged (especially right after saying "ready to merge").
 - **Rule:** Run `gh pr view <n> --json state,headRefOid` before pushing; if merged, put new work on a fresh branch from `main`. Before deleting a merged branch, check `git log main..<branch>` is empty.
+
+### Don't stack PRs; make "is it open?" a real gate
+- **Mistake:** PR #37 was stacked on #36; the owner merged #36 to `main`, then #37 into #36's finished branch, so #37 never reached `main`. Separately, my pre-push check printed `MERGED` but didn't stop the push (`gh ... -q .state && git push` only tests the exit code).
+- **Trigger:** Work that depends on an unmerged PR; any push to an existing PR branch.
+- **Rule:** Wait for the base PR to merge and branch from `main` instead of stacking (or say plainly "merge #A first, then retarget #B"). Gate pushes on the value: `[ "$(gh pr view N --json state -q .state)" = OPEN ] && git push`.
