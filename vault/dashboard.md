@@ -75,5 +75,6 @@ Colour: neutral black surfaces; tiers on one ordinal pink → cherry-red ramp (m
 - Local runs show the real export. The synthetic fixture exists only for CI (no
   `data/` there). Phase 9 screenshots use real data with the abuse.ch panel cropped
   (licence forbids redistribution); NVD/KEV/EPSS/CWE/ATT&CK content is fine to show.
+- Clarity pass (PR #35: CVE names, tab guide, plain labels): [[dashboard-web]].
 - No predicted ATT&CK techniques per CVE (owner, 2026-10-29): the 10b combiner passed
   only narrowly ([[attack-mapping-v2-results]]); the result is shown on Evaluation only.
