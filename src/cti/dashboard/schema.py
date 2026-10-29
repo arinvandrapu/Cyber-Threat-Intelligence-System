@@ -262,6 +262,10 @@ class Threats(_Model):
     review: ThreatReview | None
 
 
+class KevCatalog(_Model):
+    entries: list[LinkedCve]  # every KEV CVE (source "kev"; families empty)
+
+
 FILES: dict[str, type[_Model]] = {
     "meta.json": Meta,
     "risk.json": Risk,
@@ -269,4 +273,5 @@ FILES: dict[str, type[_Model]] = {
     "graphs.json": Graphs,
     "eval.json": Eval,
     "threats.json": Threats,
+    "kev.json": KevCatalog,
 }

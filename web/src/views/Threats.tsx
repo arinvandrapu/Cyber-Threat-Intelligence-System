@@ -5,8 +5,8 @@ import { PageHead, TierName } from "../components/ui";
 import { int, signed } from "../format";
 
 const SOURCE_LABEL: Record<ThreatFamily["category_source"], string> = {
-  owner: "reviewed label (Claude, for the owner)",
-  misp: "MISP galaxy name match",
+  owner: "reviewed",
+  misp: "unreviewed (MISP name match)",
   none: "no category",
 };
 const REVIEW_LABEL: Record<ThreatLink["review"], string> = {
@@ -57,41 +57,29 @@ export function Threats({ data }: { data: Data }) {
     <>
       <PageHead
         title="Threats"
-        lede={
-          <>
-            Malware and tool families seen in ThreatFox, ranked by a pre-declared heuristic: linked CVEs confirmed exploited
-            in CISA KEV, then linked high-risk queue CVEs, ransomware, and 30-day indicator growth. Each row says why. This
-            ranking is not a validated model, and threats never change a CVE's risk rank.
-          </>
-        }
+        lede="Active malware and attack tools, ranked by what they exploit and how active they are. Each row says why."
       />
 
       <section className="grid tiles">
         <div className="panel tile">
           <span className="label">Families tracked</span>
           <span className="value">{int(threats.families_total)}</span>
-          <span className="muted">{int(threats.families.length)} shown: top by priority, plus any with a CVE link</span>
+          <span className="muted">top {int(threats.families.length)} shown</span>
         </div>
         <div className="panel tile">
-          <span className="label">Reviewed categories</span>
-          <span className="value">{int(review?.hand_labelled_families ?? 0)}</span>
-          <span className="muted">labelled by Claude for the owner; the rest use MISP name matches, which can collide</span>
+          <span className="label">Exploiting known CVEs</span>
+          <span className="value">{int(threats.families.filter((f) => f.linked_kev_cves > 0).length)}</span>
+          <span className="muted">shown families linked to CISA KEV CVEs</span>
         </div>
         <div className="panel tile">
-          <span className="label">CVE links reviewed correct</span>
-          <span className="value">
-            {review ? `${review.links_correct} / ${review.links_reviewed}` : "—"}
-          </span>
-          <span className="muted">
-            {review?.link_precision_ci95
-              ? `95% CI ${Math.round(review.link_precision_ci95[0] * 100)}–${Math.round(review.link_precision_ci95[1] * 100)}% · ranking counts reviewed-correct links and unreviewed ThreatFox tags`
-              : ""}
-          </span>
+          <span className="label">Ransomware</span>
+          <span className="value">{int(threats.families.filter((f) => f.categories.includes("ransomware")).length)}</span>
+          <span className="muted">shown families</span>
         </div>
         <div className="panel tile">
           <span className="label">KEV CVEs used by ransomware</span>
           <span className="value">{int(threats.kev_ransomware_cves)}</span>
-          <span className="muted">CISA names no family, so these link to the category only</span>
+          <span className="muted">per CISA</span>
         </div>
       </section>
 
@@ -145,12 +133,7 @@ export function Threats({ data }: { data: Data }) {
             </table>
             {rows.length === 0 && <p className="empty">No shown family has this category.</p>}
           </div>
-          <p className="caption" style={{ padding: "0 16px 14px" }}>
-            Solid badges: reviewed category (labelled by Claude for the owner). Dashed: unreviewed MISP name match (names
-            can collide). The top of the ranking is always reviewed (the export refuses otherwise); lower families appear
-            only because of a CVE link
-            not reviewed as wrong.
-          </p>
+          <p className="caption" style={{ padding: "0 16px 14px" }}>Dashed badge: category not yet reviewed.</p>
         </div>
 
         <aside className="panel side" style={{ flexBasis: 360 }} aria-label="Selected family">
@@ -161,9 +144,7 @@ export function Threats({ data }: { data: Data }) {
       <section className="panel">
         <div className="panel-head">
           <h2>Indicators by category</h2>
-          <span className="muted" style={{ fontSize: 12.5 }}>
-            ThreatFox IOC rows · categories overlap, so rows can count twice
-          </span>
+          <span className="muted" style={{ fontSize: 12.5 }}>ThreatFox indicators per category</span>
         </div>
         {threats.categories.map((c) => (
           <div key={c.category} className="bar-row">
@@ -174,13 +155,34 @@ export function Threats({ data }: { data: Data }) {
             <span className="mono" style={{ textAlign: "right" }}>{int(c.ioc_rows)}</span>
           </div>
         ))}
-        <p className="caption">
-          Unlabelled rows belong to families with no category yet; unknown rows were submitted without a family. Counts
-          are aggregates only: abuse.ch terms forbid redistributing the indicators themselves. ATT&amp;CK techniques and
-          quoted ATT&amp;CK sentences: © The MITRE Corporation. This work is reproduced and distributed with the
-          permission of The MITRE Corporation.
-        </p>
       </section>
+
+      <details className="panel">
+        <summary style={{ cursor: "pointer", fontWeight: 600 }}>How this list is built</summary>
+        <div className="caption" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span>
+            Families come from abuse.ch ThreatFox. They are ranked by a fixed rule, not a trained model: CVEs they are
+            linked to that CISA lists as exploited (KEV), then linked high-risk CVEs from the risk queue, ransomware, and
+            30-day growth in indicators. Threats never change a CVE's own rank.
+          </span>
+          <span>
+            Links come from ThreatFox tags, MITRE ATT&amp;CK's descriptions of the software, and threat reports that name
+            the family.{" "}
+            {review
+              ? `${review.links_correct} of ${review.links_reviewed} links were reviewed as correct; only reviewed-correct links and unreviewed ThreatFox or ATT&CK links count toward the ranking (✓ correct, ✗ wrong).`
+              : ""}
+          </span>
+          <span>
+            Categories of the top families were labelled by Claude on the owner's behalf; a dashed badge is an unreviewed
+            match from the MISP galaxy, where names can collide. Indicator counts overlap across categories and are
+            aggregates only (abuse.ch terms).
+          </span>
+          <span>
+            ATT&amp;CK techniques and quoted ATT&amp;CK sentences: © The MITRE Corporation. This work is reproduced and
+            distributed with the permission of The MITRE Corporation.
+          </span>
+        </div>
+      </details>
     </>
   );
 }
@@ -212,11 +214,11 @@ function FamilyDetail({ family: f, cards }: { family: ThreatFamily; cards: Map<s
               {f.attack_software} · {f.attack_name}
             </span>
             <span className="muted" style={{ fontSize: 12.5 }}>
-              {f.techniques.length} techniques across {f.tactics.length} tactics:{" "}
-              {f.tactics.join(", ")}
+              {f.techniques.length} techniques across {f.tactics.length} tactics
             </span>
             <details>
               <summary className="muted" style={{ fontSize: 12.5, cursor: "pointer" }}>Techniques</summary>
+              <p className="muted" style={{ margin: "6px 0 0", fontSize: 12 }}>Tactics: {f.tactics.join(", ")}</p>
               <ul className="mono" style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 12, lineHeight: 1.6 }}>
                 {f.techniques.map((t) => <li key={t.id}>{t.id} {t.name}</li>)}
               </ul>
@@ -232,48 +234,58 @@ function FamilyDetail({ family: f, cards }: { family: ThreatFamily; cards: Map<s
         {f.links.length === 0 && <span className="muted" style={{ fontSize: 13 }}>None found.</span>}
         {f.links.map((l) => <LinkRow key={`${l.cve}-${l.via}`} link={l} card={cards.get(l.cve)} />)}
         {f.links.some((l) => !l.tier) && (
-          <span className="muted" style={{ fontSize: 12 }}>
-            Blue CVEs are in the risk queue and open there. The others are not ranked (KEV CVEs are already confirmed
-            exploited; older CVEs predate the queue's 2024 window): open one for its CISA or NVD record.
-          </span>
+          <span className="muted" style={{ fontSize: 12 }}>Blue CVEs open in the risk queue; ▸ shows details.</span>
         )}
       </div>
     </div>
   );
 }
 
+const SOURCE_SHORT: Record<ThreatLink["via"], string> = {
+  threatfox_tag: "ThreatFox",
+  "mention:reference_page": "Report",
+  "attack:software": "ATT&CK",
+};
+const REVIEW_MARK: Record<ThreatLink["review"], string> = { correct: "✓", rejected: "✗", unreviewed: "" };
+
 export function LinkRow({ link: l, label, card }: { link: ThreatLink; label?: string; card?: LinkedCve }) {
   const [open, setOpen] = useState(false);
+  const detail = `${VIA_LABEL[l.via]}${l.surface.length ? ` ("${l.surface.join('", "')}")` : ""} · ${REVIEW_LABEL[l.review]}${
+    l.counts_for_priority ? "" : " · not counted in the ranking"
+  }`;
+  const toggle = (
+    <button type="button" className="linkish" aria-expanded={open} onClick={() => setOpen(!open)} title={detail}>
+      {label ?? l.cve} {open ? "▾" : "▸"}
+    </button>
+  );
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, opacity: l.review === "rejected" ? 0.55 : 1 }}>
       <span style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
-        {label ? (
-          <span style={{ fontWeight: 600 }}>{label}</span>
-        ) : l.tier ? (
-          <a className="mono" href={cveHref(l.cve)}>{l.cve}</a>
-        ) : card ? (
-          <button type="button" className="linkish" style={{ textDecoration: "underline dotted" }} aria-expanded={open} onClick={() => setOpen(!open)}>
-            {l.cve} {open ? "▾" : "▸"}
+        {/* a queued CVE opens in the risk queue; anything else expands in place */}
+        {!label && l.tier ? <a className="mono" href={cveHref(l.cve)}>{l.cve}</a> : toggle}
+        {!label && l.tier && (
+          <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)} title={detail}>
+            {open ? "▾" : "▸"}
           </button>
-        ) : (
-          <span className="mono">{l.cve}</span>
         )}
-        {/* in a CVE's own detail (label = family) its KEV status and tier are already shown */}
         {!label && l.in_kev && <span className="ev">in KEV</span>}
         {!label && l.tier && <TierName tier={l.tier} />}
-      </span>
-      <span className="muted" style={{ fontSize: 12 }}>
-        {VIA_LABEL[l.via]}
-        {l.surface.length ? ` ("${l.surface.join('", "')}")` : ""} · {REVIEW_LABEL[l.review]}
-        {l.counts_for_priority ? "" : " · not counted in the ranking"}
-      </span>
-      {/* MITRE's sentence: plain text, never HTML or a link */}
-      {l.evidence_text && (
-        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--text-2)", overflowWrap: "anywhere" }}>
-          “{l.evidence_text}”
+        <span className="ev" title={detail}>
+          {SOURCE_SHORT[l.via]} {REVIEW_MARK[l.review]}
         </span>
+      </span>
+      {open && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2 }}>
+          <span className="muted" style={{ fontSize: 12 }}>{detail}</span>
+          {/* MITRE's sentence: plain text, never HTML or a link */}
+          {l.evidence_text && (
+            <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--text-2)", overflowWrap: "anywhere" }}>
+              “{l.evidence_text}”
+            </span>
+          )}
+          {card && <CveCard entry={card} />}
+        </div>
       )}
-      {open && card && <CveCard entry={card} />}
     </div>
   );
 }
@@ -304,7 +316,8 @@ export function CveCard({ entry: k }: { entry: LinkedCve }) {
       </span>
       <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>{k.description}</span>
       <span className="mono muted" style={{ fontSize: 12 }}>
-        {k.cwes.join(", ") || "no CWE"} · linked threats: {k.families.join(", ") || "none (link reviewed as wrong)"}
+        {k.cwes.join(", ") || "no CWE"}
+        {k.families.length > 0 && ` · linked threats: ${k.families.join(", ")}`}
       </span>
     </div>
   );

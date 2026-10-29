@@ -553,3 +553,20 @@ def test_git_state_sees_changes_under_src(tmp_path):
     assert _git_state(pkg)["dirty"] is False
     (pkg / "mod.py").write_text("x = 2\n")
     assert _git_state(pkg)["dirty"] is True  # the pathspec is anchored at the repo root
+
+
+def test_build_kev_has_a_card_for_every_kev_cve():
+    rows = [
+        {
+            "source_id": cve,
+            "title": f"{cve} name",
+            "text": "Lets attackers reach http://evil.example.com/.",
+            "metadata": {"vendor": "V", "product": "P", "date_added": "2024-01-02", "cwes": []},
+        }
+        for cve in ("CVE-2024-0002", "CVE-2023-0009")
+    ]
+    out = export.build_kev(rows)
+    schema.KevCatalog.model_validate(out)
+    assert [e["cve"] for e in out["entries"]] == ["CVE-2023-0009", "CVE-2024-0002"]
+    assert all(e["source"] == "kev" and e["families"] == [] for e in out["entries"])
+    assert "http://" not in json.dumps(out)

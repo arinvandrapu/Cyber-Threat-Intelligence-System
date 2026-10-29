@@ -226,8 +226,8 @@ function SharedHosts({ graph }: { graph: Graph }) {
           return (
             <circle key={c.n.id} className="hit" cx={c.x} cy={c.y} r={c.hosts.length > 1 ? 5 : 3.8} fill={fill} stroke="var(--bar)" strokeWidth="1.5"
               opacity={picked === null || linked(c.hosts) ? 1 : 0.3}
-              onClick={() => (inQueue(c.n.tier) ? openCve(c.n.id) : undefined)}
-              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue)" : c.n.in_kev ? "in KEV" : "not ranked"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
+              onClick={() => openCve(c.n.id)}
+              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue)" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not ranked"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
           );
         })}
         {layout.hosts.map((h) => {

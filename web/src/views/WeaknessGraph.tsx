@@ -80,7 +80,7 @@ export function WeaknessGraph({ data }: { data: Data }) {
     <>
       <PageHead
         title="Weakness graph"
-        lede="Which weakness families the top-tier CVEs come from: CWE pillar → CWE → CVE. CWE labels come from the NVD and CNA records and are context only, never model inputs."
+        lede="The kinds of bug behind the highest-risk CVEs. Click a node to trace it."
       >
         <Seg label="Tiers" options={[["critical", "Critical tier"], ["both", "Critical + high"]] as const} value={scope} onChange={setScope} />
       </PageHead>

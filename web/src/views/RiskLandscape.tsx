@@ -133,8 +133,7 @@ export function RiskLandscape({ data }: { data: Data }) {
           <div className="panel-head"><h2>What drives the model</h2></div>
           <div className="legend" style={{ marginBottom: 8 }}>
             <span>
-              How much each signal counts, per standard deviation: the model ranking the queue (bar, value) · the last
-              tested version (in brackets)
+              How much each signal counts (bar); last tested version in brackets
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

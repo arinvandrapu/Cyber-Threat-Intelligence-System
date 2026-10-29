@@ -60,12 +60,17 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
 - Vite `build.modulePreload.polyfill: false` and `assetsInlineLimit: 0`: nothing inline,
   no `data:` assets. `<link rel="icon" href="data:,">` stops a favicon request.
 - EPSS percentiles are floored for display (0.99981 → 99.98th, never "100th").
-## Clarity pass (2026-10-29, owner feedback)
+## Clarity passes (2026-10-29, owner feedback)
 
-- Overview opens with the question and the two linked lists, then a tab guide (what /
-  why / how, numbers from the export, `guide()` in `Overview.tsx`).
-- Plain labels: "What moved this CVE up or down" (log-odds explained in the caption),
-  signal names without logit/log wording, SSVC header tooltip.
-- CVE name: derived for queue CVEs (`export.derived_name`; placeholder vendors such as
-  "n/a" skipped), CISA's name for KEV CVEs. Display only, never a model input.
-
+- PR #35: CVE names (derived for queue CVEs, `export.derived_name`, 8,359 / 8,392; CISA's
+  for KEV), a tab guide, plain labels. A fact-check fixed overstatements (most families
+  have no category or links; not every test was fixed in advance; "98.5%" is mostly CVE
+  IDs; labels by Claude for the owner; +4 vs EPSS is from back-tests).
+- Plain-language pass: answers up front, method on request. One-sentence ledes and
+  cards; tab guide is one line per tab with "How it works" folded; disclosures moved
+  from Overview to Evaluation ("Data versions & limitations"); Threats tiles are
+  analyst facts (QA numbers in a folded "How this list is built"); link rows are one
+  line (source badge + ✓/✗, details on ▸); bar caption one line, full text in a tooltip.
+- Any CVE anywhere opens a detail: `kev.json` holds CISA's entry for all 1,756 KEV CVEs
+  (`export.build_kev`); `#/queue/<CVE>` shows the ranked detail, else a KEV or NVD card.
+  ATT&CK panel CVEs expand inline; Indicators' KEV nodes click through.

@@ -255,14 +255,14 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Eight views:
 
 | View | What an analyst gets |
 |---|---|
-| Overview | The question and how the two linked lists (vulnerabilities, threats) answer it, headline numbers, tier sizes with historical KEV rates, top of the queue, a plain-language guide to every tab (what, why, how it's calculated), and every disclosure |
+| Overview | The question, the two linked lists that answer it (vulnerabilities to fix, threats to watch), headline numbers, risk tiers, top of the queue, and one line per tab |
 | Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families |
 | Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
 | Indicators | Defanged indicator strings from CVE references, a shared-host graph, abuse.ch aggregates |
-| Evaluation | The pre-registered decision, recall with CIs against EPSS and baselines, per-fold hits, other pipeline results, limitations |
+| Evaluation | The pre-registered decision, recall with CIs against EPSS and baselines, per-fold hits, other pipeline results, data versions, limitations and every disclosure |
 
 Honest by construction: rank and tier only (no fake probabilities), tier hit rates
 labelled as historical, context fields marked as never used by the model, and every

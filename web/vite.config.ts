@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
-const EXPORT_FILES = new Set(["meta.json", "risk.json", "iocs.json", "graphs.json", "eval.json", "threats.json"]);
+const EXPORT_FILES = new Set(["meta.json", "risk.json", "iocs.json", "graphs.json", "eval.json", "threats.json", "kev.json"]);
 
 /**
  * Dev only: serve /data/<file>.json from CTI_EXPORT_DIR (a `cti export` folder), or the
