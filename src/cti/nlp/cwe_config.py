@@ -70,4 +70,5 @@ GOLD_FOLDS = 5
 GOLD_C = 1.0
 # 2026-10-29, disclosed deviation: the TF-IDF LogisticRegression is now seeded with SEED
 # (``cwe_eval.fit_tfidf``). The ``saga`` solver is stochastic and was unseeded, so re-runs
-# differed by up to 0.002 at 4 d.p.; the published (rounded) numbers and chosen C held.
+# differed by about 0.002 at 4 d.p. The seeded run kept the headline and the chosen C;
+# the name-present macro-F1 moved 0.9128 -> 0.9151 (published 0.91 -> 0.92).

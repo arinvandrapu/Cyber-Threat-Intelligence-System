@@ -182,7 +182,9 @@ numbers is fragile, so this evaluation was pre-registered.
 
 **Deviation (2026-10-29).** The TF-IDF logistic regression uses the stochastic `saga`
 solver and was not seeded, so re-runs differed by up to 0.002 at four decimals. It is now
-seeded with the config's seed; this is recorded in the config header and the vault.
+seeded with the config's seed; this is recorded in the config header and the vault. The
+seeded run kept the headline score and the chosen setting; one secondary figure (TF-IDF on
+descriptions that name the CWE) moved from 0.91 to 0.92.
 
 ## 11. A local dashboard: Vite + React, served by Python with a strict CSP
 
