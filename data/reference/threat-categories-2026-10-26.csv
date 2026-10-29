@@ -1,35 +1,35 @@
 rank,family,malware_ids,ioc_rows,categories,notes
-1,ClearFake,js.clearfake,19277,,
-2,AsyncRAT,win.asyncrat,16789,,
-3,Vidar,win.vidar,11038,,
-4,Mirai,elf.mirai;win.mirai,8330,,
-5,Cobalt Strike,win.cobalt_strike,4378,,
-6,VShell,win.vshell,3641,,
-7,IClickFix,js.iclickfix,3427,,
-8,AMOS,osx.amos,3134,,
-9,Remcos,win.remcos,2263,,
-10,Remus,win.remus,2148,,
-11,PureRAT,win.pure_rat,1896,,
-12,Aisuru,elf.aisuru,1280,,
-13,Sliver,win.sliver,1240,,
-14,ValleyRAT,win.valley_rat,1202,,
-15,Venus Stealer,py.venus_stealer,1086,,
-16,Mozi,elf.mozi,1080,,
-17,MetaStealer,win.metastealer,1004,,
-18,Coinminer,win.coinminer,935,,
-19,AdaptixC2,win.adaptix_c2,898,,
-20,NetWire RC,win.netwire,870,,
-21,Kuiper,elf.kuiper,864,,
-22,SalatStealer,win.salatstealer,864,,
-23,Formbook,win.formbook,729,,
-24,DCRat,win.dcrat,618,,
-25,StrelaStealer,win.strelastealer,582,,
-26,WannaCryptor,win.wannacryptor,582,,
-27,Stealc,win.stealc,562,,
-28,XWorm,win.xworm,543,,
-29,stealler,py.stealler,543,,
-30,Quasar RAT,win.quasar_rat,539,,
-31,Kimwolf,apk.kimwolf,507,,
-32,Nanocore RAT,win.nanocore,482,,
-33,Overlord RAT,win.overlord,423,,
-34,Akira,elf.akira;win.akira,408,,
+1,ClearFake,js.clearfake,19277,fake-update;downloader,JS framework on hacked sites showing fake browser updates
+2,AsyncRAT,win.asyncrat,16789,remote-access-trojan,
+3,Vidar,win.vidar,11038,infostealer,
+4,Mirai,elf.mirai;win.mirai,8330,bot;ddos,
+5,Cobalt Strike,win.cobalt_strike,4378,c2-framework,"commercial red-team framework, widely abused"
+6,VShell,win.vshell,3641,c2-framework;backdoor,open-source C2 implant (UNC5174)
+7,IClickFix,js.iclickfix,3427,fake-update;downloader,ClickFix fake-CAPTCHA lure framework; fake-update is the closest lure category
+8,AMOS,osx.amos,3134,infostealer,Atomic macOS Stealer
+9,Remcos,win.remcos,2263,remote-access-trojan,
+10,Remus,win.remus,2148,infostealer,moderate confidence: reported as a Lumma-derived stealer
+11,PureRAT,win.pure_rat,1896,remote-access-trojan,
+12,Aisuru,elf.aisuru,1280,bot;ddos,
+13,Sliver,win.sliver,1240,c2-framework,
+14,ValleyRAT,win.valley_rat,1202,remote-access-trojan,
+15,Venus Stealer,py.venus_stealer,1086,infostealer,low confidence: name only
+16,Mozi,elf.mozi,1080,bot;ddos,P2P IoT botnet
+17,MetaStealer,win.metastealer,1004,infostealer,
+18,Coinminer,win.coinminer,935,resource-exploitation,generic miner label
+19,AdaptixC2,win.adaptix_c2,898,c2-framework,
+20,NetWire RC,win.netwire,870,remote-access-trojan,
+21,Kuiper,elf.kuiper,864,ransomware,
+22,SalatStealer,win.salatstealer,864,infostealer,
+23,Formbook,win.formbook,729,infostealer;keylogger,form grabber
+24,DCRat,win.dcrat,618,remote-access-trojan,
+25,StrelaStealer,win.strelastealer,582,infostealer,email credential stealer
+26,WannaCryptor,win.wannacryptor,582,ransomware;worm,
+27,Stealc,win.stealc,562,infostealer,
+28,XWorm,win.xworm,543,remote-access-trojan,
+29,stealler,py.stealler,543,infostealer,"low confidence: generic Python stealer, inferred from the name"
+30,Quasar RAT,win.quasar_rat,539,remote-access-trojan,
+31,Kimwolf,apk.kimwolf,507,bot;ddos,moderate confidence: Android TV-box DDoS botnet
+32,Nanocore RAT,win.nanocore,482,remote-access-trojan,
+33,Overlord RAT,win.overlord,423,remote-access-trojan,
+34,Akira,elf.akira;win.akira,408,ransomware,

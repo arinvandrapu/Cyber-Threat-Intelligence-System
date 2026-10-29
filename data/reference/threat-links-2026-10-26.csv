@@ -1,37 +1,37 @@
 family,cve,via,surface,evidence_url,correct,notes
-Bashlite,CVE-2026-34910,mention:reference_page,Gafgyt,https://www.pwndefend.com/2026/06/09/cve-2026-34910-exploitation-itw-building-a-botnet-mirai/,,
-BianLian,CVE-2025-42999,mention:reference_page,BianLian,https://onapsis.com/blog/active-exploitation-of-sap-vulnerability-cve-2025-31324/,,
-Cobalt Strike,CVE-2024-1709,mention:reference_page,Cobalt Strike,https://techcrunch.com/2024/02/21/researchers-warn-high-risk-connectwise-flaw-under-attack-is-embarrassingly-easy-to-exploit/,,
-Coruna,CVE-2023-43000,mention:reference_page,Coruna,https://cloud.google.com/blog/topics/threat-intelligence/coruna-powerful-ios-exploit-kit,,
-Coruna,CVE-2025-43520,mention:reference_page,Coruna,https://cloud.google.com/blog/topics/threat-intelligence/darksword-ios-exploit-chain/,,
-GHOSTBLADE,CVE-2025-43520,mention:reference_page,GHOSTBLADE,https://cloud.google.com/blog/topics/threat-intelligence/darksword-ios-exploit-chain/,,
-Havoc,CVE-2026-3502,mention:reference_page,Havoc,https://research.checkpoint.com/2026/operation-truechaos-0-day-exploitation-against-southeast-asian-government-targets/,,
-Hermes,CVE-2026-33824,mention:reference_page,Hermes,https://unit42.paloaltonetworks.com/autonomous-ai-cyber-attack-campaign/,,
-Irc16,CVE-2026-73570,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-73570/,,
-Lambert,CVE-2026-22769,mention:reference_page,Plexor,https://cloud.google.com/blog/topics/threat-intelligence/unc6201-exploiting-dell-recoverpoint-zero-day,,
-Lynx,CVE-2025-25249,mention:reference_page,Lynx,https://socradar.io/blog/cve-2025-25249-pivotc2-fortigate-rat/,,
-Medusa,CVE-2024-1708,mention:reference_page,Medusa,https://www.microsoft.com/en-us/security/blog/2026/04/06/storm-1175-focuses-gaze-on-vulnerable-web-facing-assets-in-high-tempo-medusa-ransomware-operations/,,
-Medusa,CVE-2024-8877,mention:reference_page,MEDUSA,https://cyberdanube.com/security-research/multiple-vulnerabilities-in-riello-netman-204/,,
-Medusa,CVE-2025-21590,mention:reference_page,MEDUSA,https://cloud.google.com/blog/topics/threat-intelligence/china-nexus-espionage-targets-juniper-routers,,
-Meterpreter,CVE-2025-25181,mention:reference_page,Meterpreter,https://intezer.com/blog/xe-group-exploiting-zero-days | https://www.solissecurity.com/en-gb/insights/xe-group-from-credit-card-skimming-to-exploiting-zero-days/,,
-Meterpreter,CVE-2025-54068,mention:reference_page,Meterpreter,https://www.threathunter.ai/blog/iranian-threat-actor-tools-techniques-iocs-ioas/,,
-Meterpreter,CVE-2026-2329,mention:reference_page,Meterpreter,https://www.rapid7.com/blog/post/ve-cve-2026-2329-critical-unauthenticated-stack-buffer-overflow-in-grandstream-gxp1600-voip-phones-fixed/,,
-Meterpreter,CVE-2026-82078,mention:reference_page,Meterpreter,https://github.com/rapid7/metasploit-framework/pull/21842,,
-MimiKatz,CVE-2024-1708,mention:reference_page,Mimikatz,https://www.microsoft.com/en-us/security/blog/2026/04/06/storm-1175-focuses-gaze-on-vulnerable-web-facing-assets-in-high-tempo-medusa-ransomware-operations/,,
-MimiKatz,CVE-2025-49706,mention:reference_page,Mimikatz,https://www.microsoft.com/en-us/security/blog/2025/07/22/disrupting-active-exploitation-of-on-premises-sharepoint-vulnerabilities/,,
-Mirai,CVE-2023-52163,mention:reference_page,Mirai,https://www.txone.com/resources/blog/digiever-fixes-sorely-needed/,,
-Mirai,CVE-2024-8957,mention:reference_page,Mirai,https://www.greynoise.io/blog/greynoise-intelligence-discovers-zero-day-vulnerabilities-in-live-streaming-cameras-with-the-help-of-ai,,
-Mirai,CVE-2025-55182,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2025-55182/,,
-Mirai,CVE-2025-62593,mention:reference_page,Mirai,https://www.bitsight.com/blog/rondodox-botnet-infrastructure-analysis,,
-Mirai,CVE-2026-109618,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-109618/,,
-Mirai,CVE-2026-34910,mention:reference_page,Mirai,https://www.pwndefend.com/2026/06/09/cve-2026-34910-exploitation-itw-building-a-botnet-mirai/,,
-NetSupportManager RAT,CVE-2026-23760,mention:reference_page,NetSupport,https://code-white.com/public-vulnerability-list/#authenticationserviceforceresetpassword-missing-authentication-in-smartermail,,
-NetSupportManager RAT,CVE-2026-24423,mention:reference_page,NetSupport,https://code-white.com/public-vulnerability-list/#systemadminsettingscontrollerconnecttohub-missing-authentication-in-smartermail,,
-RedTail,CVE-2017-9841,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2017-9841/,,
-RedTail,CVE-2021-41773,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2021-41773/,,
-RedTail,CVE-2024-4577,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2024-4577/,,
-RedTail,CVE-2026-109618,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-109618/,,
-ShadowPad,CVE-2026-3502,mention:reference_page,ShadowPad,https://research.checkpoint.com/2026/operation-truechaos-0-day-exploitation-against-southeast-asian-government-targets/,,
-XMRIG,CVE-2026-110447,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-110447/,,
-XMRIG,CVE-2026-60004,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-60004/,,
-XMRIG,CVE-2026-96656,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-96656/,,
+Bashlite,CVE-2026-34910,mention:reference_page,Gafgyt,https://www.pwndefend.com/2026/06/09/cve-2026-34910-exploitation-itw-building-a-botnet-mirai/,yes,page: payload is a Mirai/Gafgyt-derived bot dropped via this CVE
+BianLian,CVE-2025-42999,mention:reference_page,BianLian,https://onapsis.com/blog/active-exploitation-of-sap-vulnerability-cve-2025-31324/,no,page attributes exploitation of CVE-2025-31324 to BianLian; not this CVE
+Cobalt Strike,CVE-2024-1709,mention:reference_page,Cobalt Strike,https://techcrunch.com/2024/02/21/researchers-warn-high-risk-connectwise-flaw-under-attack-is-embarrassingly-easy-to-exploit/,yes,page: Cobalt Strike beacons deployed after ScreenConnect exploitation
+Coruna,CVE-2023-43000,mention:reference_page,Coruna,https://cloud.google.com/blog/topics/threat-intelligence/coruna-powerful-ios-exploit-kit,yes,GTIG Coruna exploit kit write-up lists this CVE
+Coruna,CVE-2025-43520,mention:reference_page,Coruna,https://cloud.google.com/blog/topics/threat-intelligence/darksword-ios-exploit-chain/,no,DarkSword page; Coruna named only as an earlier kit
+GHOSTBLADE,CVE-2025-43520,mention:reference_page,GHOSTBLADE,https://cloud.google.com/blog/topics/threat-intelligence/darksword-ios-exploit-chain/,yes,DarkSword chain (incl. this CVE) deploys GHOSTBLADE
+Havoc,CVE-2026-3502,mention:reference_page,Havoc,https://research.checkpoint.com/2026/operation-truechaos-0-day-exploitation-against-southeast-asian-government-targets/,yes,TrueChaos: CVE exploited to deploy Havoc payload
+Hermes,CVE-2026-33824,mention:reference_page,Hermes,https://unit42.paloaltonetworks.com/autonomous-ai-cyber-attack-campaign/,no,"name collision: page's Hermes is an AI agent framework, not win.hermes"
+Irc16,CVE-2026-73570,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-73570/,yes,ThreatFox reporter tag; not independently verified
+Lambert,CVE-2026-22769,mention:reference_page,Plexor,https://cloud.google.com/blog/topics/threat-intelligence/unc6201-exploiting-dell-recoverpoint-zero-day,no,matched 'Plexor' inside a GRIMBOLT YARA string; not Lambert
+Lynx,CVE-2025-25249,mention:reference_page,Lynx,https://socradar.io/blog/cve-2025-25249-pivotc2-fortigate-rat/,no,page: PivotC2 exploited the CVE; Lynx named for a separate campaign
+Medusa,CVE-2024-1708,mention:reference_page,Medusa,https://www.microsoft.com/en-us/security/blog/2026/04/06/storm-1175-focuses-gaze-on-vulnerable-web-facing-assets-in-high-tempo-medusa-ransomware-operations/,yes,Storm-1175 deploys Medusa ransomware after exploitation; assumes win.medusa = Medusa ransomware (unverified)
+Medusa,CVE-2024-8877,mention:reference_page,MEDUSA,https://cyberdanube.com/security-research/multiple-vulnerabilities-in-riello-netman-204/,no,name collision: MEDUSA firmware emulation framework in author bio
+Medusa,CVE-2025-21590,mention:reference_page,MEDUSA,https://cloud.google.com/blog/topics/threat-intelligence/china-nexus-espionage-targets-juniper-routers,no,"name collision: UNC3886 MEDUSA rootkit, not ThreatFox Medusa"
+Meterpreter,CVE-2025-25181,mention:reference_page,Meterpreter,https://intezer.com/blog/xe-group-exploiting-zero-days | https://www.solissecurity.com/en-gb/insights/xe-group-from-credit-card-skimming-to-exploiting-zero-days/,yes,XE Group: exploitation led to a Meterpreter stager
+Meterpreter,CVE-2025-54068,mention:reference_page,Meterpreter,https://www.threathunter.ai/blog/iranian-threat-actor-tools-techniques-iocs-ioas/,yes,same actor's toolkit lists this CVE exploit and Meterpreter payloads
+Meterpreter,CVE-2026-2329,mention:reference_page,Meterpreter,https://www.rapid7.com/blog/post/ve-cve-2026-2329-critical-unauthenticated-stack-buffer-overflow-in-grandstream-gxp1600-voip-phones-fixed/,no,"vendor research PoC demo, not threat use"
+Meterpreter,CVE-2026-82078,mention:reference_page,Meterpreter,https://github.com/rapid7/metasploit-framework/pull/21842,no,"Metasploit module PR test output, not threat use"
+MimiKatz,CVE-2024-1708,mention:reference_page,Mimikatz,https://www.microsoft.com/en-us/security/blog/2026/04/06/storm-1175-focuses-gaze-on-vulnerable-web-facing-assets-in-high-tempo-medusa-ransomware-operations/,yes,post-exploitation tool in Storm-1175 intrusions using this CVE
+MimiKatz,CVE-2025-49706,mention:reference_page,Mimikatz,https://www.microsoft.com/en-us/security/blog/2025/07/22/disrupting-active-exploitation-of-on-premises-sharepoint-vulnerabilities/,yes,post-exploitation credential theft after SharePoint exploitation
+Mirai,CVE-2023-52163,mention:reference_page,Mirai,https://www.txone.com/resources/blog/digiever-fixes-sorely-needed/,yes,page: exploited in the wild by a Mirai-type botnet
+Mirai,CVE-2024-8957,mention:reference_page,Mirai,https://www.greynoise.io/blog/greynoise-intelligence-discovers-zero-day-vulnerabilities-in-live-streaming-cameras-with-the-help-of-ai,no,Mirai named only as a generic example
+Mirai,CVE-2025-55182,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2025-55182/,yes,ThreatFox reporter tag; not independently verified
+Mirai,CVE-2025-62593,mention:reference_page,Mirai,https://www.bitsight.com/blog/rondodox-botnet-infrastructure-analysis,no,RondoDox analysis; Mirai named for code similarity
+Mirai,CVE-2026-109618,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-109618/,yes,ThreatFox reporter tag; not independently verified
+Mirai,CVE-2026-34910,mention:reference_page,Mirai,https://www.pwndefend.com/2026/06/09/cve-2026-34910-exploitation-itw-building-a-botnet-mirai/,yes,page: CVE chain drops a Mirai loader
+NetSupportManager RAT,CVE-2026-23760,mention:reference_page,NetSupport,https://code-white.com/public-vulnerability-list/#authenticationserviceforceresetpassword-missing-authentication-in-smartermail,no,advisory list row for NetSupport Manager product bugs; CVE is SmarterMail
+NetSupportManager RAT,CVE-2026-24423,mention:reference_page,NetSupport,https://code-white.com/public-vulnerability-list/#systemadminsettingscontrollerconnecttohub-missing-authentication-in-smartermail,no,advisory list row for NetSupport Manager product bugs; CVE is SmarterMail
+RedTail,CVE-2017-9841,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2017-9841/,yes,ThreatFox reporter tag; not independently verified
+RedTail,CVE-2021-41773,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2021-41773/,yes,ThreatFox reporter tag; not independently verified
+RedTail,CVE-2024-4577,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2024-4577/,yes,ThreatFox reporter tag; not independently verified
+RedTail,CVE-2026-109618,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-109618/,yes,ThreatFox reporter tag; not independently verified
+ShadowPad,CVE-2026-3502,mention:reference_page,ShadowPad,https://research.checkpoint.com/2026/operation-truechaos-0-day-exploitation-against-southeast-asian-government-targets/,no,same victim targeted by ShadowPad; not via this CVE
+XMRIG,CVE-2026-110447,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-110447/,yes,ThreatFox reporter tag; not independently verified
+XMRIG,CVE-2026-60004,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-60004/,yes,ThreatFox reporter tag; not independently verified
+XMRIG,CVE-2026-96656,threatfox_tag,,https://threatfox.abuse.ch/browse/tag/CVE-2026-96656/,yes,ThreatFox reporter tag; not independently verified
