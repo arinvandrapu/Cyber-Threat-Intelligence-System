@@ -85,7 +85,7 @@ export function AttackGraph({ data }: { data: Data }) {
     <>
       <PageHead
         title="ATT&CK graph"
-        lede="How known-exploited CVEs map to adversary behaviour: KEV CVE → ATT&CK technique → tactic, from the Center for Threat-Informed Defense KEV mappings (expert-labelled, pinned)."
+        lede="How exploited CVEs are used in attacks: CVE → ATT&CK technique → tactic (MITRE expert mappings)."
       >
         <Seg label="Mapping type" options={MAPPING} value={mapping} onChange={(m) => { setMapping(m); setPicked(null); }} />
       </PageHead>

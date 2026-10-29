@@ -11,7 +11,6 @@ export function Overview({ data }: { data: Data }) {
   const hist = Object.fromEntries(risk.historical_tiers.map((t) => [t.name, t]));
   const decision = evals.risk.decision["logistic_minus_epss_hits@100"];
   const paired = typeof decision === "object" ? decision : null;
-  const positives = evals.risk.methods.logistic?.pooled.positives ?? 0;
   const critical = hist.critical;
   const top = risk.rows.slice(0, 5);
 
@@ -19,23 +18,15 @@ export function Overview({ data }: { data: Data }) {
     <>
       <PageHead
         title="Which threats deserve attention first, and why?"
-        lede={
-          <>
-            Built from public feeds as of {meta.snapshot_date}. Two linked lists answer it: which vulnerabilities to fix
-            next, and which attackers' tools matter most. Every ranking says why, and every score shows how well it was
-            tested.
-          </>
-        }
+        lede={<>Two ranked lists from public feeds as of {meta.snapshot_date}: vulnerabilities to fix, and threats to watch.</>}
       />
 
-      <section className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }} aria-label="How this dashboard works">
+      <section className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }} aria-label="How this dashboard works">
         <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span className="label">1 · Vulnerabilities</span>
           <h2 style={{ margin: 0, fontSize: 17 }}>Which CVEs to fix next</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            {int(risk.ranked_cves)} CVEs published since 2024 and not yet in CISA's list are scored on how likely CISA is to add them to its
-            Known Exploited Vulnerabilities (KEV) list within 180 days; the top {int(risk.rows.length)} form the queue.
-            Each one shows what moved it up or down.
+            The {int(risk.rows.length)} CVEs most likely to be exploited soon, best first.
           </p>
           <a href="#/queue" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open risk queue</a>
         </div>
@@ -44,8 +35,8 @@ export function Overview({ data }: { data: Data }) {
           <h2 style={{ margin: 0, fontSize: 17 }}>Which attackers' tools matter most</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
             {threats.available
-              ? `${int(threats.families_total)} malware and tool families seen in ThreatFox. The top ${int(threats.families.length)} are shown with a category (ransomware, botnet, infostealer…), their ATT&CK techniques where matched, and any CVEs linked to them.`
-              : "The threat catalog has not been built for this snapshot."}
+              ? "Active malware and attack tools, with what they exploit."
+              : "Not built for this snapshot yet."}
           </p>
           <a href="#/threats" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open threats</a>
         </div>
@@ -53,9 +44,7 @@ export function Overview({ data }: { data: Data }) {
           <span className="label">How they connect</span>
           <h2 style={{ margin: 0, fontSize: 17 }}>Threats explain CVEs</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            A CVE linked to a threat (e.g. a botnet exploiting it) is more urgent; a threat linked to CVEs tells you what
-            to patch to defend against it. CVEs already in KEV are confirmed exploited: patch those first. They are not
-            ranked; their CISA entry opens from the threats linked to them. Threats never change a CVE's rank.
+            A CVE used by an active threat is more urgent. CVEs already known to be exploited (CISA KEV): patch first.
           </p>
         </div>
       </section>
@@ -64,7 +53,7 @@ export function Overview({ data }: { data: Data }) {
         <div className="panel tile">
           <span className="label">CVEs ranked</span>
           <span className="value">{int(risk.ranked_cves)}</span>
-          <span className="muted">eligible at snapshot · KEV excluded</span>
+          <span className="muted">not yet known to be exploited</span>
         </div>
         <div className="panel tile">
           <span className="label">Critical tier</span>
@@ -72,10 +61,10 @@ export function Overview({ data }: { data: Data }) {
           <span className="muted">top 0.1% by rank</span>
         </div>
         <div className="panel tile">
-          <span className="label">Model vs EPSS · KEV additions caught in the top 100</span>
+          <span className="label">Better than EPSS</span>
           <span className="value">{paired ? `${paired.difference_hits >= 0 ? "+" : ""}${paired.difference_hits} hits` : "—"}</span>
           <span className="muted">
-            {paired ? `95% range ${paired.ci95[0]} to ${paired.ci95[1]} · ${positives} KEV additions over 3 test periods` : ""}
+            {paired ? `more exploited CVEs caught in its top 100, in past tests` : ""}
           </span>
         </div>
         <div className="panel tile">
@@ -89,9 +78,7 @@ export function Overview({ data }: { data: Data }) {
         <div className="panel grow">
           <div className="panel-head">
             <h2>Risk tiers</h2>
-            <span className="muted" style={{ fontSize: 12.5 }}>
-              Historical KEV rate: same procedure, rolling-origin test folds, next 180 days
-            </span>
+            <span className="muted" style={{ fontSize: 12.5 }}>share later confirmed exploited, in past tests</span>
           </div>
           <div className="table-wrap">
             <table className="data">
@@ -128,10 +115,9 @@ export function Overview({ data }: { data: Data }) {
           </div>
           {critical && hist.baseline && (
             <p className="note" style={{ marginTop: 14 }}>
-              Read this as a triage order, not a forecast: about {pct(1 - critical.hit_rate, 0)} of critical-tier
-              CVEs did <strong>not</strong> enter KEV within 180 days. The critical tier's rate is still about{" "}
-              {int(critical.kev_positives / critical.cves / (hist.baseline.kev_positives / hist.baseline.cves))}× the
-              baseline tier's. Log scale.
+              A triage order, not a forecast: most critical CVEs are never exploited, but they are about{" "}
+              {int(critical.kev_positives / critical.cves / (hist.baseline.kev_positives / hist.baseline.cves))}× likelier
+              than the rest.
             </p>
           )}
         </div>
@@ -158,49 +144,32 @@ export function Overview({ data }: { data: Data }) {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Guide to each tab</h2>
-          <span className="muted" style={{ fontSize: 12.5 }}>what it is · why it's there · how it's calculated</span>
+          <h2>What each tab is for</h2>
         </div>
         <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
           {guide(data).map((g) => (
-            <a key={g.view} href={`#/${g.view}`} className="guide">
-              <span style={{ fontWeight: 600, color: "var(--text)" }}>{g.title}</span>
-              <span><strong>What:</strong> {g.what}</span>
-              <span><strong>Why:</strong> {g.why}</span>
-              <span><strong>How:</strong> {g.how}</span>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Data &amp; disclosures</h2>
-          <span className="mono muted" style={{ fontSize: 12 }}>
-            commit {String(meta.git.commit ?? "unknown").slice(0, 7)}
-            {meta.git.dirty ? " (uncommitted changes)" : ""} · config sha256 {meta.config_sha256.slice(0, 8)}… ·
-            KEV {meta.kev_catalog_version}
-          </span>
-        </div>
-        <ul className="plain">
-          {meta.disclosures.map((d) => <li key={d}>{d}</li>)}
-        </ul>
-        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 16 }}>
-          {Object.entries(meta.epss_model_versions).map(([asOf, versions]) => (
-            <div key={asOf} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ fontSize: 13.5, fontWeight: 550 }}>EPSS at {asOf} ({meta.as_of_dates[asOf]})</div>
-              <div className="mono muted" style={{ fontSize: 12 }}>{versions.join(", ")}</div>
+            <div key={g.view} className="guide">
+              <a href={`#/${g.view}`} style={{ fontWeight: 600, color: "var(--text)", textDecoration: "none" }}>{g.title} →</a>
+              <span>{g.what}</span>
+              <details>
+                <summary className="muted" style={{ cursor: "pointer", fontSize: 12.5 }}>How it works</summary>
+                <p style={{ margin: "6px 0 0" }}>{g.why} {g.how}</p>
+              </details>
             </div>
           ))}
         </div>
       </section>
+
+      <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
+        Data as of {meta.snapshot_date}. Methods, data versions and limitations: <a href="#/evaluation">Evaluation</a>.
+      </p>
     </>
   );
 }
 
 /** Plain-language description of every tab; numbers come from the export. */
 function guide(data: Data): { view: string; title: string; what: string; why: string; how: string }[] {
-  const { risk, threats, evals } = data;
+  const { threats, evals } = data;
   const d = evals.risk.decision["logistic_minus_epss_hits@100"];
   const vsEpss = typeof d === "object" ? `${d.difference_hits >= 0 ? "+" : ""}${d.difference_hits}` : "?";
   const extract = evals.extract.per_origin.reference_page;
@@ -209,14 +178,14 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
     {
       view: "queue",
       title: "Risk queue",
-      what: `The ${int(risk.rows.length)} highest-risk CVEs that are not yet in CISA KEV, best first, in critical, high and elevated tiers.`,
+      what: "Which vulnerabilities to patch next, best first, each with its reasons.",
       why: "So you know which unexploited vulnerabilities to patch next, before attackers start using them.",
       how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days. In back-tests of the same procedure it caught ${vsEpss} more later KEV additions than EPSS in each period's top 100; this snapshot's ranking itself cannot be scored yet. Tiers are rank bands, not probabilities.`,
     },
     {
       view: "threats",
       title: "Threats",
-      what: "Malware and tool families seen in abuse.ch ThreatFox, with category, ATT&CK techniques and linked CVEs.",
+      what: "Which malware and attack tools are active, and what they exploit.",
       why: "So you know which attackers' tools are active and which vulnerabilities they exploit.",
       how: review
         ? `Ranked by a fixed rule, not a trained model: linked CVEs confirmed exploited (KEV), then linked high-risk queue CVEs, ransomware, then 30-day growth in indicators. Categories of the top families were labelled by an AI reviewer (Claude) on the owner's behalf, not by MISP name matching; ${review.links_correct} of ${review.links_reviewed} CVE links were reviewed correct, and only reviewed-correct links or ThreatFox's own tags count.`
@@ -225,35 +194,35 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
     {
       view: "landscape",
       title: "Risk landscape",
-      what: "Charts of the whole ranking: model rank against EPSS, how much each signal counts, signal coverage by tier, and ranked CVEs by month.",
+      what: "Charts of the whole ranking and what drives it.",
       why: "To see where the model agrees or disagrees with EPSS, and what drives it.",
       how: "Computed from the same ranking as the risk queue; the weights are the model's, measured per standard deviation of each signal.",
     },
     {
       view: "weakness",
       title: "Weakness graph",
-      what: "The kinds of bug behind critical and high-risk CVEs, grouped by CWE category.",
+      what: "The kinds of bug behind the highest-risk CVEs.",
       why: "Recurring weakness types point to root causes worth fixing across products.",
       how: "Each critical/high CVE is joined to the CWE that NVD or the reporting organisation (CNA) assigned, and each CWE to its top-level CWE category.",
     },
     {
       view: "attack",
       title: "ATT&CK graph",
-      what: "How known-exploited CVEs are used in attacks: CVE → ATT&CK technique → tactic.",
+      what: "How exploited CVEs are used in attacks (MITRE ATT&CK).",
       why: "To connect vulnerabilities to attacker behaviour and the defences that detect it.",
       how: "MITRE Center for Threat-Informed Defense expert mappings of KEV CVEs, not predictions. A tested automatic mapping was too weak to show here (see Evaluation).",
     },
     {
       view: "indicators",
       title: "Indicators",
-      what: "IP addresses, domains, URLs and file hashes found in CVE reference pages, plus abuse.ch feed totals.",
+      what: "IPs, domains, URLs and hashes found around these CVEs.",
       why: "Context for hunting and blocking, and for seeing infrastructure shared across CVEs.",
       how: `Pattern matching with validation; every value is defanged so it can't be clicked. ${extract ? `On a reviewed sample from reference pages, ${pct(extract.precision)} of extracted values were real values of their type, but most of those are CVE IDs; IP addresses are much weaker (see Evaluation).` : ""} Nothing here is vetted as malicious. abuse.ch data is shown only as counts (licence).`,
     },
     {
       view: "evaluation",
       title: "Evaluation",
-      what: "How well each part works, on data it was not built from.",
+      what: "How well each part works, plus data sources and limitations.",
       why: "So you know how much to trust each number on the other tabs.",
       how: "The risk model, CWE classifier and ATT&CK re-test were set up in advance and scored on data they were not built from; indicator extraction was scored on a hand-reviewed sample. Anything changed after seeing results is disclosed, and weak results are shown, not hidden.",
     },

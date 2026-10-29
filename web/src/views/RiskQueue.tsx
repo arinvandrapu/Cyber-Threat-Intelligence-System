@@ -94,22 +94,21 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     <>
       <PageHead
         title="Risk queue"
-        lede={`${int(risk.rows.length)} CVEs in the critical, high and elevated tiers, best first. Grey columns are context only and were never model inputs.`}
+        lede={`${int(risk.rows.length)} CVEs most likely to be exploited soon, best first. Click one to see why.`}
       />
       {notRanked && focusCard && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <p className="note">
             {focusCard.source === "kev"
-              ? `${focus} is in CISA KEV: it is already confirmed exploited, so it is not ranked here. Patch KEV CVEs first.`
-              : `${focus} is not ranked: it is outside the queue's window or below its tiers. A threat links to it; its NVD record is below.`}
+              ? `${focus} is already known to be exploited (CISA KEV), so it isn't ranked. Patch it first.`
+              : `${focus} isn't ranked (older than 2024 or lower risk). Its record is below.`}
           </p>
           <CveCard entry={focusCard} />
         </div>
       )}
       {notRanked && !focusCard && (
         <p className="note">
-          {focus} is not in the ranked tiers: it is already in KEV, below the elevated tier, or published before the
-          ranked window.
+          {focus} isn't in the ranked list: already known to be exploited, lower risk, or older than 2024.
         </p>
       )}
 
@@ -225,14 +224,16 @@ function Detail({
             <span className="mono" style={{ textAlign: "right" }}>{signed(v)}</span>
           </div>
         ))}
-        <span className="muted" style={{ fontSize: 12 }}>
-          Each bar is how much one signal pushed this CVE's score up (blue) or down (grey), compared with an average
-          CVE the model was trained on. Bars add up, in model score units (log-odds). † no value at the snapshot, so a
-          typical (median) value was used.
+        <span
+          className="muted"
+          style={{ fontSize: 12 }}
+          title="Each bar is how much one signal moved this CVE's score compared with an average CVE the model was trained on; bars add up (model score units, log-odds). † no value at the snapshot, so a typical (median) value was used."
+        >
+          Blue pushes it up, grey pushes it down. † value missing, a typical one was used.
         </span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-        <span className="label">Context (not used by the model)</span>
+        <span className="label">About this CVE</span>
         {/* plain text only: descriptions are never rendered as HTML or linkified */}
         <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: "var(--text-2)", overflowWrap: "anywhere" }}>
           {row.context.description || "No description."}
@@ -244,7 +245,7 @@ function Detail({
         <span className="mono muted" style={{ fontSize: 12, overflowWrap: "anywhere" }}>assigner {row.context.assigner ?? "unknown"}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-        <span className="label">Linked threats (not used by the model)</span>
+        <span className="label">Linked threats</span>
         {!threatsBuilt && <span className="muted" style={{ fontSize: 13 }}>Threat catalog not built for this snapshot.</span>}
         {threatsBuilt && threats.length === 0 && (
           <span className="muted" style={{ fontSize: 13 }}>No malware family is linked to this CVE.</span>

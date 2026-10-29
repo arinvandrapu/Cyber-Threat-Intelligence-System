@@ -43,7 +43,7 @@ export function Evaluation({ data }: { data: Data }) {
     <>
       <PageHead
         title="Evaluation"
-        lede={`Forward-looking test: score CVEs with only what was known at a cutoff, then check which ones CISA added to KEV in the next 180 days (the last window, 177). ${folds.length} rolling-origin test folds, ${positives} KEV additions. Every choice was committed before any test score.`}
+        lede={`How well each part works, on data it never saw. Risk model: CVEs scored with only what was known at a cutoff, then checked against CISA's KEV additions in the next 180 days (${folds.length} test periods, ${positives} additions).`}
       />
       {tip.node}
       {decision && (
@@ -194,6 +194,28 @@ export function Evaluation({ data }: { data: Data }) {
           <li>Exploratory results (no-EPSS ablation, text features) are not shown as findings.</li>
           <li>ATT&amp;CK and CWE ground truths have known biases (KEV-only mappings; assigner-dependent labels).</li>
         </ul>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Data versions &amp; limitations</h2>
+          <span className="mono muted" style={{ fontSize: 12 }}>
+            commit {String(data.meta.git.commit ?? "unknown").slice(0, 7)}
+            {data.meta.git.dirty ? " (uncommitted changes)" : ""} · config sha256 {data.meta.config_sha256.slice(0, 8)}… ·
+            KEV {data.meta.kev_catalog_version}
+          </span>
+        </div>
+        <ul className="plain">
+          {data.meta.disclosures.map((d) => <li key={d}>{d}</li>)}
+        </ul>
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 16 }}>
+          {Object.entries(data.meta.epss_model_versions).map(([asOf, versions]) => (
+            <div key={asOf} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 550 }}>EPSS at {asOf} ({data.meta.as_of_dates[asOf]})</div>
+              <div className="mono muted" style={{ fontSize: 12 }}>{versions.join(", ")}</div>
+            </div>
+          ))}
+        </div>
       </section>
     </>
   );

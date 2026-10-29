@@ -60,18 +60,14 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
 - Vite `build.modulePreload.polyfill: false` and `assetsInlineLimit: 0`: nothing inline,
   no `data:` assets. `<link rel="icon" href="data:,">` stops a favicon request.
 - EPSS percentiles are floored for display (0.99981 → 99.98th, never "100th").
-## Clarity pass (2026-10-29, owner feedback, PR #35)
+## Clarity passes (2026-10-29, owner feedback)
 
-- Overview opens with the question and the two linked lists, then "Guide to each tab"
-  (what / why / how, numbers from the export, `guide()` in `Overview.tsx`).
-- Plain labels: "What moved this CVE up or down" (log-odds only in the caption),
-  plain signal names ("EPSS percentile", "Age (newer = higher)"), SSVC header tooltip.
-- CVE name: derived for queue CVEs (`export.derived_name`, 8,359 / 8,392): NVD Primary
-  CWE, else the only CWE; several CWEs and no primary → "<product> vulnerability";
-  placeholder vendors ("n/a") skipped. KEV CVEs use CISA's name. Display only.
-- A fact-check of the new text corrected overstatements: most of the 467 families have
-  no category or links (top 20 shown); not every evaluation was fixed in advance
-  (ATT&CK v2 rule, IOC sample redraw, CWE deviation); "98.5%" extraction precision is
-  mostly CVE IDs (IPv4 ~44%); categories were labelled by Claude for the owner, not
-  "hand-checked"; the +4 vs EPSS is from back-tests, not this ranking.
-
+- PR #35: CVE names (derived for queue CVEs, `export.derived_name`, 8,359 / 8,392; CISA's
+  for KEV), a tab guide, plain labels. A fact-check fixed overstatements (most families
+  have no category or links; not every test was fixed in advance; "98.5%" is mostly CVE
+  IDs; labels by Claude for the owner; +4 vs EPSS is from back-tests).
+- Plain-language pass: answers up front, method on request. One-sentence ledes and
+  cards; tab guide is one line per tab with "How it works" folded; disclosures moved
+  from Overview to Evaluation ("Data versions & limitations"); Threats tiles are
+  analyst facts (QA numbers in a folded "How this list is built"); link rows are one
+  line (source badge + ✓/✗, details on ▸); bar caption one line, full text in a tooltip.
