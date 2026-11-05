@@ -159,11 +159,24 @@ def _review_state(correct: bool | None) -> str:
     return {True: "correct", False: "rejected", None: "unreviewed"}[correct]
 
 
-def _why(keys: dict[str, int], recent: int, prior: int) -> list[str]:
+def _kev_why(ranked: list[dict]) -> str:
+    """The linked KEV CVEs by source, e.g. "3 CISA KEV CVEs: 2 cited by ATT&CK, 1 ..."."""
+    order = list(cfg.WHY_LINK_SOURCES)
+    credited: dict[str, str] = {}
+    for c in sorted((c for c in ranked if c["in_kev"]), key=lambda c: order.index(c["via"])):
+        credited.setdefault(c["cve"], c["via"])
+    n, sources = len(credited), Counter(credited.values())
+    head = f"{n} CISA KEV CVE{'s' * (n != 1)}"
+    if len(sources) == 1:
+        return f"{head} {cfg.WHY_LINK_SOURCES[next(iter(sources))]}"
+    parts = [f"{sources[v]} {label}" for v, label in cfg.WHY_LINK_SOURCES.items() if sources[v]]
+    return f"{head}: {', '.join(parts)}"
+
+
+def _why(keys: dict[str, int], ranked: list[dict], recent: int, prior: int) -> list[str]:
     why = []
     if keys["linked_kev_cves"]:
-        n = keys["linked_kev_cves"]
-        why.append(f"linked to {n} CVE{'s' * (n != 1)} in CISA KEV (confirmed exploited)")
+        why.append(_kev_why(ranked))
     if keys["linked_high_tier_cves"]:
         n = keys["linked_high_tier_cves"]
         why.append(f"linked to {n} critical/high-tier CVE{'s' * (n != 1)} in the queue")
@@ -281,7 +294,7 @@ def build(
                 },
                 "cves": cves,
                 "priority_keys": keys,
-                "why": _why(keys, recent, prior),
+                "why": _why(keys, ranked, recent, prior),
             }
         )
     out.sort(key=lambda f: (*(-f["priority_keys"][k] for k in cfg.PRIORITY_KEYS), f["family"]))
@@ -352,13 +365,16 @@ def agreement(owner: Mapping[str, tuple[str, ...]], auto: Mapping[str, tuple[str
 
 
 def link_precision(labels: Mapping[tuple[str, str, str], bool]) -> dict:
-    """Share of reviewed links marked correct, overall and per ``via``, with Wilson 95%."""
+    """Share of reviewed links marked correct, with Wilson 95%: overall, per ``via``, and
+    "judged" (without the sources accepted unjudged)."""
     from cti.nlp.evaluate import wilson
 
     groups: dict[str, list[bool]] = defaultdict(list)
     for (_, _, via), ok in labels.items():
         groups["all"].append(ok)
         groups[via].append(ok)
+        if via not in cfg.ACCEPTED_UNJUDGED_LINKS:
+            groups["judged"].append(ok)
     return {
         g: {
             "n": len(oks),

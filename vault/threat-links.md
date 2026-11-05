@@ -44,8 +44,15 @@ owner decisions that followed. Catalog overview: [[threat-catalog]].
   "XLoader" is `apk.xloader` (Android, MoqHao) and "Xloader" `osx.xloader` (macOS build),
   but ATT&CK's sentence is the Windows XLoader's Office exploits. Lesson: the own-name join
   ignores platform; check `malware_ids` when a family links.
-- Cobalt Strike is now rank 1 on a **capability** statement ("can exploit" four 2011–2013
-  Java CVEs via modules), not observed use; recorded in the sheet notes.
+- Cobalt Strike is now rank 1 on 4 KEV CVEs: 3 from a **capability** statement ("can
+  exploit" four 2011–2013 Java CVEs, one of them not in KEV), not observed use, plus
+  CVE-2024-1709 from a reference page; recorded in the sheet notes.
+- Report **judged** precision: 25/43 (58%, Wilson 43–72%) = ATT&CK 13/17 + pages 12/26. The
+  10 ThreatFox tags were accepted, not judged (`ACCEPTED_UNJUDGED_LINKS`), so 35/53 overstates
+  what was checked. `link_precision` keeps both; the dashboard and README lead with judged.
+- "Why" lines name the source per family (`WHY_LINK_SOURCES`, 2026-11-04): being in KEV says a
+  CVE is exploited, not that this family exploits it. Owner decision: wording only; old or
+  capability-only links still count, because a post-hoc rule change is harder to defend.
 - Rejected sources: campaigns (cross product), MISP descriptions, KEV text, Metasploit names.
 - The link sheet is append-only (new links blank = unreviewed, only when none removed);
   `review.links.unreviewed` counts them. Quoted MITRE text carries MITRE's attribution.

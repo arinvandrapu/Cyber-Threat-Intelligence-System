@@ -47,7 +47,7 @@ flowchart LR
     D --> X[Extract<br/>regex IOCs · aliases]
     X --> E[NLP: SecureBERT 2.0<br/>NER · ATT&CK mapping]
     E --> F[Risk scoring]
-    F --> G[Exports<br/>JSON · STIX 2.1]
+    F --> G[Exports<br/>JSON · STIX 2.1 planned]
     G --> H[Localhost dashboard]
 ```
 
@@ -141,9 +141,10 @@ CVEs from 2008–2020 with an exploitation label). Every choice was committed in
 | **Combiner** (prior, bi-encoder, TF-IDF, CWE→CAPEC→ATT&CK paths, CVSS rule) | **0.29** | **0.72 (0.66–0.78)** |
 | CTID methodology replay (reference only) | 0.56 | 0.82 |
 
-- **Pre-registered decision: passes, narrowly.** Combiner minus the Phase 5b method:
+- **Pre-registered decision: passes, marginally.** Combiner minus the Phase 5b method:
   hit@5 +0.035 (95% CI +0.005 to +0.070). Cross-validation set the prior weight so high
-  that the Phase 5b method equals majority here.
+  that the Phase 5b method equals majority here. The lead doesn't last: at hit@10 the
+  combiner (0.845) is **below** majority (0.865); no paired CI was computed at that rank.
 - **Where the gain comes from:** a CVSS heuristic (user interaction → drive-by /
   user execution), mostly at T1189. It was written after the test label counts were
   seen, which is disclosed; without it the gain is +0.015 and not significant. The
@@ -220,8 +221,8 @@ before any test score (`src/cti/nlp/risk_config.py`, commit `c528d07`). From
 - **Most additions aren't predictable from these signals.** Each method's top 1% catches
   14–16 of the 68 (23 if the logistic and EPSS lists are combined).
 - **Tier hit rates fall monotonically.** Top 0.1% ("critical"): 6 of 230 added to KEV
-  (2.6%, 95% CI 1.2–5.6%; about 90× the overall 0.029% rate); then 0.48%, 0.17%, and
-  0.016% for the rest, as pre-registered.
+  (2.6%, 95% CI 1.2–5.6%; about 89× the overall 0.029% rate, CI about 41–190× with that
+  rate taken as fixed); then 0.48%, 0.17%, and 0.016% for the rest, as pre-registered.
 - **Exploratory, read after scoring (no CIs):**
   - EPSS ranked the latest fold poorly (ROC-AUC 0.41). Its 17 additions had a median
     EPSS percentile of 0.16 (16 scored, 1 unscored).
@@ -238,6 +239,25 @@ before any test score (`src/cti/nlp/risk_config.py`, commit `c528d07`). From
   cutoff4 (training only); v4 at every test cutoff.
 
 Details: [`vault/risk-eval.md`](vault/risk-eval.md).
+
+### Threat ↔ CVE link review
+
+Threat priority is a pre-declared heuristic, not a validated model, and it never feeds the
+risk score. Links between malware families and CVEs were reviewed by Claude on the owner's
+behalf (not fully blind):
+
+- **Judged from evidence: 25 of 43 correct** (58%, Wilson 95% CI 43–72%): ATT&CK software
+  statements 13/17, reference-page mentions 12/26.
+- **Accepted, not judged: 10 ThreatFox tags**, taken as the reporter's attribution and left
+  out of that figure. Counting them gives 35/53, which would overstate what was checked.
+- **What "correct" means.** The source supports the tie between family and CVE, not that
+  the use was observed. Links marked wrong never count toward ranking. All 53 links were
+  reviewed, so the CI describes the link process, not a sample of a larger set.
+- **What a link means.** A family's "KEV CVE" is a CVE in CISA KEV that a source ties to the
+  family. KEV shows that someone exploited it, not this family, and ATT&CK can describe
+  capability rather than observed use. Each family's reason names the source. Example: Cobalt
+  Strike ranks first on 4 KEV CVEs, 3 of them 2011–2013 Java bugs from an ATT&CK "can exploit"
+  statement.
 
 ### SecureBERT 2.0 NER (sanity check)
 
@@ -286,9 +306,9 @@ Secure by construction:
 
 | Area | Skills | Tools |
 |---|---|---|
-| Threat intelligence | CVE/KEV/EPSS analysis, IOC extraction and defanging, threat-actor alias normalization, MITRE ATT&CK mapping, STIX 2.1 | NVD, CISA KEV, FIRST EPSS, MITRE ATT&CK/CWE, abuse.ch, tldextract (Public Suffix List) |
+| Threat intelligence | CVE/KEV/EPSS analysis, IOC extraction and defanging, threat-actor alias normalization, MITRE ATT&CK mapping | NVD, CISA KEV, FIRST EPSS, MITRE ATT&CK/CWE, abuse.ch, tldextract (Public Suffix List) |
 | Vulnerability management | Risk-based prioritization, forward-looking evaluation | Python, pandas, scikit-learn |
-| Secure engineering | SSRF defense, secrets management, least-privilege IAM, threat modeling (STRIDE) | httpx, pydantic, GitHub Actions, pip-audit, secret scanning |
+| Secure engineering | SSRF defense, secrets management, least-privilege IAM | httpx, pydantic, GitHub Actions, pip-audit, secret scanning |
 | Cloud security | Private, encrypted, TLS-only storage; cost guardrails | AWS S3, IAM, AWS Budgets |
 | NLP / ML | Security-domain NER and embeddings, supervised-prior + embedding ranking, baselines, paired bootstrap evaluation, leakage control, boilerplate removal on untrusted HTML | SecureBERT 2.0 (ModernBERT), PyTorch, Hugging Face Transformers, scikit-learn, NumPy, trafilatura, lxml |
 | ML supply chain | Model pinning by commit and weight hash, safetensors only, no remote code, offline inference | Hugging Face Hub, safetensors |
@@ -409,8 +429,8 @@ tasks/todo.md        build plan and progress
 ## What this project demonstrates
 
 - Turning raw threat feeds into **prioritized, explainable** intelligence.
-- **Secure-by-design** engineering: SSRF protection, least-privilege cloud access, secret
-  hygiene, and a documented threat model.
+- **Secure-by-design** engineering: SSRF protection, least-privilege cloud access, and secret
+  hygiene.
 - **Measurement discipline**: risk scores evaluated against real exploitation outcomes,
   not assumed.
 - Building **end to end**: ingestion, processing, cloud storage, evaluation, and UI.

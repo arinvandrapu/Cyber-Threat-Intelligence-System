@@ -294,6 +294,9 @@ export interface ThreatReview {
   links_reviewed: number;
   links_correct: number;
   link_precision_ci95: Interval | null;
+  links_judged: number;
+  links_judged_correct: number;
+  judged_precision_ci95: Interval | null;
 }
 
 export interface Threats {

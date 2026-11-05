@@ -322,7 +322,7 @@ def _threats_doc(tiers: dict[str, str], kev_cve: str) -> dict:
                 1,
                 40,
                 12,
-                ["linked to 1 CVE in CISA KEV (confirmed exploited)", "ransomware", "40 IOCs"],
+                ["1 CISA KEV CVE cited by ATT&CK", "ransomware", "40 IOCs"],
                 sw="S9999",
             ),
             family(
@@ -362,7 +362,12 @@ def _threats_doc(tiers: dict[str, str], kev_cve: str) -> dict:
         "summary": {"category_source": {"owner": 3, "misp": 1}},
         "review": {
             "labeller": "fixture labeller",
-            "links": {"precision": {"all": {"n": 2, "correct": 1, "ci95": [0.09, 0.91]}}},
+            "links": {
+                "precision": {
+                    "all": {"n": 2, "correct": 1, "ci95": [0.09, 0.91]},
+                    "judged": {"n": 1, "correct": 1, "ci95": [0.21, 1.0]},
+                }
+            },
         },
     }
 

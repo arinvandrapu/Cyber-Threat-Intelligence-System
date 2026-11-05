@@ -266,8 +266,29 @@ def test_linked_kev_cves_rank_first():
     assert [f["family"] for f in result["families"]] == ["Exploits", "Queue", "Akira"]
     exploits = _fam(result, "Exploits")
     assert exploits["priority_keys"]["linked_kev_cves"] == 2
-    assert exploits["why"][0] == "linked to 2 CVEs in CISA KEV (confirmed exploited)"
+    assert exploits["why"][0] == "2 CISA KEV CVEs tagged on ThreatFox"
     assert _fam(result, "Queue")["priority_keys"]["linked_kev_cves"] == 0
+
+
+def test_every_link_source_has_why_wording():
+    assert set(config.WHY_LINK_SOURCES) == set(config.LINK_SOURCES)
+
+
+def test_kev_why_names_sources_and_credits_each_cve_once():
+    def link(cve, via, in_kev=True):
+        return {"cve": cve, "via": via, "in_kev": in_kev}
+
+    one = [link("CVE-1", "attack:software"), link("CVE-2", "attack:software", in_kev=False)]
+    assert catalog._kev_why(one) == "1 CISA KEV CVE cited by ATT&CK"
+    mixed = [
+        link("CVE-1", "mention:reference_page"),
+        link("CVE-1", "attack:software"),  # both cite it: ATT&CK is credited, counted once
+        link("CVE-2", "mention:reference_page"),
+        link("CVE-3", "threatfox_tag"),
+    ]
+    assert catalog._kev_why(mixed) == (
+        "3 CISA KEV CVEs: 1 cited by ATT&CK, 1 tagged on ThreatFox, 1 cited in reference pages"
+    )
 
 
 def test_only_reviewed_correct_or_trusted_links_rank():
@@ -356,6 +377,11 @@ def test_link_sheet_round_trip_and_precision(tmp_path):
     prec = catalog.link_precision(labels)
     assert prec["all"]["n"] == 2 and prec["all"]["precision"] == 0.5
     assert prec["threatfox_tag"]["correct"] == 1
+    assert "judged" not in prec  # tags are accepted, not judged
+    labels[("Mirai", "CVE-3", "attack:software")] = True
+    labels[("Mirai", "CVE-4", "mention:reference_page")] = False
+    prec = catalog.link_precision(labels)
+    assert prec["all"]["n"] == 4 and prec["judged"]["n"] == 2 and prec["judged"]["correct"] == 1
 
 
 def test_append_families_adds_missing_rows_only(tmp_path):

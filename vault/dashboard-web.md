@@ -41,7 +41,7 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
 ## Audit outcomes (2026-10-28)
 
 - Ratios and tier CIs are computed from counts (`wilson()` in `format.ts`), not from the
-  export's 4-decimal rounded rates (baseline CI 0.012–0.023%, critical ≈159× baseline).
+  export's 4-decimal rounded rates (baseline CI 0.012–0.023%, critical ≈89× the overall rate).
 - ATT&CK v20 tactics `stealth` and `defense-impairment` must be in `TACTICS` (they were
   silently dropped: 29 → 33 exploitation techniques); unknown tactics get a sector.
 - Lists that are cut (top-N CVEs) are sorted by rank first, and say "top N of M".

@@ -1,11 +1,13 @@
 """Pre-declared configuration for the threat layer (Phase 10a).
 
-Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N``, ``LINK_SOURCES``
-and ``REVIEW_LABELLER`` was committed before the review sheets were labelled
-(``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` and the
-``linked_kev_cves`` key were added after the first ``cti threats`` run; ``TRUSTED_LINKS``,
-``PRIORITY_REVIEW_TOP_N`` and the ``attack:software`` link source after the link review,
-each in its own commit. Any later change must be disclosed in ``vault/threat-catalog.md``.
+Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N``, ``LINK_SOURCES``,
+``REVIEW_LABELLER``, ``ACCEPTED_UNJUDGED_LINKS`` and ``WHY_LINK_SOURCES`` was committed
+before the review sheets were labelled (``git log -- src/cti/threats/config.py`` is the
+evidence). ``MENTION_ORIGINS`` and the ``linked_kev_cves`` key were added after the first
+``cti threats`` run; ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N`` and the ``attack:software``
+link source after the link review, each in its own commit. ``ACCEPTED_UNJUDGED_LINKS`` and
+``WHY_LINK_SOURCES`` (reporting and wording only, never rank) followed the 2026-10-29
+end-to-end review. Any later change must be disclosed in ``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.
@@ -136,4 +138,15 @@ HIGH_TIERS = ("critical", "high")
 # output with its review state; this only decides what ranks.
 # ATT&CK's curated statements are trusted like ThreatFox tags (added 2026-10-29).
 TRUSTED_LINKS = ("threatfox_tag", "attack:software")
+# Tags are the reporter's own attribution: accepted in the review, not judged from evidence,
+# so they stay out of the "judged" precision.
+ACCEPTED_UNJUDGED_LINKS = ("threatfox_tag",)
+# How a "why" line names a link's source, because being in KEV says a CVE is exploited, not
+# that this family exploits it. A CVE cited by several sources is credited to the first
+# listed here, so the counts add up to linked_kev_cves. Wording only: never affects rank.
+WHY_LINK_SOURCES = {
+    "attack:software": "cited by ATT&CK",
+    "threatfox_tag": "tagged on ThreatFox",
+    "mention:reference_page": "cited in reference pages",
+}
 GROWTH_DAYS = 30

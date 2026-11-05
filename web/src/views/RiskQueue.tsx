@@ -96,7 +96,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     <>
       <PageHead
         title="Risk queue"
-        lede={`${int(risk.rows.length)} CVEs most likely to be exploited soon, best first. Click one to see why.`}
+        lede={`${int(risk.rows.length)} CVEs ranked likeliest to join CISA KEV, best first. Click one to see why.`}
       />
       {notRanked && focusCard && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

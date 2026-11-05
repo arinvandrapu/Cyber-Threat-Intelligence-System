@@ -29,6 +29,8 @@ One pre-registered run of `cti attack-eval2 --date 2026-10-26 --archive-date 202
 
 - **Decision: passes.** Combiner − prior+biencoder hit@5 +0.035 [+0.005, +0.070]; hit@1
   +0.035 [+0.010, +0.065]; MRR +0.031.
+- Marginal, and gone by rank 10: hit@10 combiner 0.845 < majority 0.865 (no paired CI). The
+  combiner leads at hit@1, hit@3 and hit@5.
 - What the pass means: CV chose β = 1.0, so the baseline equals majority (identical
   hit@5). The gain is small and comes from the **CVSS rule** (without it +0.015, CI
   crosses 0), almost all at **T1189** (0.57 vs 0 in top 5) via UI:R. That rule was written
