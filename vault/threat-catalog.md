@@ -53,4 +53,8 @@ Moved to [[threat-links]] (review results, owner decisions on links, ATT&CK link
 - Linked KEV CVEs (never queued) open a CISA card: name, vendor/product, dates,
   ransomware use, description (`threats.kev`); also shown when such a CVE is opened in the queue.
 
+- Later config changes (2026-11-04, after the review; rank unaffected, outputs diffed):
+  `ACCEPTED_UNJUDGED_LINKS` defines the judged precision that is now the headline (25/43),
+  `WHY_LINK_SOURCES` names each KEV link's source ([[threat-links]]).
+
 Related: [[threat-layer]], [[dashboard]], [[ioc-extraction]], [[data-sources]].

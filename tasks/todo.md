@@ -311,26 +311,27 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       fixes are about claims, docs, UX and robustness. Three batches, one PR each; verify
       each claim against the outputs before editing.
   - [ ] **11a. Credibility (do first; before any interview)**
-    - [ ] README: drop or mark planned "threat modeling (STRIDE)" (skills table, ~:291)
+    - [x] README: drop or mark planned "threat modeling (STRIDE)" (skills table, ~:291)
           and "a documented threat model" (~:413); STIX 2.1 listed as a skill (~:289)
           but planned (~:37)
-    - [ ] Overview guide (`web/src/views/Overview.tsx` risk-queue "how"): "+4 … in each
+    - [x] Overview guide (`web/src/views/Overview.tsx` risk-queue "how"): "+4 … in each
           period's top 100" is wrong; +4 is the total over 3 periods (0, +2, +2), CI +1
           to +8. Same check for the "Better than EPSS" tile (add the CI; note EPSS wins
           on mean AP)
-    - [ ] Link precision: report judged links separately: 25/43 (58%) judged from
+    - [x] Link precision: report judged links separately: 25/43 (58%) judged from
           evidence; the 10 ThreatFox tags were accepted as reporter attributions. Update
           Threats fold, Overview guide, README Results, vault/threat-links.md
-    - [ ] Threat "why" wording: "linked to N CVEs in CISA KEV (confirmed exploited)"
-          reads as the family exploited them. Name the source (e.g. "4 KEV CVEs cited by
-          ATT&CK"); decide (owner) whether capability-only or very old links (Cobalt
-          Strike's 2011–2013 Java CVEs) should count less — a disclosed rule change
-    - [ ] One framing for tier lift: Overview "≈159× likelier than the rest" (vs baseline
+    - [x] Threat "why" wording: "linked to N CVEs in CISA KEV (confirmed exploited)"
+          reads as the family exploited them. Name the source; owner decided 2026-11-04: wording only, no rule change. Cobalt Strike is
+          "4 CISA KEV CVEs: 3 cited by ATT&CK, 1 cited in reference pages" (one of ATT&CK's
+          four Java CVEs is not in KEV; the fourth KEV CVE is CVE-2024-1709)
+    - [x] One framing for tier lift: Overview "≈159× likelier than the rest" (vs baseline
           tier, 6 positives) vs README "≈90× the overall rate"; pick one, add the CI
-    - [ ] Wording: "not yet known to be exploited" → "not in CISA KEV"; "more exploited
+    - [x] Wording: "not yet known to be exploited" → "not in CISA KEV"; "more exploited
           CVEs caught" → "more later KEV additions caught"
-    - [ ] Disclose ATT&CK 10b hit@10: combiner 0.845 < majority 0.865 (results +
-          README); call the pass "marginal, rank-5 specific"
+    - [x] Disclose ATT&CK 10b hit@10: combiner 0.845 < majority 0.865 (results +
+          README); call the pass "marginal". (Corrected from "rank-5 specific": the combiner leads at
+          hit@1, @3 and @5, and falls behind only at hit@10)
     - [ ] Re-stamp outputs from a clean `main`: `cti extract` (iocs.jsonl.gz predates the
           `ftp://`→`fxp://` defang fix, 3 rows), `cti extract-eval --labels …`, `cti
           threats`, `cti export` (meta.json says commit e3a8528 + uncommitted changes)

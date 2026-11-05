@@ -82,9 +82,10 @@ export function interval([lo, hi]: [number, number], f: (x: number) => string = 
 
 /** Link review: judged links apart from the tags accepted as the reporter's attribution. */
 export function linkReview(r: ThreatReview): string {
+  if (!r.links_judged) return `${r.links_correct} of ${r.links_reviewed} links were reviewed as correct`;
   const ci = r.judged_precision_ci95 ? ` (95% CI ${interval(r.judged_precision_ci95)})` : "";
   const accepted = r.links_reviewed - r.links_judged;
-  return `${r.links_judged_correct} of ${r.links_judged} links judged from their evidence were correct${ci}; ${accepted} ThreatFox tags were accepted as the reporter's attribution, not judged`;
+  return `${r.links_judged_correct} of ${r.links_judged} links judged from their evidence were correct${ci}; ${accepted} ThreatFox tag${accepted === 1 ? " was" : "s were"} accepted as the reporter's attribution, not judged`;
 }
 
 /** Stable 0..1 pseudo-random from a string (deterministic graph layouts). */

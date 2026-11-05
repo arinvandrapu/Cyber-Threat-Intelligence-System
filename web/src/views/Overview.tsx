@@ -17,6 +17,9 @@ export function Overview({ data }: { data: Data }) {
     risk.historical_tiers.reduce((s, t) => s + t.cves, 0);
   const epssAp = evals.risk.methods.epss?.pooled.mean_average_precision;
   const logisticAp = evals.risk.methods.logistic?.pooled.mean_average_precision;
+  const logisticHits = evals.risk.methods.logistic?.pooled["hits@100"];
+  const epssHits = evals.risk.methods.epss?.pooled["hits@100"];
+  const positives = evals.risk.methods.logistic?.pooled.positives;
   const top = risk.rows.slice(0, 5);
 
   return (
@@ -66,10 +69,10 @@ export function Overview({ data }: { data: Data }) {
           <span className="muted">top 0.1% by rank</span>
         </div>
         <div className="panel tile">
-          <span className="label">Better than EPSS</span>
+          <span className="label">vs EPSS, top 100</span>
           <span className="value">{paired ? `${signed(paired.difference_hits, 0)} hits` : "—"}</span>
           <span className="muted">
-            {paired ? `more later KEV additions caught in its top-100 lists, over ${Object.keys(evals.risk.folds).length} past test periods (95% CI ${signed(paired.ci95[0], 0)} to ${signed(paired.ci95[1], 0)})` : ""}
+            {paired ? `${logisticHits} vs ${epssHits} of ${positives} later KEV additions, over ${Object.keys(evals.risk.folds).length} past test periods (95% CI ${signed(paired.ci95[0], 0)} to ${signed(paired.ci95[1], 0)})` : ""}
             {paired && epssAp !== undefined && logisticAp !== undefined && epssAp > logisticAp ? ". EPSS has the higher mean average precision." : ""}
           </span>
         </div>
@@ -180,13 +183,16 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
   const vsEpss = typeof d === "object" ? `${signed(d.difference_hits, 0)} (95% CI ${signed(d.ci95[0], 0)} to ${signed(d.ci95[1], 0)})` : "?";
   const extract = evals.extract.per_origin.reference_page;
   const review = threats.review;
+  const epssAp = evals.risk.methods.epss?.pooled.mean_average_precision;
+  const logisticAp = evals.risk.methods.logistic?.pooled.mean_average_precision;
+  const apNote = epssAp !== undefined && logisticAp !== undefined && epssAp > logisticAp ? ", though EPSS has the higher mean average precision" : "";
   return [
     {
       view: "queue",
       title: "Risk queue",
       what: "Which vulnerabilities to patch next, best first, each with its reasons.",
       why: "So you know which vulnerabilities outside CISA KEV to patch next.",
-      how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days. In back-tests of the same procedure, summed over ${Object.keys(evals.risk.folds).length} periods, its top-100 lists caught ${vsEpss} later KEV additions vs EPSS, though EPSS has the higher mean average precision; this snapshot's ranking itself cannot be scored yet. Tiers are rank bands, not probabilities.`,
+      how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days. In back-tests of the same procedure, summed over ${Object.keys(evals.risk.folds).length} periods, its top-100 lists caught ${vsEpss} later KEV additions vs EPSS${apNote}; this snapshot's ranking itself cannot be scored yet. Tiers are rank bands, not probabilities.`,
     },
     {
       view: "threats",

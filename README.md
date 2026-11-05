@@ -250,6 +250,9 @@ behalf (not fully blind):
   statements 13/17, reference-page mentions 12/26.
 - **Accepted, not judged: 10 ThreatFox tags**, taken as the reporter's attribution and left
   out of that figure. Counting them gives 35/53, which would overstate what was checked.
+- **What "correct" means.** The source supports the tie between family and CVE, not that
+  the use was observed. Links marked wrong never count toward ranking. All 53 links were
+  reviewed, so the CI describes the link process, not a sample of a larger set.
 - **What a link means.** A family's "KEV CVE" is a CVE in CISA KEV that a source ties to the
   family. KEV shows that someone exploited it, not this family, and ATT&CK can describe
   capability rather than observed use. Each family's reason names the source. Example: Cobalt

@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-10-29 (Phase 10, follow-up fixes, dashboard clarity, end-to-end review). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-11-04 (Phase 11a credibility fixes). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -30,7 +30,8 @@
 | Alias-bug fix + CWE seed | ✅ merged | #36 |
 | ATT&CK software links + CVE cards (re-land of #37) | ✅ merged | #38 |
 | Plain-language pass + every CVE opens a detail | ✅ merged | #39 |
-| **11. Review fixes** (from the 2026-10-29 end-to-end review) | **⏭ next** | — |
+| 11a. Credibility fixes | in review; re-stamp after merge | see below |
+| **11b–d. Review fixes** (docs, dashboard, robustness) | **⏭ next** | — |
 | 9. Security deliverables + polish | after 11 | — |
 
 `main` is green (offline tests on the Phase 8 PR 2 branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
@@ -39,9 +40,9 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 **Next session, in order:**
 1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`
    (Phase 11 is the plan, in batches 11a → 11d).
-2. Start **11a (credibility)**: false/overstated claims (README STRIDE/STIX, "+4 in each
-   period", link precision 25/43 judged, threat "why" wording, tier-lift framing), then
-   re-stamp outputs from a clean `main`. Verify each claim against the outputs first.
+2. After the 11a PR merges, re-stamp from clean `main`: `cti extract`, `cti extract-eval --labels
+   data/reference/ioc-review-2026-10-26.csv`, `cti export`, `cti threats`, `cti export`, then check
+   `meta.json` shows `dirty: false`.
 3. Then 11b docs, 11c dashboard, 11d robustness/hygiene, one PR each. Phase 9 after.
 4. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
    are at the end of Phase 11 in `tasks/todo.md`.

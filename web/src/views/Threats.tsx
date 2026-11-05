@@ -67,7 +67,7 @@ export function Threats({ data }: { data: Data }) {
           <span className="muted">top {int(threats.families.length)} shown</span>
         </div>
         <div className="panel tile">
-          <span className="label">Exploiting known CVEs</span>
+          <span className="label">Linked to KEV CVEs</span>
           <span className="value">{int(threats.families.filter((f) => f.linked_kev_cves > 0).length)}</span>
           <span className="muted">shown families linked to CISA KEV CVEs</span>
         </div>

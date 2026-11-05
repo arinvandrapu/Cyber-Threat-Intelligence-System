@@ -1,11 +1,13 @@
 """Pre-declared configuration for the threat layer (Phase 10a).
 
-Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N``, ``LINK_SOURCES``
-and ``REVIEW_LABELLER`` was committed before the review sheets were labelled
-(``git log -- src/cti/threats/config.py`` is the evidence). ``MENTION_ORIGINS`` and the
-``linked_kev_cves`` key were added after the first ``cti threats`` run; ``TRUSTED_LINKS``,
-``PRIORITY_REVIEW_TOP_N`` and the ``attack:software`` link source after the link review,
-each in its own commit. Any later change must be disclosed in ``vault/threat-catalog.md``.
+Every choice here except ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N``, ``LINK_SOURCES``,
+``REVIEW_LABELLER``, ``ACCEPTED_UNJUDGED_LINKS`` and ``WHY_LINK_SOURCES`` was committed
+before the review sheets were labelled (``git log -- src/cti/threats/config.py`` is the
+evidence). ``MENTION_ORIGINS`` and the ``linked_kev_cves`` key were added after the first
+``cti threats`` run; ``TRUSTED_LINKS``, ``PRIORITY_REVIEW_TOP_N`` and the ``attack:software``
+link source after the link review, each in its own commit. ``ACCEPTED_UNJUDGED_LINKS`` and
+``WHY_LINK_SOURCES`` (reporting and wording only, never rank) followed the 2026-10-29
+end-to-end review. Any later change must be disclosed in ``vault/threat-catalog.md``.
 
 Threats explain CVEs; they never feed the CVE risk score (vault/threat-layer.md). The
 threat priority below is a heuristic, not a model, and is labelled as not validated.

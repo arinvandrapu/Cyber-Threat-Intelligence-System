@@ -270,6 +270,10 @@ def test_linked_kev_cves_rank_first():
     assert _fam(result, "Queue")["priority_keys"]["linked_kev_cves"] == 0
 
 
+def test_every_link_source_has_why_wording():
+    assert set(config.WHY_LINK_SOURCES) == set(config.LINK_SOURCES)
+
+
 def test_kev_why_names_sources_and_credits_each_cve_once():
     def link(cve, via, in_kev=True):
         return {"cve": cve, "via": via, "in_kev": in_kev}
