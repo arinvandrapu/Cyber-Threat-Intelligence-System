@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Data, LinkedCve, ThreatFamily, ThreatLink } from "../types";
 import { cveHref } from "../App";
 import { PageHead, TierName } from "../components/ui";
-import { int, signed } from "../format";
+import { int, linkReview, signed } from "../format";
 
 const SOURCE_LABEL: Record<ThreatFamily["category_source"], string> = {
   owner: "reviewed",
@@ -57,7 +57,7 @@ export function Threats({ data }: { data: Data }) {
     <>
       <PageHead
         title="Threats"
-        lede="Active malware and attack tools, ranked by what they exploit and how active they are. Each row says why."
+        lede="Active malware and attack tools, ranked by the CVEs linked to them and how active they are. Each row says why."
       />
 
       <section className="grid tiles">
@@ -169,7 +169,7 @@ export function Threats({ data }: { data: Data }) {
             Links come from ThreatFox tags, MITRE ATT&amp;CK's descriptions of the software, and threat reports that name
             the family.{" "}
             {review
-              ? `${review.links_correct} of ${review.links_reviewed} links were reviewed as correct; only reviewed-correct links and unreviewed ThreatFox or ATT&CK links count toward the ranking (✓ correct, ✗ wrong).`
+              ? `${linkReview(review)}. Only reviewed-correct links and unreviewed ThreatFox or ATT&CK links count toward the ranking (✓ correct, ✗ wrong). A KEV listing shows a CVE is exploited by someone, not necessarily by this family, and ATT&CK can describe what software is able to do rather than observed use.`
               : ""}
           </span>
           <span>

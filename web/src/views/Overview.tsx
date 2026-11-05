@@ -1,7 +1,7 @@
 import type { Data } from "../types";
 import { cveHref } from "../App";
 import { PageHead, TierDot, TierName, IntervalBar } from "../components/ui";
-import { TIER_BAND, TIERS, epss, int, pct, interval, wilson, FEATURE_LABEL } from "../format";
+import { TIER_BAND, TIERS, epss, int, linkReview, pct, interval, signed, wilson, FEATURE_LABEL } from "../format";
 
 const logScale = (v: number) => (Math.log10(Math.max(v, 1e-4)) + 4) / 3; // 0.01% .. 10%
 
@@ -12,6 +12,11 @@ export function Overview({ data }: { data: Data }) {
   const decision = evals.risk.decision["logistic_minus_epss_hits@100"];
   const paired = typeof decision === "object" ? decision : null;
   const critical = hist.critical;
+  const overallRate =
+    risk.historical_tiers.reduce((s, t) => s + t.kev_positives, 0) /
+    risk.historical_tiers.reduce((s, t) => s + t.cves, 0);
+  const epssAp = evals.risk.methods.epss?.pooled.mean_average_precision;
+  const logisticAp = evals.risk.methods.logistic?.pooled.mean_average_precision;
   const top = risk.rows.slice(0, 5);
 
   return (
@@ -26,7 +31,7 @@ export function Overview({ data }: { data: Data }) {
           <span className="label">1 · Vulnerabilities</span>
           <h2 style={{ margin: 0, fontSize: 17 }}>Which CVEs to fix next</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            The {int(risk.rows.length)} CVEs most likely to be exploited soon, best first.
+            The {int(risk.rows.length)} CVEs ranked likeliest to join CISA KEV, best first.
           </p>
           <a href="#/queue" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open risk queue</a>
         </div>
@@ -35,7 +40,7 @@ export function Overview({ data }: { data: Data }) {
           <h2 style={{ margin: 0, fontSize: 17 }}>Which attackers' tools matter most</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
             {threats.available
-              ? "Active malware and attack tools, with what they exploit."
+              ? "Active malware and attack tools, with the CVEs linked to them."
               : "Not built for this snapshot yet."}
           </p>
           <a href="#/threats" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open threats</a>
@@ -44,7 +49,7 @@ export function Overview({ data }: { data: Data }) {
           <span className="label">How they connect</span>
           <h2 style={{ margin: 0, fontSize: 17 }}>Threats explain CVEs</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            A CVE used by an active threat is more urgent. CVEs already known to be exploited (CISA KEV): patch first.
+            A CVE linked to an active threat deserves a closer look. CVEs already in CISA KEV: patch first.
           </p>
         </div>
       </section>
@@ -53,7 +58,7 @@ export function Overview({ data }: { data: Data }) {
         <div className="panel tile">
           <span className="label">CVEs ranked</span>
           <span className="value">{int(risk.ranked_cves)}</span>
-          <span className="muted">not yet known to be exploited</span>
+          <span className="muted">not in CISA KEV</span>
         </div>
         <div className="panel tile">
           <span className="label">Critical tier</span>
@@ -62,9 +67,10 @@ export function Overview({ data }: { data: Data }) {
         </div>
         <div className="panel tile">
           <span className="label">Better than EPSS</span>
-          <span className="value">{paired ? `${paired.difference_hits >= 0 ? "+" : ""}${paired.difference_hits} hits` : "—"}</span>
+          <span className="value">{paired ? `${signed(paired.difference_hits, 0)} hits` : "—"}</span>
           <span className="muted">
-            {paired ? `more exploited CVEs caught in its top 100, in past tests` : ""}
+            {paired ? `more later KEV additions caught in its top-100 lists, over ${Object.keys(evals.risk.folds).length} past test periods (95% CI ${signed(paired.ci95[0], 0)} to ${signed(paired.ci95[1], 0)})` : ""}
+            {paired && epssAp !== undefined && logisticAp !== undefined && epssAp > logisticAp ? ". EPSS has the higher mean average precision." : ""}
           </span>
         </div>
         <div className="panel tile">
@@ -78,7 +84,7 @@ export function Overview({ data }: { data: Data }) {
         <div className="panel grow">
           <div className="panel-head">
             <h2>Risk tiers</h2>
-            <span className="muted" style={{ fontSize: 12.5 }}>share later confirmed exploited, in past tests</span>
+            <span className="muted" style={{ fontSize: 12.5 }}>share later added to CISA KEV, in past tests</span>
           </div>
           <div className="table-wrap">
             <table className="data">
@@ -115,9 +121,9 @@ export function Overview({ data }: { data: Data }) {
           </div>
           {critical && hist.baseline && (
             <p className="note" style={{ marginTop: 14 }}>
-              A triage order, not a forecast: most critical CVEs are never exploited, but they are about{" "}
-              {int(critical.kev_positives / critical.cves / (hist.baseline.kev_positives / hist.baseline.cves))}× likelier
-              than the rest.
+              A triage order, not a forecast: most critical CVEs never reached KEV, but they reached it about{" "}
+              {int(critical.kev_positives / critical.cves / overallRate)}× as often as CVEs overall (95% CI{" "}
+              {interval(wilson(critical.kev_positives, critical.cves), (x) => int(x / overallRate))}×, overall rate taken as fixed).
             </p>
           )}
         </div>
@@ -171,7 +177,7 @@ export function Overview({ data }: { data: Data }) {
 function guide(data: Data): { view: string; title: string; what: string; why: string; how: string }[] {
   const { threats, evals } = data;
   const d = evals.risk.decision["logistic_minus_epss_hits@100"];
-  const vsEpss = typeof d === "object" ? `${d.difference_hits >= 0 ? "+" : ""}${d.difference_hits}` : "?";
+  const vsEpss = typeof d === "object" ? `${signed(d.difference_hits, 0)} (95% CI ${signed(d.ci95[0], 0)} to ${signed(d.ci95[1], 0)})` : "?";
   const extract = evals.extract.per_origin.reference_page;
   const review = threats.review;
   return [
@@ -179,16 +185,16 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
       view: "queue",
       title: "Risk queue",
       what: "Which vulnerabilities to patch next, best first, each with its reasons.",
-      why: "So you know which unexploited vulnerabilities to patch next, before attackers start using them.",
-      how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days. In back-tests of the same procedure it caught ${vsEpss} more later KEV additions than EPSS in each period's top 100; this snapshot's ranking itself cannot be scored yet. Tiers are rank bands, not probabilities.`,
+      why: "So you know which vulnerabilities outside CISA KEV to patch next.",
+      how: `A scoring model fixed before testing combines signals known on the snapshot date: EPSS, CISA's SSVC assessment, public exploit code (ExploitDB, Metasploit, Nuclei) and the CVE's age. It was trained to predict which CVEs CISA adds to KEV within 180 days. In back-tests of the same procedure, summed over ${Object.keys(evals.risk.folds).length} periods, its top-100 lists caught ${vsEpss} later KEV additions vs EPSS, though EPSS has the higher mean average precision; this snapshot's ranking itself cannot be scored yet. Tiers are rank bands, not probabilities.`,
     },
     {
       view: "threats",
       title: "Threats",
-      what: "Which malware and attack tools are active, and what they exploit.",
-      why: "So you know which attackers' tools are active and which vulnerabilities they exploit.",
+      what: "Which malware and attack tools are active, and which CVEs are linked to them.",
+      why: "So you know which attackers' tools are active and which vulnerabilities sources tie to them.",
       how: review
-        ? `Ranked by a fixed rule, not a trained model: linked CVEs confirmed exploited (KEV), then linked high-risk queue CVEs, ransomware, then 30-day growth in indicators. Categories of the top families were labelled by an AI reviewer (Claude) on the owner's behalf, not by MISP name matching; ${review.links_correct} of ${review.links_reviewed} CVE links were reviewed correct, and only reviewed-correct links or ThreatFox's own tags count.`
+        ? `Ranked by a fixed rule, not a trained model: linked CVEs in CISA KEV, then linked high-risk queue CVEs, ransomware, then 30-day growth in indicators. Categories of the top families were labelled by an AI reviewer (Claude) on the owner's behalf, not by MISP name matching; ${linkReview(review)}. Only reviewed-correct links, or unreviewed ThreatFox or ATT&CK links, count. A KEV CVE is exploited by someone, not necessarily by the family linked to it.`
         : "Not built for this snapshot.",
     },
     {

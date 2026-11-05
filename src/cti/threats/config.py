@@ -136,4 +136,15 @@ HIGH_TIERS = ("critical", "high")
 # output with its review state; this only decides what ranks.
 # ATT&CK's curated statements are trusted like ThreatFox tags (added 2026-10-29).
 TRUSTED_LINKS = ("threatfox_tag", "attack:software")
+# Tags are the reporter's own attribution: accepted in the review, not judged from evidence,
+# so they stay out of the "judged" precision.
+ACCEPTED_UNJUDGED_LINKS = ("threatfox_tag",)
+# How a "why" line names a link's source, because being in KEV says a CVE is exploited, not
+# that this family exploits it. A CVE cited by several sources is credited to the first
+# listed here, so the counts add up to linked_kev_cves. Wording only: never affects rank.
+WHY_LINK_SOURCES = {
+    "attack:software": "cited by ATT&CK",
+    "threatfox_tag": "tagged on ThreatFox",
+    "mention:reference_page": "cited in reference pages",
+}
 GROWTH_DAYS = 30

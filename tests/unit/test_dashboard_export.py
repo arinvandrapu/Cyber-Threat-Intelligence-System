@@ -248,7 +248,12 @@ def _threats_doc(tier="critical"):
         "summary": {"category_source": {"owner": 51}},
         "review": {
             "labeller": "x",
-            "links": {"precision": {"all": {"n": 36, "correct": 22, "ci95": [0.45, 0.75]}}},
+            "links": {
+                "precision": {
+                    "all": {"n": 36, "correct": 22, "ci95": [0.45, 0.75]},
+                    "judged": {"n": 26, "correct": 12, "ci95": [0.29, 0.65]},
+                }
+            },
         },
     }
 
@@ -265,6 +270,7 @@ def test_build_threats_shows_top_and_linked_families_without_evidence_ids():
     assert "references:abc" not in json.dumps(out)  # no evidence document IDs shipped
     assert out["families"][0]["techniques"] == [{"id": "T1486", "name": "Data Encrypted"}]
     assert out["kev_ransomware_cves"] == 2 and out["review"]["links_correct"] == 22
+    assert out["review"]["links_judged"] == 26 and out["review"]["links_judged_correct"] == 12
     assert out["categories"][0] == {"category": "ransomware", "ioc_rows": 10}
     assert "Rejected only" not in names
     assert out["linked_cves"] == []  # no KEV rows or NVD records passed

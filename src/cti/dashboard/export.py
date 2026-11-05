@@ -847,6 +847,7 @@ def build_threats(
     ]
     review = doc["review"]
     precision = (review["links"].get("precision") or {}).get("all")
+    judged = (review["links"].get("precision") or {}).get("judged")
     return {
         "available": True,
         "snapshot_date": doc["snapshot_date"],
@@ -864,6 +865,9 @@ def build_threats(
             "links_reviewed": precision["n"] if precision else 0,
             "links_correct": precision["correct"] if precision else 0,
             "link_precision_ci95": tuple(precision["ci95"]) if precision else None,
+            "links_judged": judged["n"] if judged else 0,
+            "links_judged_correct": judged["correct"] if judged else 0,
+            "judged_precision_ci95": tuple(judged["ci95"]) if judged else None,
         },
     }
 

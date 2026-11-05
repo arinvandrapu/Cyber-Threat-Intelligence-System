@@ -248,6 +248,9 @@ class ThreatReview(_Model):
     links_reviewed: int
     links_correct: int
     link_precision_ci95: Interval | None
+    links_judged: int  # reviewed links judged from evidence; the rest were accepted as reported
+    links_judged_correct: int
+    judged_precision_ci95: Interval | None
 
 
 class Threats(_Model):
