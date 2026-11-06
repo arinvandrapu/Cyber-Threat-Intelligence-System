@@ -74,3 +74,7 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
 - Any CVE anywhere opens a detail: `kev.json` holds CISA's entry for all 1,756 KEV CVEs
   (`export.build_kev`); `#/queue/<CVE>` shows the ranked detail, else a KEV or NVD card.
   ATT&CK panel CVEs expand inline; Indicators' KEV nodes click through.
+- Overview top (2026-11-05): the three intro cards and four stat tiles became one
+  `.brief` panel, a column per question (CVEs | threats), each holding its own numbers
+  (`<dl class="stats">`, label above value) and button; "how they connect" is the footer
+  strip. Stacks to one column under 760px. `.tile` stays for Threats/Indicators.
