@@ -78,3 +78,7 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   `.brief` panel, a column per question (CVEs | threats), each holding its own numbers
   (`<dl class="stats">`, label above value) and button; "how they connect" is the footer
   strip. Stacks to one column under 760px. `.tile` stays for Threats/Indicators.
+- Overview queue card (2026-11-05): `.row.match` stretches it to the Risk tiers card's
+  height; the top-5 list sits in `.queue-viewport` (relative, min-height 260px) with an
+  absolutely positioned `.queue-scroll`, so the list never sets the row height and scrolls
+  instead. Focusable region for keyboard scrolling.
