@@ -29,58 +29,58 @@ export function Overview({ data }: { data: Data }) {
         lede={<>Two ranked lists from public feeds as of {meta.snapshot_date}: vulnerabilities to fix, and threats to watch.</>}
       />
 
-      <section className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }} aria-label="How this dashboard works">
-        <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span className="label">1 · Vulnerabilities</span>
-          <h2 style={{ margin: 0, fontSize: 17 }}>Which CVEs to fix next</h2>
-          <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            The {int(risk.rows.length)} CVEs ranked likeliest to join CISA KEV, best first.
-          </p>
-          <a href="#/queue" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open risk queue</a>
+      <section className="panel brief" aria-label="How this dashboard works">
+        <div className="brief-col">
+          <div className="brief-head">
+            <h2>Which CVEs to fix next</h2>
+            <p>The {int(risk.rows.length)} CVEs ranked likeliest to join CISA KEV, best first.</p>
+          </div>
+          <dl className="stats">
+            <div className="stat">
+              <dt>CVEs ranked, not in CISA KEV</dt>
+              <dd>{int(risk.ranked_cves)}</dd>
+            </div>
+            <div className="stat">
+              <dt>in the critical tier, top 0.1% by rank</dt>
+              <dd>{int(counts.critical ?? 0)}</dd>
+            </div>
+            <div className="stat">
+              <dt>vs EPSS in the top 100</dt>
+              <dd>{paired ? `${signed(paired.difference_hits, 0)} hits` : "—"}</dd>
+            </div>
+          </dl>
+          {paired && (
+            <p className="brief-note">
+              {`${logisticHits} vs ${epssHits} of ${positives} later KEV additions, over ${Object.keys(evals.risk.folds).length} past test periods (95% CI ${signed(paired.ci95[0], 0)} to ${signed(paired.ci95[1], 0)})`}
+              {epssAp !== undefined && logisticAp !== undefined && epssAp > logisticAp ? ". EPSS has the higher mean average precision." : "."}
+            </p>
+          )}
+          <a href="#/queue" className="pill brief-cta">Open risk queue</a>
         </div>
-        <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span className="label">2 · Threats</span>
-          <h2 style={{ margin: 0, fontSize: 17 }}>Which attackers' tools matter most</h2>
-          <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            {threats.available
-              ? "Active malware and attack tools, with the CVEs linked to them."
-              : "Not built for this snapshot yet."}
-          </p>
-          <a href="#/threats" className="pill" style={{ alignSelf: "flex-start", textDecoration: "none" }}>Open threats</a>
-        </div>
-        <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span className="label">How they connect</span>
-          <h2 style={{ margin: 0, fontSize: 17 }}>Threats explain CVEs</h2>
-          <p className="muted" style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-            A CVE linked to an active threat deserves a closer look. CVEs already in CISA KEV: patch first.
-          </p>
-        </div>
-      </section>
 
-      <section className="grid tiles">
-        <div className="panel tile">
-          <span className="label">CVEs ranked</span>
-          <span className="value">{int(risk.ranked_cves)}</span>
-          <span className="muted">not in CISA KEV</span>
+        <div className="brief-col">
+          <div className="brief-head">
+            <h2>Which attackers' tools matter most</h2>
+            <p>
+              {threats.available
+                ? "Active malware and attack tools, with the CVEs linked to them."
+                : "Not built for this snapshot yet."}
+            </p>
+          </div>
+          <dl className="stats">
+            <div className="stat">
+              <dt>top threat</dt>
+              <dd>{threats.families[0]?.family ?? "—"}</dd>
+            </div>
+          </dl>
+          <p className="brief-note">{threats.families[0]?.why[0] ?? "threat catalog not built"}</p>
+          <a href="#/threats" className="pill brief-cta">Open threats</a>
         </div>
-        <div className="panel tile">
-          <span className="label">Critical tier</span>
-          <span className="value">{int(counts.critical ?? 0)}</span>
-          <span className="muted">top 0.1% by rank</span>
-        </div>
-        <div className="panel tile">
-          <span className="label">vs EPSS, top 100</span>
-          <span className="value">{paired ? `${signed(paired.difference_hits, 0)} hits` : "—"}</span>
-          <span className="muted">
-            {paired ? `${logisticHits} vs ${epssHits} of ${positives} later KEV additions, over ${Object.keys(evals.risk.folds).length} past test periods (95% CI ${signed(paired.ci95[0], 0)} to ${signed(paired.ci95[1], 0)})` : ""}
-            {paired && epssAp !== undefined && logisticAp !== undefined && epssAp > logisticAp ? ". EPSS has the higher mean average precision." : ""}
-          </span>
-        </div>
-        <div className="panel tile">
-          <span className="label">Top threat</span>
-          <span className="value" style={{ fontSize: 22 }}>{threats.families[0]?.family ?? "—"}</span>
-          <span className="muted">{threats.families[0]?.why[0] ?? "threat catalog not built"}</span>
-        </div>
+
+        <p className="brief-foot">
+          <strong>How they connect: threats explain CVEs.</strong> A CVE linked to an active threat deserves a closer look.
+          CVEs already in CISA KEV: patch first.
+        </p>
       </section>
 
       <section className="row">
