@@ -83,7 +83,7 @@ export function Overview({ data }: { data: Data }) {
         </p>
       </section>
 
-      <section className="row">
+      <section className="row match">
         <div className="panel grow">
           <div className="panel-head">
             <h2>Risk tiers</h2>
@@ -131,22 +131,27 @@ export function Overview({ data }: { data: Data }) {
           )}
         </div>
 
-        <div className="panel side">
-          <div className="panel-head"><h2>Top of the queue</h2></div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {top.map((r) => {
-              const driver = Object.entries(r.contributions).sort((a, b) => b[1] - a[1])[0];
-              return (
-                <a key={r.cve} href={cveHref(r.cve)} style={{ textDecoration: "none", color: "var(--text)", display: "grid", gridTemplateColumns: "26px 1fr", gap: "2px 8px", padding: "10px 12px", borderRadius: 8, background: "var(--raised)" }}>
-                  <span className="mono muted" style={{ fontSize: 12.5 }}>{r.rank}</span>
-                  <span className="mono" style={{ fontSize: 13.5, whiteSpace: "nowrap" }}><TierDot tier={r.tier} />{r.cve}</span>
-                  <span />
-                  <span className="muted" style={{ fontSize: 12.5 }}>
-                    top driver: {driver ? FEATURE_LABEL[driver[0]] : "—"} · EPSS {epss(r.epss, r.epss_percentile)}
-                  </span>
-                </a>
-              );
-            })}
+        <div className="panel side queue-card">
+          <div className="panel-head">
+            <h2>Top of the queue</h2>
+            <span className="muted" style={{ fontSize: 12.5 }}>top {top.length} of {int(risk.rows.length)}</span>
+          </div>
+          <div className="queue-viewport">
+            <div className="queue-scroll" tabIndex={0} role="region" aria-label={`Top ${top.length} CVEs in the risk queue`}>
+              {top.map((r) => {
+                const driver = Object.entries(r.contributions).sort((a, b) => b[1] - a[1])[0];
+                return (
+                  <a key={r.cve} href={cveHref(r.cve)} style={{ textDecoration: "none", color: "var(--text)", display: "grid", gridTemplateColumns: "26px 1fr", gap: "2px 8px", padding: "10px 12px", borderRadius: 8, background: "var(--raised)" }}>
+                    <span className="mono muted" style={{ fontSize: 12.5 }}>{r.rank}</span>
+                    <span className="mono" style={{ fontSize: 13.5, whiteSpace: "nowrap" }}><TierDot tier={r.tier} />{r.cve}</span>
+                    <span />
+                    <span className="muted" style={{ fontSize: 12.5 }}>
+                      top driver: {driver ? FEATURE_LABEL[driver[0]] : "—"} · EPSS {epss(r.epss, r.epss_percentile)}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

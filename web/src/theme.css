@@ -70,6 +70,12 @@ main { max-width: 1360px; margin: 0 auto; padding: 28px 32px 56px; display: flex
 .grow { flex: 999 1 640px; min-width: 0; }
 .side { flex: 1 1 360px; min-width: 0; }
 .grid { display: grid; gap: 14px; }
+/* Overview: the queue card takes the Risk tiers card's height and scrolls its list inside it */
+.row.match { align-items: stretch; }
+.queue-card { display: flex; flex-direction: column; }
+.queue-viewport { position: relative; flex: 1 1 auto; min-height: 260px; }
+.queue-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column;
+  gap: 8px; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--edge) transparent; border-radius: 8px; }
 .tiles { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .tile { display: flex; flex-direction: column; gap: 6px; }
 .tile .value { font-family: var(--mono); font-size: 30px; font-weight: 600; }
