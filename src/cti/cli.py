@@ -557,7 +557,8 @@ def cmd_cwe_eval(args, settings: Settings) -> int:
 
 
 def _git_state(here: Path | None = None) -> dict:
-    """The checked-out commit and whether tracked files under src/ differ from it."""
+    """The checked-out commit and whether tracked files under src/ or data/reference/ (the
+    pinned reference data and the owner's label sheets) differ from it."""
     import shutil
     import subprocess
 
@@ -573,8 +574,18 @@ def _git_state(here: Path | None = None) -> dict:
     try:
         return {
             "commit": run("rev-parse", "HEAD"),
-            # ":(top)" anchors the pathspec at the repo root (git runs from src/cti)
-            "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", ":(top)src")),
+            # ":(top)" anchors the pathspec at the repo root (git runs from src/cti); the
+            # label sheets steer `cti threats`, so an uncommitted edit counts (threat model R4)
+            "dirty": bool(
+                run(
+                    "status",
+                    "--porcelain",
+                    "--untracked-files=no",
+                    "--",
+                    ":(top)src",
+                    ":(top)data/reference",
+                )
+            ),
         }
     except (OSError, subprocess.SubprocessError):
         return {"commit": None, "dirty": None}
@@ -1259,14 +1270,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+NOISY_LOGGERS = ("httpx", "httpcore", "botocore", "boto3", "s3transfer", "urllib3")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    # request URLs and redirect headers may carry keys
-    for noisy in ("httpx", "httpcore"):
+    # request URLs and redirect headers may carry keys; botocore's DEBUG output includes
+    # the canonical request and the AWS access-key ID (threat model R6)
+    for noisy in NOISY_LOGGERS:
         logging.getLogger(noisy).setLevel(logging.WARNING)
     try:
         return args.func(args, Settings())

@@ -605,6 +605,26 @@ def test_git_state_sees_changes_under_src(tmp_path):
     assert _git_state(pkg)["dirty"] is True  # the pathspec is anchored at the repo root
 
 
+@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+def test_git_state_sees_edited_label_sheets_but_not_docs(tmp_path):
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    pkg, ref, docs = tmp_path / "src" / "cti", tmp_path / "data" / "reference", tmp_path / "docs"
+    for d in (pkg, ref, docs):
+        d.mkdir(parents=True)
+    (pkg / "mod.py").write_text("x = 1\n")
+    (ref / "threat-links.csv").write_text("cve,ok\n")
+    (docs / "notes.md").write_text("a\n")
+    git("init", "-q")
+    git("-c", "user.email=t@example.com", "-c", "user.name=t", "add", ".")
+    git("-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-qm", "init")
+    (docs / "notes.md").write_text("b\n")
+    assert _git_state(pkg)["dirty"] is False  # docs never make an export dirty
+    (ref / "threat-links.csv").write_text("cve,ok\nCVE-1,yes\n")
+    assert _git_state(pkg)["dirty"] is True
+
+
 def test_build_kev_has_a_card_for_every_kev_cve():
     rows = [
         {
