@@ -12,7 +12,9 @@ Decisions and licence: [[threat-layer]].
 
 - Parsed ThreatFox (family = `malware_printable`, IDs = `fk_malware`), MISP clusters via
   `cti.reference.read_pinned`, ATT&CK docs + raw-bundle `uses` (`attack_catalog.uses`),
-  `cti extract` alias rows, KEV, risk tiers from `data/export/<date>/risk.json`.
+  `cti extract` alias rows, KEV, risk tiers from `data/export/<date>/risk.json`. NVD cards
+  for orphan linked CVEs also read the 2002-2022 archive: `--archive-date` (11d; default
+  the newest reference snapshot, `2026-10-29`; one without an `nvd` feed is refused).
 - Owner sheets in `data/reference/`: `threat-categories-<date>.csv` (blind categories),
   `threat-links-<date>.csv` (every CVE link: yes/no). Both written with `open("x")`.
   A half-filled category sheet is refused, not mixed with MISP labels. A link sheet
@@ -46,7 +48,8 @@ Moved to [[threat-links]] (review results, owner decisions on links, ATT&CK link
 ## Dashboard (10c, 2026-10-29)
 
 - `cti export` reads `data/threats/<date>/threats.json` as an **optional** input (order:
-  export → threats → export); missing → `available: false`; stale tiers → export fails.
+  export → threats → export); missing → `available: false`; stale tiers → threats left out (`stale: true`), the
+  rest written, exit 1 until `cti threats` reruns ([[dashboard-export-facts]]).
 - Ships the priority top `PRIORITY_REVIEW_TOP_N` (export refuses if any is unreviewed)
   + families with a link not reviewed as wrong (none today: 20 shown); no IOC
   values, URLs or evidence doc IDs. Threats view + "Linked threats" in the CVE detail;

@@ -40,7 +40,8 @@ Label chain NVD > CNA > CISA-ADP (other ADPs not used).
   train has more NVD and Patchstack/MITRE. Discouraged share of single labels ~9% train vs
   ~18% test (CWE-284 1.8% → 6%).
 
-## 6b: `cti cwe-eval` (2026-10-27, ≈8 min CPU, `ml` extra only)
+## 6b: `cti cwe-eval` (2026-10-27, ≈8 min CPU, `ml` extra only; 11d adds `provenance`)
+
 
 - Pre-registration: `src/cti/nlp/cwe_config.py` in `2e69e14`; implementation `4f54975`;
   both before any test score. Feasibility was checked on train → dev only. Deviation,

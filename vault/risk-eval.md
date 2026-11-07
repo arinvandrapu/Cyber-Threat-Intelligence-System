@@ -25,7 +25,8 @@ Label: KEV `date_added` in (cutoff, min(next cutoff, 2026-10-23)]. Population: `
 
 ## Pre-registered choices (summary; the config is authoritative)
 
-- Population: published 2024-01-01 → cutoff, not in KEV. Labels: KEV 2026.10.23; last
+- Population: published 2024-01-01 → cutoff, not in KEV. Labels: KEV 2026.10.23 (checked:
+  `cti risk-eval` and `cti export` refuse a snapshot whose KEV `source_version` differs); last
   window ends 2026-10-23 (177 d).
 - Features via `features_at(record, as_of)`: logit EPSS percentile, SSVC (exploitation,
   automatable, total impact), ExploitDB/Metasploit/Nuclei flags (absence = 0), log age

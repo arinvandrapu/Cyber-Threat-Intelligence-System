@@ -422,6 +422,9 @@ cti threats --date 2026-10-26       # categories, ATT&CK techniques, CVE links, 
 cti threats-sheet --date 2026-10-26 --priority  # add priority-top-20 families not yet on the sheet
 #   label them, rerun `cti threats`; repeat until no new family enters the top 20
 cti export --date 2026-10-26        # again, now with threats and the Known exploited order
+#   if tiers change later, export leaves the out-of-date threats out and exits 1:
+#   rerun `cti threats` (it reads the new risk.json), then `cti export`
+#   (`cti threats --archive-date <date>` picks the NVD 2002-2022 archive; default: newest)
 (cd web && npm ci && npm run build) # build the dashboard once (pinned, no install scripts)
 cti serve                           # dashboard at http://127.0.0.1:8000/ (local only)
 cti serve --export-dir web/fixtures # the same dashboard on synthetic data (no pipeline run)

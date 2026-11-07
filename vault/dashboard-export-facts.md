@@ -15,6 +15,11 @@ Split from [[dashboard]] (note length). Counts and sizes from `cti export` on th
   2026-10 (log-age weight; the cap is 365 d). Every critical CVE has a Nuclei template.
 - Shared-host graph drops non-global IP literals (127.0.0.1 linked 24 CVEs); top 30
   hosts, 30 CVEs each (`truncated: true`).
+- Stale threats (11d, schema 3): if tiers changed since `cti threats` read `risk.json`,
+  the export writes every file with threats `available:false, stale:true` (Threats tab says
+  "out of date"; KEV sort drops the threat key) and exits 1 with the recovery commands.
+  Before, it refused before writing, so `cti threats` re-read the old `risk.json`: a loop.
+  The hand-label check on the priority top 20 is still a hard error (only labelling fixes it).
 - Python 3.12+ `http.server` collapses a leading `//` in the path before lookup.
 - Audit (2026-10-28): requests rejected while parsing (414/505/bad request line) used to
   get no reply (`log_message` hit an unset `self.path`) or an HTTP/0.9 bare body; fixed
