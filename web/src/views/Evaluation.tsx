@@ -42,6 +42,7 @@ export function Evaluation({ data }: { data: Data }) {
   return (
     <>
       <PageHead
+        guide="evaluation"
         title="Evaluation"
         lede={`How well each part works, on data it never saw. Risk model: CVEs scored with only what was known at a cutoff, then checked against CISA's KEV additions in the next 180 days (${folds.length} test periods, ${positives} additions).`}
       />

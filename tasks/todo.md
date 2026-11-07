@@ -608,6 +608,23 @@ detection-rule generation, a small hand-labeled evaluation set.
 After Phase 10, before Phase 9 screenshots: dashboard clarity (E3: CVE name, Overview tab descriptions) in
 [future-extensions.md](future-extensions.md). Done 2026-10-29 (CVE names, Overview guide, plain labels).
 
+Dashboard Guide tab (2026-11-07, `feat/guide-tab`; owner approved name "Guide",
+per-tab "How to read this" links, ~1–2 screens per tab, methods link to Evaluation):
+
+- [x] G1 Due diligence: per-view fact briefs (every panel, encoding, caveat) + docs-page UX
+- [x] G2 Plan audit
+- [x] G3 `guide` view last in `VIEWS`; `#/guide/<section>` deep links; sticky sidebar
+      (tabs → panels) with scroll-spy; dropdown under 900px
+- [x] G4 Content per tab: purpose, how to read each panel, how it's computed, caveats,
+      live-number example; Concepts glossary; Data & freshness (`src/guide/sections/`).
+      Overview keeps its own short cards (the Guide intros are longer, so no shared module)
+- [x] G5 "How to read this →" link in each tab's header
+- [x] G6 Smoke marker, build, `npm run check`, screenshots at 1280px and phone width
+- [x] G7 Implementation audit (code) + fact-check audit (every claim vs view code/export):
+      2 scroll-spy fixes; ~40 wording fixes (overclaims on threat coverage, calibration,
+      ATT&CK mapper and IOC precision; wrong SSVC owner, bootstrap and bar-scale details)
+- [x] G8 Vault (`dashboard.md`, `dashboard-web.md`, new `dashboard-guide.md`) + README; open PR (don't merge)
+
 ## Review
 
 As of 2026-11-06 (`main` 51d932c; export re-stamped clean, schema 2; 562 tests).

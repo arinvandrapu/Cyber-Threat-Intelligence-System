@@ -62,6 +62,7 @@ export function RiskLandscape({ data }: { data: Data }) {
   return (
     <>
       <PageHead
+        guide="landscape"
         title="Risk landscape"
         lede="Where the model agrees with EPSS, where it doesn't, and what the top tiers are made of."
       />

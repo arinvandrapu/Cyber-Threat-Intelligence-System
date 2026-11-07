@@ -44,7 +44,7 @@ export function Indicators({ data }: { data: Data }) {
 
   return (
     <>
-      <PageHead title="Indicators" />
+      <PageHead title="Indicators" guide="indicators" />
       <span className="sr-only" aria-live="polite">{copied ? `Copied ${copied}` : ""}</span>
       <div className="warn" role="note">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5c46b" strokeWidth="2" aria-hidden="true" style={{ flex: "none", marginTop: 1 }}>

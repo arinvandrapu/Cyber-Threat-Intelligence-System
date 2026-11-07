@@ -15,7 +15,7 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   is a CVE ID, or a URI-encoded family name (`threatHref`) decoded in try/catch and used
   only if it is a shown family; a KEV CVE under `#/queue/` is `location.replace`d to
   `#/kev/` (11c).
-- `src/views/*`: 9 views (list: [[dashboard]]). Charts and graphs are hand-rolled SVG with deterministic
+- `src/views/*`: 9 views + Guide (list: [[dashboard]]; Guide: [[dashboard-guide]]). Charts and graphs are hand-rolled SVG with deterministic
   layouts (`hash01` jitter): weakness = layered pillar → CWE → CVE; ATT&CK = radial, one
   angular sector per tactic sized by its techniques; shared hosts = ring + inner CVEs.
 - Colours are CSS variables in `src/theme.css` (tiers pink → cherry, KEV orange).

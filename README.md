@@ -38,8 +38,8 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   with reviewed categories, ATT&CK techniques and CVE links. Threats order the Known
   exploited list (every CISA KEV CVE, patch-first) and flag queued CVEs as early
   warnings; they never feed the risk score.
-- **Presents** the results in a local, read-only analyst dashboard (nine views, three
-  relationship graphs) served on 127.0.0.1 under a strict Content-Security-Policy.
+- **Presents** the results in a local, read-only analyst dashboard (nine views plus an in-app
+  guide, three relationship graphs) served on 127.0.0.1 under a strict Content-Security-Policy.
   STIX 2.1 output is *planned*.
 
 ## Architecture
@@ -285,7 +285,7 @@ See [`vault/nlp-design.md`](vault/nlp-design.md).
 ## Analyst dashboard
 
 `cti export` turns the pipeline's outputs into schema-validated JSON, and `cti serve`
-serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
+serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views and a guide:
 
 | View | What an analyst gets |
 |---|---|
@@ -298,6 +298,7 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
 | Indicators | Defanged indicator strings from CVE references, a shared-host graph, abuse.ch aggregates; every CVE they mention opens its record (in the queue, in KEV, or an NVD card saying why it is not in the queue) |
 | Evaluation | The pre-registered decision, recall with CIs against EPSS and baselines, per-fold hits, other pipeline results, data versions, limitations and every disclosure |
+| Guide | How to read every tab in depth: each panel's encodings, how it is built, common misreadings and a worked example from the live export, plus a glossary; every tab links to its section |
 
 Honest by construction: rank and tier only (no fake probabilities), tier hit rates
 labelled as historical, context fields marked as never used by the model, and every
@@ -457,7 +458,7 @@ src/cti/
                      the pre-declared priority rule
   dashboard/         `cti export` (schema-validated dashboard JSON) and `cti serve`
                      (allowlist static server on 127.0.0.1, strict security headers)
-web/                 Vite + React + TypeScript dashboard (9 views, hand-rolled SVG charts),
+web/                 Vite + React + TypeScript dashboard (9 views + guide, hand-rolled SVG charts),
                      synthetic fixture, static and headless-browser checks
 data/reference/      pinned third-party reference data (CTID, CAPEC, MISP galaxy) and the
                      committed review labels

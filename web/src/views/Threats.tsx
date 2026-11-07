@@ -46,7 +46,7 @@ export function Threats({ data, focus }: { data: Data; focus: string | null }) {
   if (!threats.available) {
     return (
       <>
-        <PageHead title="Threats" />
+        <PageHead title="Threats" guide="threats" />
         <div className="panel empty">
           <p>The threat catalog has not been built for this snapshot.</p>
           <pre className="mono note">cti threats --date {data.meta.snapshot_date}{"\n"}cti export --date {data.meta.snapshot_date}</pre>
@@ -63,6 +63,7 @@ export function Threats({ data, focus }: { data: Data; focus: string | null }) {
   return (
     <>
       <PageHead
+        guide="threats"
         title="Threats"
         lede="Active malware and attack tools, ranked by the CVEs linked to them and how active they are. Each row says why."
       />
