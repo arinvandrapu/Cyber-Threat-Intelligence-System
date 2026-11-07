@@ -224,7 +224,7 @@ function SharedHosts({ graph }: { graph: Graph }) {
             <circle key={c.n.id} className="hit" cx={c.x} cy={c.y} r={c.hosts.length > 1 ? 5 : 3.8} fill={fill} stroke="var(--bar)" strokeWidth="1.5"
               opacity={picked === null || linked(c.hosts) ? 1 : 0.3}
               onClick={() => openCve(c.n.id)}
-              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue)" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not scored (published before 2024)"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
+              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue) · click for its record" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not scored · click for its record"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
           );
         })}
         {layout.hosts.map((h) => {
@@ -263,10 +263,10 @@ function IndicatorCves({ cves, total }: { cves: string[]; total: number }) {
       ))}
       {cves.length > 2 && (
         <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "show fewer" : `+${total - 2} more`}
+          {open ? "show fewer" : `+${cves.length - 2} more${total > cves.length ? ` (+${total - cves.length} not exported)` : ""}`}
         </button>
       )}
-      {(open || cves.length <= 2) && total > cves.length && <span className="faint">+{total - cves.length} not exported</span>}
+      {cves.length <= 2 && total > cves.length && <span className="faint">+{total - cves.length} not exported</span>}
     </span>
   );
 }

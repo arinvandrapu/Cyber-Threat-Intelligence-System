@@ -105,6 +105,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const focusCard = focus
     ? data.threats.linked_cves.find((k) => k.cve === focus) ?? data.kev.entries.find((k) => k.cve === focus)
     : undefined;
+  const queueVendors = useMemo(() => risk.rows.map((r) => r.context.vendor), [risk.rows]);
   const record = notRanked && !focusCard ? data.cves.entries.find((c) => c.cve === focus) : undefined;
   const reset = () => setPage(0);
 
@@ -154,7 +155,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
             </svg>
             <span className="sr-only">Search CVE, CWE, vendor, product or assigner</span>
             <input type="search" placeholder="CVE, CWE, vendor, product…" list="queue-vendors" value={query} onChange={(e) => { setQuery(e.target.value); reset(); }} />
-            <VendorList id="queue-vendors" vendors={risk.rows.map((r) => r.context.vendor)} />
+            <VendorList id="queue-vendors" vendors={queueVendors} />
           </label>
           <button type="button" className="pill" aria-pressed={evidenceOnly} onClick={() => { setEvidenceOnly(!evidenceOnly); reset(); }}>
             Exploit evidence only

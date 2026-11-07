@@ -1042,6 +1042,15 @@ def referenced_cves(files: dict[str, dict]) -> set[str]:
     return out
 
 
+def _scored_status(cve: str, tiers: dict[str, str]) -> str:
+    """A carded CVE has no queue row, so if scored it must be baseline; check, don't assume."""
+    if cve not in tiers:
+        return "not_scored"
+    if tiers[cve] != "baseline":
+        raise ValueError(f"{cve} is in tier {tiers[cve]} but has no queue row")
+    return "below_queue"
+
+
 def build_cve_cards(
     files: dict[str, dict], nvd_rows: Iterable[dict], tiers: dict[str, str], cwe_names: dict
 ) -> dict:
@@ -1064,7 +1073,7 @@ def build_cve_cards(
         cwes = [{"id": c, "name": cwe_names.get(c)} for c in m.get("cwes", [])]
         cards[cve] = {
             "cve": cve,
-            "status": "below_queue" if cve in tiers else "not_scored",
+            "status": _scored_status(cve, tiers),
             "name": defang_text(derived_name(affected, cwes, m.get("cwe_assignments", [])) or "")
             or None,
             **_vendor_product(affected),

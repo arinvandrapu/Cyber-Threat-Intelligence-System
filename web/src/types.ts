@@ -7,7 +7,7 @@ export type Interval = [number, number];
 // ---- meta.json ----
 
 export interface Meta {
-  schema_version: 1;
+  schema_version: 2;
   snapshot_date: string;
   as_of_dates: Record<string, string>;
   kev_catalog_version: string;

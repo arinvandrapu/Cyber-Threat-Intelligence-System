@@ -35,8 +35,8 @@ export async function loadAll(): Promise<Data> {
     Object.entries(FILES).map(async ([key, file]) => [key, await load(file)] as const),
   );
   const data = Object.fromEntries(entries) as unknown as Data;
-  if (data.meta?.schema_version !== 1) {
-    throw new DataError("export schema version is not 1; rebuild the dashboard or re-export");
+  if (data.meta?.schema_version !== 2) {
+    throw new DataError("export schema version is not 2; rebuild the dashboard or re-run `cti export`");
   }
   if (!Array.isArray(data.risk?.rows) || !Array.isArray(data.iocs?.indicators)) {
     throw new DataError("export files are incomplete; re-run `cti export`");

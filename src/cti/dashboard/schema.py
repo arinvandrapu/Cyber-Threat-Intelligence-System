@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA = 1
+SCHEMA = 2  # 2: cves.json, context.vendor/product (11c)
 Tier = Literal["critical", "high", "elevated", "baseline"]
 Interval = tuple[float, float]
 
@@ -24,7 +24,7 @@ class _Model(BaseModel):
 
 
 class Meta(_Model):
-    schema_version: Literal[1] = SCHEMA
+    schema_version: Literal[2] = SCHEMA
     snapshot_date: str
     as_of_dates: dict[str, str]
     kev_catalog_version: str

@@ -474,7 +474,7 @@ def build() -> dict[str, dict]:
     evals["sources_sha256"] = {n: "0" * 64 for n in export.EVALS}
     versions = export.epss_versions(recs)
     meta = {
-        "schema_version": 1,
+        "schema_version": export.schema.SCHEMA,
         "snapshot_date": DATES["snapshot"],
         "as_of_dates": DATES,
         "kev_catalog_version": "fixture",
@@ -503,13 +503,14 @@ def build() -> dict[str, dict]:
         "threats.json": threats,
         "kev.json": export.build_kev([kev_row, *_extra_kev_rows()], threats["families"]),
     }
+    tiers = export.tier_lookup(scored)
     files["cves.json"] = export.build_cve_cards(
-        files, _nvd_rows(files), export.tier_lookup(scored), {"CWE-78": "OS Command Injection"}
+        files, _nvd_rows(files, set(tiers)), tiers, {"CWE-78": "OS Command Injection"}
     )
     return export.validate(files)
 
 
-def _nvd_rows(files: dict[str, dict]) -> list[dict]:
+def _nvd_rows(files: dict[str, dict], scored: set[str]) -> list[dict]:
     """Synthetic NVD records for the CVEs the fixture references without a detail, all but
     the last, so the cards show both a record and the "no record" case."""
     detail = {r["cve"] for r in files["risk.json"]["rows"]}
@@ -520,7 +521,8 @@ def _nvd_rows(files: dict[str, dict]) -> list[dict]:
         {
             "source_id": cve,
             "text": "Synthetic fixture: an example flaw.",
-            "published": "2023-06-01T00:00:00",
+            # scored CVEs were published inside the window; the rest before it
+            "published": "2024-06-01T00:00:00" if cve in scored else "2023-06-01T00:00:00",
             "metadata": {
                 "affected": [{"vendor": "Example Vendor", "product": "Example Product"}],
                 "cwes": ["CWE-78"],

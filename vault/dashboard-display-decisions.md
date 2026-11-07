@@ -58,5 +58,7 @@ changed. Context: [[dashboard]], [[dashboard-web]], [[risk-eval]],
 - Queue rows: `context.vendor`/`product` (first affected entry, defanged); search +
   vendor `<datalist>` on Risk queue and Known exploited.
 - UUID assigners: "CNA (ID xxxxxxxx…)" (owner: no outside name map).
+- Schema version 2 (new required `cves.json` + context fields): an old export fails
+  with "re-run `cti export`". Export asserts every carded scored CVE is baseline.
 - MimiKatz: the labels CSV note isn't in the export; view says "none of the categories
   fits" rather than hard-coding the family.
