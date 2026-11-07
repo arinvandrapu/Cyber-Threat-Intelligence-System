@@ -646,25 +646,32 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       (access-key ID, not the secret); ATLAS AML.T0010 = "AI Supply Chain Compromise",
       .003 = Model (MITRE page); D3FEND D3-OTF = Outbound Traffic Filtering (only D3FEND ID
       cited; file-hash ID unconfirmed on MITRE's site, so left out)
-    - [ ] T1 `docs/threat-model.md` (~3–4 pages), headings = Shostack's four questions:
+    - [x] T1 `docs/threat-model.md` (~3–4 pages), headings = Shostack's four questions:
           scope + data assets (snapshot, scraped HTML, model weights, AWS key, abuse.ch key,
           export, review CSVs); Mermaid DFD (`flowchart LR`, trust boundaries as subgraphs,
           flow IDs F1…; ~15 nodes; no HTML labels); assumptions + out of scope (single
           trusted operator, host not compromised, AWS root secured, no physical, live AWS
           state not re-verified in this review)
-    - [ ] T2 STRIDE per boundary-crossing flow: threat table ~14 rows: ID | flow/element |
+    - [x] T2 STRIDE per boundary-crossing flow: threat table ~14 rows: ID | flow/element |
           STRIDE | threat (project-specific) | ATT&CK/ATLAS/CWE/CAPEC (only IDs verified) |
           control | evidence (file:line or test) | L | I | residual | decision. Qualitative
           L×I with a stated key. Top 3 risks in prose
-    - [ ] T3 Accepted / open residual risks from the 14 gaps, each with a proposed decision
+    - [x] T3 Accepted / open residual risks from the 14 gaps, each with a proposed decision
           (accept + why, or "planned" with a trigger); owner reviews in the PR
-    - [ ] T4 Validation: which controls are tested (test names) vs config-only vs
+    - [x] T4 Validation: which controls are tested (test names) vs config-only vs
           unverified (live AWS); review date + commit; re-review triggers
-    - [ ] T5 Link from README (security section / skills), `docs/architecture.md` (replace
+    - [x] T5 Link from README (security section / skills), `docs/architecture.md` (replace
           "planned"), vault note `threat-model.md` + index; handoff; hub
-    - [ ] Verify: every file:line and test name in the doc checked by a script (paths
-          exist, line ranges in range, tests exist); Mermaid renders on GitHub (PR
-          preview); plan audit before T1, implementation audit before the PR
+    - Plan audit applied: cite `file::symbol` / tests (no line numbers), committed check
+      `tests/unit/test_threat_model_refs.py`; attacker profiles A1–A6; asset classes; split
+      table + controls list; inherent → residual with a concrete key; ID fixes (CWE-346,
+      mitigated CWE-611/776/502, CWE-770, CWE-1333 unverified; ATT&CK v20 checked); two
+      gaps fixed (R6 loggers, R4 `_git_state` watches `data/reference/`); architecture
+      "Security boundaries" shrunk to a summary + link. Details: `vault/threat-model.md`
+    - [x] Verify: pytest (596), ruff, citation check; implementation audit applied (5
+          required: logging test, 25/43 headline, deadline and lxml wording, rating grid
+          + residual R; most optional: T15, R13, upload node, checker hardening). Mermaid
+          render checked in the PR preview
   - [ ] 9.3 STIX 2.1 export (bundle of vulnerabilities, malware, relationships; validated)
   - [ ] 9.4 SBOM (Python + npm) and dashboard screenshots from real data (abuse.ch panel
         cropped per licence)

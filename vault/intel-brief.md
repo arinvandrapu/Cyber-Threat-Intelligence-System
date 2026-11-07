@@ -55,5 +55,5 @@ the committed sample. Regenerate both after any export change ([[dashboard-expor
 **Gotcha:** any re-stamp of the export (even from an uncommitted tree) changes `meta.json`
 and so the hash: the sample then fails `--check`. Order: commit code, `cti export` (clean),
 `cti report --out docs/sample-intel-brief.md`, commit docs (`_git_state` watches `src/`
-only, so a docs commit keeps the stamp clean). Re-stamping after every merge now also
+and `data/reference/` only, so a docs commit keeps the stamp clean). Re-stamping after every merge now also
 means regenerating the sample in the same PR.

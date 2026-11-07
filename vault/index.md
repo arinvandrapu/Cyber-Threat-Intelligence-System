@@ -30,6 +30,7 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   127.0.0.1 with strict CSP, nine views (incl. Threats, Known exploited), a Guide tab and three relationship graphs
 - [[dashboard-guide]] — Guide tab: section routing, scroll-spy, live-number content, no-URL rule
 - [[intel-brief]] — Phase 9.1 `cti report`: brief structure, CTI conventions, wording rules, golden test, `--check`
+- [[threat-model]] — Phase 9.2 STRIDE model: structure, verified MITRE IDs, cite-by-symbol rule, gaps
 - [[dashboard-export-facts]] — export counts and sizes on the 2026-10-26 snapshot
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
