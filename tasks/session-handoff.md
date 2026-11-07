@@ -34,7 +34,7 @@
 | Overview redesign + queue card scroll | ✅ merged | #42, #43 |
 | 12. Connect threats to what to patch (Known exploited view, queue threat badge, Overview) | ✅ merged | #44 |
 | 11c. Dashboard (UI fixes; scored vs queue terms, NVD cards, vendor search; Evaluation grid) | ✅ merged, re-stamped (export at `51d932c`, clean, schema 2) | #45, #46, #47 |
-| 11b. Docs catch-up | in review | `docs/11b-catch-up` |
+| 11b. Docs catch-up | ✅ merged, export re-stamped at `1382819` (clean) | #48 |
 | **11d. Robustness + hygiene** | **⏭ next** | — |
 | 9. Security deliverables + polish | after 11 | — |
 
@@ -46,9 +46,14 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 2. After any merge that changes export code: `cti export --date 2026-10-26` from clean `main`
    and check `meta.json` shows `dirty: false` (restart `cti serve`; it builds its file
    allowlist at startup).
-3. Next: 11d robustness/hygiene (one PR), then Phase 9, starting with the sample intel
-   report (the clearest demonstration of the problem statement).
-4. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
+3. **Next: 11d robustness/hygiene** (`tasks/todo.md` → 11d, incl. "How to run it"):
+   due diligence on `main` first, then plan audit; ask the owner MIT vs Apache-2.0 for the
+   LICENSE; one or two PRs (LICENSE + CI hashed locks + scraper hardening; export/threats
+   recovery + KEV version check + refactors). Re-stamp and smoke after export/scraper changes.
+4. **Then Phase 9**, one PR per item, in order (`tasks/todo.md` → 9): 9.1 sample intel
+   report (first: it shows the problem statement answered), 9.2 STRIDE threat model, 9.3
+   STIX 2.1 export, 9.4 SBOM + screenshots, 9.5 limitations + final README.
+5. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
    are at the end of Phase 11 in `tasks/todo.md`.
 
 ## Phase 3 result (2026-10-26)

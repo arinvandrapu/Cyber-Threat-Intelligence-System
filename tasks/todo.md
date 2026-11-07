@@ -496,6 +496,13 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           for `nvd._affected`, `attack_eval._per_cve`; move orchestration out of `cli.py`
           (cmd_threats 142 lines, cmd_attack_eval2 105, build_parser 156); embed.py pooling
           test with a fake model
+    - [x] Docs: `tasks/session-handoff.md` row "11b in review" → merged #48 (#49)
+    - **How to run it (next session)**: branch `chore/11d-robustness` from `main`; due
+      diligence first (re-check each item on `main`, several were written 2026-10-29);
+      plan audit; owner picks the LICENSE (MIT vs Apache-2.0) before it is added. Split
+      into two PRs if large: (a) LICENSE + CI locks + scraper hardening, (b) export/threats
+      recovery, KEV version check, quality refactors. Any change to `cti export` or the
+      scraper: rerun tests, re-stamp the export from clean `main`, smoke both exports.
 
 - [x] **12. Connect threats to what to patch** *(merged #44)* *(from the 2026-11-06 problem-statement
       review; finding: `vault/threat-queue-overlap.md`)* — 47 of 53 threat links point at
@@ -547,7 +554,18 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
 
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
-      limitations section, final README.
+      limitations section, final README. Order (owner, 2026-11-06), one PR each:
+  - [ ] 9.1 **Sample intel report** first: a short analyst brief generated from the export
+        (patch-now KEV CVEs in the Known exploited order, queue CVEs likeliest next, early
+        warnings, top threats, each with its "why" and the honest limits). The clearest
+        demonstration of the problem statement; numbers read from the export, not typed
+  - [ ] 9.2 STRIDE threat model of the pipeline (ingest/scraper, storage/S3, export,
+        `cti serve`, browser) with the controls already built and the gaps
+  - [ ] 9.3 STIX 2.1 export (bundle of vulnerabilities, malware, relationships; validated)
+  - [ ] 9.4 SBOM (Python + npm) and dashboard screenshots from real data (abuse.ch panel
+        cropped per licence)
+  - [ ] 9.5 Limitations section and final README pass (recruiter-facing: problem, skills,
+        how to run, what it demonstrates)
 
 Stretch (only if time allows): relation extraction,
 detection-rule generation, a small hand-labeled evaluation set.
