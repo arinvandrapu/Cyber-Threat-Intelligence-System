@@ -6,7 +6,8 @@ moves, and where it is stored. The reasoning behind each choice is in
 
 > Built: Phases 0–8 (ingest through the local dashboard), 10 (threat layer and the
 > ATT&CK mapping re-test), 12 (the Known exploited view), and the 11a and 11c review fixes.
-> Phase 9 (STIX 2.1, threat model, polish) is next. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
+> Phase 9: the analyst brief (9.1) and the [threat model](threat-model.md) (9.2) are
+> built; STIX 2.1 and polish are next. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
 
 ## Overview
 
@@ -127,27 +128,16 @@ NVD analyzes KEV-listed CVEs first, so those NVD fields are biased toward the la
 
 ## Security boundaries
 
-```mermaid
-flowchart LR
-    U[Untrusted input<br/>feed data, CVE reference URLs,<br/>live IOCs] --> F[SafeFetcher<br/>http/https · 80/443 · public IPs only<br/>IP pinning · per-hop redirect checks]
-    F --> L[Local snapshot]
-    L -->|cti IAM user:<br/>Get/Put/List one bucket,<br/>no delete, no overwrite| S[(S3: Block Public Access,<br/>SSE-S3, TLS-only, versioned)]
-```
-
-- **Untrusted URLs.** Reference URLs come from public CVE records, so the scraper
-  validates every hop and connects to the validated IP to defeat DNS rebinding and SSRF
-  (`http/safe_fetch.py`, `vault/ssrf-safe-fetching.md`). robots.txt is honored.
-- **Malicious content.** IOCs are defanged for display (`hxxp://evil[.]com`); the gold set
-  keeps unmodified text privately because entity offsets index into it.
-- **Secrets.** Typed settings from `CTI_*` env vars; keys are `SecretStr`; the abuse.ch
-  key (which must go in the URL path) is redacted from manifests and errors.
-- **Cloud.** One private bucket; a dedicated `cti` IAM user that cannot delete and cannot
-  PUT without `If-None-Match` (except the manifest, which the code replaces only
-  by a compare-and-swap `If-Match` write). AWS Budgets alert at $5/month.
-  Setup: [`infra/README.md`](../infra/README.md).
-- **Supply chain.** Hash-pinned dependencies (`requirements.lock`, installed with
-  `--require-hashes`), pip-audit, gitleaks, GitHub Actions pinned by commit SHA, and
-  checkouts that keep no Git credentials (`persist-credentials: false`) in CI.
+The full STRIDE analysis (assets, trust boundaries, attacker profiles, threats with
+their controls and tests, residual risks) is in [threat-model.md](threat-model.md). In
+short: untrusted URLs go only through the SSRF-safe fetcher; feed content is defanged
+and rendered as text under a strict CSP; secrets are typed, redacted and kept out of
+logs; the archive is write-once in a private, TLS-only bucket reached by a least-privilege
+IAM user, with an AWS Budgets alert at $5/month; and every dependency, Action and model
+is pinned by hash or commit. The gold set keeps its text unmodified (privately) because
+entity offsets index into it. Details: SSRF controls in
+[`vault/ssrf-safe-fetching.md`](../vault/ssrf-safe-fetching.md); bucket and IAM setup in
+[`infra/README.md`](../infra/README.md).
 
 ## Code map
 

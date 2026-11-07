@@ -639,6 +639,39 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
     - [x] Verify: pytest (592), ruff; brief read end to end; implementation audit applied (8 required + most optional); CI on the PR
   - [ ] 9.2 STRIDE threat model of the pipeline (ingest/scraper, storage/S3, export,
         `cti serve`, browser) with the controls already built and the gaps
+    - Due diligence 2026-11-07: internal inventory (~40 controls with file:line, 14 gaps);
+      external (Shostack 4 questions, OWASP cheat sheet, STRIDE-per-interaction, qualitative
+      L×I, no DREAD, no CVSS for design threats). Verified myself: httpx strips
+      `Authorization` on cross-origin redirects; botocore DEBUG logs the canonical request
+      (access-key ID, not the secret); ATLAS AML.T0010 = "AI Supply Chain Compromise",
+      .003 = Model (MITRE page); D3FEND D3-OTF = Outbound Traffic Filtering (only D3FEND ID
+      cited; file-hash ID unconfirmed on MITRE's site, so left out)
+    - [x] T1 `docs/threat-model.md` (~3–4 pages), headings = Shostack's four questions:
+          scope + data assets (snapshot, scraped HTML, model weights, AWS key, abuse.ch key,
+          export, review CSVs); Mermaid DFD (`flowchart LR`, trust boundaries as subgraphs,
+          flow IDs F1…; ~15 nodes; no HTML labels); assumptions + out of scope (single
+          trusted operator, host not compromised, AWS root secured, no physical, live AWS
+          state not re-verified in this review)
+    - [x] T2 STRIDE per boundary-crossing flow: threat table ~14 rows: ID | flow/element |
+          STRIDE | threat (project-specific) | ATT&CK/ATLAS/CWE/CAPEC (only IDs verified) |
+          control | evidence (file:line or test) | L | I | residual | decision. Qualitative
+          L×I with a stated key. Top 3 risks in prose
+    - [x] T3 Accepted / open residual risks from the 14 gaps, each with a proposed decision
+          (accept + why, or "planned" with a trigger); owner reviews in the PR
+    - [x] T4 Validation: which controls are tested (test names) vs config-only vs
+          unverified (live AWS); review date + commit; re-review triggers
+    - [x] T5 Link from README (security section / skills), `docs/architecture.md` (replace
+          "planned"), vault note `threat-model.md` + index; handoff; hub
+    - Plan audit applied: cite `file::symbol` / tests (no line numbers), committed check
+      `tests/unit/test_threat_model_refs.py`; attacker profiles A1–A6; asset classes; split
+      table + controls list; inherent → residual with a concrete key; ID fixes (CWE-346,
+      mitigated CWE-611/776/502, CWE-770, CWE-1333 unverified; ATT&CK v20 checked); two
+      gaps fixed (R6 loggers, R4 `_git_state` watches `data/reference/`); architecture
+      "Security boundaries" shrunk to a summary + link. Details: `vault/threat-model.md`
+    - [x] Verify: pytest (596), ruff, citation check; implementation audit applied (5
+          required: logging test, 25/43 headline, deadline and lxml wording, rating grid
+          + residual R; most optional: T15, R13, upload node, checker hardening). Mermaid
+          render checked in the PR preview
   - [ ] 9.3 STIX 2.1 export (bundle of vulnerabilities, malware, relationships; validated)
   - [ ] 9.4 SBOM (Python + npm) and dashboard screenshots from real data (abuse.ch panel
         cropped per licence)
