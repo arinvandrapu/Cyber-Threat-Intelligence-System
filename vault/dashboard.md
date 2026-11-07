@@ -62,10 +62,9 @@ Status 2026-10-28: PR 1 (`cti export`, `cti serve`, #27) merged; PR 2 (`web/`) b
 
 ## Views (dark theme)
 
-1. Overview · 2. Risk queue · 3. Risk landscape (charts) · 4. Weakness graph
-(pillar → CWE → CVE, [[cwe-classification]]) · 5. ATT&CK graph (KEV CVE →
-technique → tactic, CTID, [[attack-mapping]]) · 6. Indicators (shared-host graph)
-· 7. Evaluation.
+Overview · Known exploited ([[known-exploited-view]]) · Risk queue · Threats · Risk
+landscape · Weakness graph ([[cwe-classification]]) · ATT&CK graph (CTID,
+[[attack-mapping]]) · Indicators (shared-host graph) · Evaluation: 9 views.
 
 Colour: neutral black surfaces; tiers on one ordinal pink → cherry-red ramp (more red = higher risk); model blue, EPSS aqua, KEV CVEs in the ATT&CK graph orange #f59a23 (CVD-validated). Brand: "CTI Console".
 

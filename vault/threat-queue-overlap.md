@@ -37,9 +37,9 @@ Finding 2026-11-06 (snapshot 2026-10-26). Sources: [[threat-links]], [[threat-ca
 - A threat link on a queued CVE is an early-warning signal (exploitation evidence before
   CISA lists it), not a ranking input: threats never feed the risk score.
 
-## Proposed fixes (not yet approved or built)
+## Fixes (Phase 12, approved 2026-11-06)
 
-1. KEV triage view: rank KEV CVEs by ransomware use + linked active threats (the join
-   that actually exists).
-2. "Linked to a threat" badge + filter in the queue (11c optional item).
-3. Rewrite Overview "How they connect" to match the counts above.
+1. Built (12.1): KEV triage view, [[known-exploited-view]]. 26 KEV CVEs are linked by a
+   link that counts (not 30: 4 have only rejected links).
+2. Next (12.2): "Linked to a threat" badge + filter in the queue (11c optional item).
+3. Then (12.3): rewrite Overview "How they connect" to match the counts above.
