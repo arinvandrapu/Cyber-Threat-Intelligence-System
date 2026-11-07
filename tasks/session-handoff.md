@@ -52,9 +52,12 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 3. **Phase 9**, one PR per item, in order (`tasks/todo.md` → 9): 9.1 sample intel brief
    (owner: Markdown in `docs/`; plan B1–B5 in todo), 9.2 STRIDE threat model, 9.3 STIX 2.1
    export, 9.4 SBOM + screenshots, 9.5 limitations + final README.
-4. Local venvs predating #50 need the hashed reinstall (README Setup) to get setuptools.
+4. **The export and `docs/sample-intel-brief.md` are coupled** (9.1): the brief states the
+   export's SHA-256. Re-stamping the export means regenerating the sample in the same PR
+   (`vault/intel-brief.md` → Gotcha); check with `cti report --check docs/sample-intel-brief.md`.
+5. Local venvs predating #50 need the hashed reinstall (README Setup) to get setuptools.
    If `cti export` exits 1 with "threats … older risk.json": rerun `cti threats`, then export.
-5. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
+6. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
    are at the end of Phase 11 in `tasks/todo.md`.
 
 ## Phase 3 result (2026-10-26)
