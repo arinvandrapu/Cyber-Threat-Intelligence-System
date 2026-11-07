@@ -17,7 +17,7 @@ export const TIER_BAND: Record<Tier, string> = {
 export const FEATURE_LABEL: Record<string, string> = {
   epss_logit: "EPSS percentile",
   epss_missing: "No EPSS score",
-  ssvc_exploitation: "SSVC: exploited",
+  ssvc_exploitation: "SSVC: PoC / exploited",
   ssvc_automatable: "SSVC: automatable",
   ssvc_total_impact: "SSVC: full-control impact",
   ssvc_missing: "No SSVC assessment",

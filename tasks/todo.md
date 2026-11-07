@@ -380,7 +380,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
             print "+0.57" for a −0.57 weight) and no "≈ 0" (a −0.01 weight still
             contributes −0.19 on 90 rows; hiding it would misstate bars that add up).
             Instead: age label "Age (older ranks lower)", which reads right for both the
-            weight and a contribution; a queue note when ExploitDB or "SSVC: exploited"
+            weight and a contribution; a queue note when ExploitDB or "SSVC: PoC / exploited"
             pulls down; Landscape caption: bar = refit today, bracket = tested fold, why
             weights move; README/vault "recency" → "age"
       - [x] SSVC in plain words: header "Exploited? · Automatable? · Impact"; none→no,

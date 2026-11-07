@@ -180,7 +180,9 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
                   <th>CVE</th>
                   <th>Tier</th>
                   {header("epss", "EPSS")}
-                  <th className="ssvc" title="CISA's SSVC assessment: exploited (no / PoC / yes) · automatable · technical impact (partial / full control)">Exploited? · Automatable? · Impact</th>
+                  <th className="ssvc" title="CISA's SSVC assessment: exploited (no / PoC / yes) · automatable · technical impact (partial / full control)">
+                    SSVC<span className="th-sub">exploited · automatable · impact</span>
+                  </th>
                   <th>Exploit evidence</th>
                   {header("age", "Age")}
                   {header("cvss", "CVSS (NVD, else CNA)", "ctx")}
@@ -274,7 +276,7 @@ function Detail({
         </span>
         {contrib.some(([f, v]) => (f === "exploitdb" || f === "ssvc_exploitation") && v < 0) && (
           <span className="muted" style={{ fontSize: 12 }}>
-            A small minus on ExploitDB or "SSVC: exploited" doesn't mean exploit evidence lowers risk: once Metasploit,
+            A small minus on ExploitDB or "SSVC: PoC / exploited" doesn't mean exploit evidence lowers risk: once Metasploit,
             Nuclei and EPSS are counted these signals add almost nothing (weights near zero), and because they are rare, a
             near-zero weight can still show as a visible bar.
           </span>

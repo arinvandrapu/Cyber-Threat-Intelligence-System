@@ -158,7 +158,7 @@ export function Threats({ data, focus }: { data: Data; focus: string | null }) {
             const filterable = categories.includes(c.category);
             return (
               <div key={c.category} className="bar-row">
-                <span className={filterable ? undefined : "faint"}>{c.category}</span>
+                <span style={filterable ? undefined : { color: "var(--faint)" }}>{c.category}</span>
                 <span className="bar-track" aria-hidden="true">
                   <span className="bar-fill" style={{ width: `${(100 * c.ioc_rows) / maxRows}%`, background: filterable ? undefined : "var(--edge)" }} />
                 </span>
@@ -290,7 +290,7 @@ export function LinkRow({ link: l, label, card, href }: { link: ThreatLink; labe
         {/* a queued CVE opens in the risk queue; anything else expands in place */}
         {!label && l.tier ? <a className="mono" href={cveHref(l.cve)}>{l.cve}</a> : label && href ? <a href={href}>{label}</a> : toggle}
         {((!label && l.tier) || (label && href)) && (
-          <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)} title={detail}>
+          <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)} title={detail} aria-label={`Details for ${label ?? l.cve}`}>
             {open ? "▾" : "▸"}
           </button>
         )}
