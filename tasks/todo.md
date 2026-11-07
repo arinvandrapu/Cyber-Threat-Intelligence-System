@@ -387,10 +387,6 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           for `nvd._affected`, `attack_eval._per_cve`; move orchestration out of `cli.py`
           (cmd_threats 142 lines, cmd_attack_eval2 105, build_parser 156); embed.py pooling
           test with a fake model
-  - Interview prep (no code): +4/68 holds at every budget (5–1 @50, 6–2 @100, 8–6 @200,
-    11–7 @300, 16–12 @500); EPSS wins mean AP; last-fold EPSS AUC 0.41 (one positive
-    had no EPSS, ranked last); refit vs tested weights; SSVC exploitation weight ≈ 0;
-    "isn't this just recency?" → no-EPSS ablation + age cap.
 
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
