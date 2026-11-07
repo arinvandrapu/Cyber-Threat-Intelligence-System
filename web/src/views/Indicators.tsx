@@ -208,7 +208,7 @@ function SharedHosts({ graph }: { graph: Graph }) {
           <span><TierDot tier="elevated" />elevated</span>
           <span><TierDot tier="baseline" />baseline (below the queue)</span>
           <span><span className="dot" style={{ background: "var(--kev)" }} />in KEV</span>
-          <span><span className="dot" style={{ background: "var(--other)" }} />not ranked</span>
+          <span><span className="dot" style={{ background: "var(--other)" }} />not scored</span>
         </div>
       </div>
       {tip.node}
@@ -227,7 +227,7 @@ function SharedHosts({ graph }: { graph: Graph }) {
             <circle key={c.n.id} className="hit" cx={c.x} cy={c.y} r={c.hosts.length > 1 ? 5 : 3.8} fill={fill} stroke="var(--bar)" strokeWidth="1.5"
               opacity={picked === null || linked(c.hosts) ? 1 : 0.3}
               onClick={() => openCve(c.n.id)}
-              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue)" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not ranked"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
+              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue)" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not scored (published before 2024)"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
           );
         })}
         {layout.hosts.map((h) => {

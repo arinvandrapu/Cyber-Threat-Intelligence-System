@@ -189,7 +189,7 @@ export function Evaluation({ data }: { data: Data }) {
         <ul className="plain" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "8px 32px" }}>
           <li>KEV is a lagging, incomplete label: exploited-but-unlisted CVEs count as misses.</li>
           <li>{positives} positives: one hit is about {pct(1 / positives)} of recall, so only large gains are detectable.</li>
-          <li>Only CVEs published inside the NVD window are ranked; older CVEs are out of scope.</li>
+          <li>Only CVEs published inside the NVD window are scored; older CVEs are out of scope.</li>
           <li>Exploratory results (no-EPSS ablation, text features) are not shown as findings.</li>
           <li>ATT&amp;CK and CWE ground truths have known biases (KEV-only mappings; assigner-dependent labels).</li>
         </ul>

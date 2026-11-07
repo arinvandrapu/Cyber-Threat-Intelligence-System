@@ -93,7 +93,7 @@ class Coefficient(_Model):
 
 class Risk(_Model):
     snapshot_date: str
-    ranked_cves: int
+    ranked_cves: int  # every CVE scored (given a tier); the queue is `rows`
     tiers: list[TierCount]
     rows: list[RiskRow]  # critical, high and elevated only
     coefficients: list[Coefficient]

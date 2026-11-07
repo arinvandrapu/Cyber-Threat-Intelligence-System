@@ -518,7 +518,12 @@ def test_disclosures_are_derived():
     versions = {"cutoff4": ["v1"], "cutoff": ["v2"], "snapshot": ["v3"]}
     text = " ".join(export.disclosures(versions, 88 / 262612, folds, 5, 10, -0.5725))
     assert "0.034% prevalence" in text and "2025-05-04 to 2026-10-23" in text
-    assert "v3" in text and "v1 and v2" in text and "5 of the 10 tiered" in text and "-0.57" in text
+    assert (
+        "v3" in text
+        and "v1 and v2" in text
+        and "5 of the 10 CVEs in the queue" in text
+        and "-0.57" in text
+    )
     assert risk_config.NVD_WINDOW_START in text
 
 

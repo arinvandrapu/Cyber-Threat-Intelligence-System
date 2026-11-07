@@ -117,13 +117,13 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     <>
       <PageHead
         title="Risk queue"
-        lede={`${int(risk.rows.length)} CVEs ranked likeliest to join CISA KEV, best first. Click one to see why.`}
+        lede={`The ${int(risk.rows.length)} CVEs in the queue: of ${int(risk.ranked_cves)} scored, those likeliest to join CISA KEV (critical, high and elevated tiers), best first. Click one to see why.`}
       />
       {notRanked && focusCard && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <p className="note">
             {focusCard.source === "kev"
-              ? <>{focus} is already known to be exploited (CISA KEV), so it isn't ranked. Patch it first: see its place in <a href={`#/kev/${focus}`}>Known exploited</a>.</>
+              ? <>{focus} is already known to be exploited (CISA KEV), so it isn't scored. Patch it first: see its place in <a href={`#/kev/${focus}`}>Known exploited</a>.</>
               : `${focus} isn't ranked (older than 2024 or lower risk). Its record is below.`}
           </p>
           <CveCard entry={focusCard} />
@@ -131,7 +131,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
       )}
       {notRanked && !focusCard && (
         <p className="note">
-          {focus} isn't in the ranked list: already known to be exploited, lower risk, or older than 2024.
+          {focus} isn't in the queue: already known to be exploited, scored below the queue, or published before 2024 (not scored).
         </p>
       )}
 

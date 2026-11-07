@@ -51,7 +51,8 @@ GRAPH_TIERS = ("critical", "high")
 TIER_NAMES = [name for name, _ in cfg.TIERS]
 
 DISCLOSURES = [
-    "Ranks only CVEs published from {window_start} that were not in CISA KEV at the snapshot.",
+    "Scores only CVEs published from {window_start} that were not in CISA KEV at the snapshot; "
+    "the queue is the critical, high and elevated tiers.",
     "Rank and tier only: the model's output is not a probability (fit at {prevalence} "
     "prevalence; snapshot EPSS is a newer model version than training saw).",
     "Snapshot EPSS is model {snapshot_epss}; the risk model was trained on {train_epss}. "
@@ -59,7 +60,7 @@ DISCLOSURES = [
     "The snapshot ranking itself is not evaluated. Tier hit rates are historical: the "
     "same procedure on the rolling-origin test folds ({test_span}), next 180 days.",
     "Newer CVEs rank higher (standardized log-age weight {age_weight:+.2f}): {recent:,} of "
-    "the {tiered:,} tiered CVEs are 30 days old or younger.",
+    "the {tiered:,} CVEs in the queue are 30 days old or younger.",
     "Weights describe correlated signals, not causes; the refit's weights differ from the "
     "evaluated folds' (both shown).",
     "CVSS, CWE, assigner and descriptions are context only and were never model inputs.",

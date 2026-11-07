@@ -284,7 +284,7 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
 | Known exploited | Every CISA KEV CVE in a fixed patch-first order agreed before it was run (linked to a threat family, then CISA known ransomware use, then newest listing), each with a one-line reason naming its sources |
 | Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families; a CVE a threat is tied to is flagged as an early warning (never a rank input) |
 | Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
-| Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
+| Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, queue CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
 | Indicators | Defanged indicator strings from CVE references, a shared-host graph, abuse.ch aggregates |
