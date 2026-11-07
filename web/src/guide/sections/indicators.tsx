@@ -92,7 +92,7 @@ export const indicators: SectionBuilder = (data) => {
             items={[
               ["\"These are IOCs from attacks.\"", "They are strings of an indicator's shape found on CVE references; nothing here is vetted as malicious."],
               ["\"A host shared by many CVEs is attacker infrastructure.\"", "It is usually a vendor or advisory site."],
-              ["\"The headline extraction precision applies to every row.\"", "It is weighted and dominated by CVE IDs, which this table leaves out. Hashes and IPs scored lower on small samples (see Evaluation)."],
+              ["\"The headline extraction precision applies to every row.\"", "It is weighted and dominated by CVE IDs, which this table leaves out. MD5 hashes and IPv4 addresses scored clearly lower, on small samples (see Evaluation)."],
             ]}
           />
         ),

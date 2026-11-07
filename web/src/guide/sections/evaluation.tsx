@@ -100,8 +100,8 @@ export const evaluation: SectionBuilder = (data) => {
         body: (
           <Defs
             rows={[
-              ["ATT&CK technique mapping", <>The automatic mapper's <G to="concepts-stats">hit@5</G> (a correct technique in its top 5) against always guessing the most common techniques, from an early test; a later test on new CVEs found no reliable gain. Not shown on the ATT&amp;CK graph.</>],
-              ["CWE classification", <>Predicting a CVE's weakness from its description, scored by <G to="concepts-stats">macro-F1</G> on descriptions that don't name the weakness. A simple word-weight model (TF-IDF) beat a security language model (SecureBERT).</>],
+              ["ATT&CK technique mapping", <>The automatic mapper's <G to="concepts-stats">hit@5</G> (a correct technique in its top 5) against always guessing the most common techniques, from an early test. A later pre-registered test on older, non-KEV CVEs found at most a small gain, resting on a rule written after the counts were seen. Not shown on the ATT&amp;CK graph.</>],
+              ["CWE classification", <>Predicting a CVE's weakness from its description, scored by <G to="concepts-stats">macro-F1</G> on descriptions that don't name the weakness. A simple word-weight model (TF-IDF) beat frozen embeddings from a security language model (SecureBERT) fed to the same kind of classifier.</>],
               ["IOC extraction", "Share of extracted values that were real values of their type, on a sample labelled by an AI reviewer. The weighted figure is dominated by CVE IDs. The weakest figure shown, IPv4 across all sources, is pulled down by IPs in NVD descriptions; samples per type are small."],
               ["SecureBERT NER (Malware)", "How many malware names a language model finds, against rule-made labels. Context only; never used for scoring."],
             ]}
