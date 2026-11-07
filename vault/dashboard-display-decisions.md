@@ -43,6 +43,9 @@ changed. Context: [[dashboard]], [[dashboard-web]], [[risk-eval]],
 - Evaluation (owner, 2026-11-06): the four middle panels sit in a 2×2 `.eval-grid`
   of equal 400px cells; content that doesn't fit scrolls inside its panel. One column
   under 1000px.
+- Tier hit rates (owner): one block per tier, name + wider interval bar on one line,
+  then "Hit rate / KEV additions / 95% CI" as labelled values in three equal columns
+  (aligned across tiers), tiers separated by a thin rule.
 
 ## Links
 

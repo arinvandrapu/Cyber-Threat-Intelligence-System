@@ -137,15 +137,19 @@ export function Evaluation({ data }: { data: Data }) {
             <h2>Tier hit rates (evaluation folds)</h2>
             <span className="muted" style={{ fontSize: 12.5 }}>{r.tiers.monotonic ? "Monotonic, as pre-registered" : "Not monotonic"} · log scale</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="tier-list">
             {TIERS.map((t) => {
               const h = r.tiers.tiers[t];
               if (!h) return null;
               return (
-                <div key={t} style={{ display: "grid", gridTemplateColumns: "100px minmax(120px, 200px) auto", gap: 10, alignItems: "center", fontSize: 13 }}>
+                <div key={t} className="tier-block">
                   <TierName tier={t} />
-                  <IntervalBar value={h.kev_positives / h.cves} ci={wilson(h.kev_positives, h.cves)} color={`var(--${t})`} scale={logScale} />
-                  <span className="mono" style={{ whiteSpace: "nowrap" }}>{pct(h.kev_positives / h.cves)} · {h.kev_positives}/{int(h.cves)} · CI {interval(wilson(h.kev_positives, h.cves))}</span>
+                  <IntervalBar value={h.kev_positives / h.cves} ci={wilson(h.kev_positives, h.cves)} color={`var(--${t})`} scale={logScale} width={340} />
+                  <dl className="tier-metrics">
+                    <div><dt>Hit rate</dt><dd>{pct(h.kev_positives / h.cves)}</dd></div>
+                    <div><dt>KEV additions</dt><dd>{h.kev_positives} of {int(h.cves)}</dd></div>
+                    <div><dt>95% CI</dt><dd>{interval(wilson(h.kev_positives, h.cves))}</dd></div>
+                  </dl>
                 </div>
               );
             })}
