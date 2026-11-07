@@ -43,16 +43,18 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     return m;
   }, [data.threats.families]);
 
-  // CVE -> families linked by a link that counts for priority: the same rule as the Known
-  // exploited view. On a queued CVE this is an early warning, never a ranking input.
+  // The badge and filter use the subset of those links that count for priority: the rule
+  // that ranks threats and orders the Known exploited view. The detail lists every
+  // non-rejected link with its review state, so a link that doesn't count shows there as
+  // evidence without a badge. On a queued CVE a badge is an early warning, never a rank input.
   const linkedFamilies = useMemo(() => {
     const m = new Map<string, string[]>();
-    for (const f of data.threats.families)
-      for (const l of f.links)
-        if (l.counts_for_priority && !(m.get(l.cve) ?? []).includes(f.family))
-          m.set(l.cve, [...(m.get(l.cve) ?? []), f.family]);
+    for (const [cve, links] of threatsByCve) {
+      const fams = [...new Set(links.filter(({ link }) => link.counts_for_priority).map(({ family }) => family))];
+      if (fams.length > 0) m.set(cve, fams);
+    }
     return m;
-  }, [data.threats.families]);
+  }, [threatsByCve]);
   const threatLinked = useMemo(() => risk.rows.filter((r) => linkedFamilies.has(r.cve)).length, [risk.rows, linkedFamilies]);
 
   const counts = useMemo(() => {
@@ -117,7 +119,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <p className="note">
             {focusCard.source === "kev"
-              ? `${focus} is already known to be exploited (CISA KEV), so it isn't ranked. Patch it first.`
+              ? <>{focus} is already known to be exploited (CISA KEV), so it isn't ranked. Patch it first: see its place in <a href={`#/kev/${focus}`}>Known exploited</a>.</>
               : `${focus} isn't ranked (older than 2024 or lower risk). Its record is below.`}
           </p>
           <CveCard entry={focusCard} />
@@ -158,9 +160,9 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
 
       {threatOnly && (
         <p className="caption" style={{ margin: 0, maxWidth: 900 }}>
-          Early warning: a source ties a threat family to {threatLinked === 1 ? "this CVE" : "these CVEs"} before CISA
-          has listed {threatLinked === 1 ? "it" : "them"} as exploited. Threat links never change the rank; most threat
-          links point at CVEs already in KEV (see Known exploited).
+          Early warning: for each CVE here, a source ties a threat family to it before CISA has listed it as
+          exploited. Threat links never change the rank; most threat links point at CVEs already in KEV (see Known
+          exploited).
         </p>
       )}
 
@@ -191,7 +193,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
                       </button>
                       {linkedFamilies.has(r.cve) && (
                         <span className="ev threat-badge" title={`Linked threat: ${linkedFamilies.get(r.cve)!.join(", ")}. An early warning; it never changes the rank.`}>
-                          threat
+                          threat<span className="sr-only">: linked to {linkedFamilies.get(r.cve)!.join(", ")}</span>
                         </span>
                       )}
                     </td>

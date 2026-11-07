@@ -42,7 +42,9 @@ export function Overview({ data }: { data: Data }) {
         <div className="brief-col">
           <div className="brief-head">
             <h2>Which exploited CVEs to patch first</h2>
-            <p>Every CVE in CISA KEV: someone has exploited it. Threat-linked first, then ransomware use, then newest.</p>
+            <p>
+              Every CVE in CISA KEV: someone has exploited it. {threats.available ? "Threat-linked first, then ransomware use" : "Ransomware use first"}, then newest.
+            </p>
           </div>
           <dl className="stats">
             <div className="stat">

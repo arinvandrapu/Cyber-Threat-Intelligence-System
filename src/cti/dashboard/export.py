@@ -921,7 +921,9 @@ def kev_sort_key(card: dict) -> tuple:
 def kev_why(card: dict, links: list[tuple[str, str]]) -> str:
     """One line naming the source of each fact the sort uses. ``links``: (family, via) that
     count for priority; a family with several sources is credited to the first in
-    ``WHY_LINK_SOURCES`` (as on the Threats view)."""
+    ``WHY_LINK_SOURCES`` (as on the Threats view). A new link ``via`` must be added to
+    both ``WHY_LINK_SOURCES`` and ``KEV_LINK_SOURCES``; until then the export fails here
+    (ValueError/KeyError) rather than describe a link it has no wording for."""
     order = list(WHY_LINK_SOURCES)
     best: dict[str, str] = {}
     for family, via in links:
