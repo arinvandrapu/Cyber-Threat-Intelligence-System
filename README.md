@@ -282,12 +282,12 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
 |---|---|
 | Overview | The question and the three lists that answer it (exploited CVEs to patch first, CVEs likeliest to be exploited next, threats to watch), how they connect, risk tiers, top of the queue, and one line per tab |
 | Known exploited | Every CISA KEV CVE in a fixed patch-first order agreed before it was run (linked to a threat family, then CISA known ransomware use, then newest listing), each with a one-line reason naming its sources |
-| Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families; a CVE a threat is tied to is flagged as an early warning (never a rank input) |
+| Risk queue | The critical, high and elevated tiers: sortable, filterable, searchable by vendor or product, with each CVE's per-feature contribution to its rank and any linked malware families; a CVE a threat is tied to is flagged as an early warning (never a rank input) |
 | Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, queue CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
-| Indicators | Defanged indicator strings from CVE references, a shared-host graph, abuse.ch aggregates |
+| Indicators | Defanged indicator strings from CVE references, a shared-host graph, abuse.ch aggregates; every CVE they mention opens its record (in the queue, in KEV, or an NVD card saying why it is not in the queue) |
 | Evaluation | The pre-registered decision, recall with CIs against EPSS and baselines, per-fold hits, other pipeline results, data versions, limitations and every disclosure |
 
 Honest by construction: rank and tier only (no fake probabilities), tier hit rates

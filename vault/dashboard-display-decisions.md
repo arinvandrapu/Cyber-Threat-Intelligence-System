@@ -47,8 +47,16 @@ changed. Context: [[dashboard]], [[dashboard-web]], [[risk-eval]],
 - KEV CVE under `#/queue/` → `#/kev/` via `location.replace` ([[known-exploited-view]]).
 - Known nit: selecting a family inside Threats doesn't update the URL.
 
-## Left for PR 2 (data/export)
+## PR 2 (data/export, `feat/11c-data`)
 
-NVD cards for 155 dead CVE links (status from the scored set, not "below the queue"),
-"scored" vs "in the queue" terms, vendor/product filter, CNA ID labels, Threats rows
-without links. Plan in `tasks/todo.md` 11c.
+- Terms: "scored" = 167,844 given a tier (`ranked_cves`), "in the queue" = 8,392
+  critical/high/elevated, "below the queue" = baseline, "not scored" = outside the window.
+- `cves.json`: `export.referenced_cves` walks the export for every clickable CVE
+  (`cve`/`cves` keys, `kind: "cve"` nodes; not description text); 154 had no detail, all
+  now carded with status from the scored set (`below_queue`/`not_scored`/`no_record`).
+  CVE-2025-66478 appears only in text, so needs no card.
+- Queue rows: `context.vendor`/`product` (first affected entry, defanged); search +
+  vendor `<datalist>` on Risk queue and Known exploited.
+- UUID assigners: "CNA (ID xxxxxxxx…)" (owner: no outside name map).
+- MimiKatz: the labels CSV note isn't in the export; view says "none of the categories
+  fits" rather than hard-coding the family.
