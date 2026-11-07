@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Data, RiskRow, ThreatLink, Tier } from "../types";
+import type { CveCard as CveCardData, Data, RiskRow, ThreatLink, Tier } from "../types";
 import { DivergingBar, PageHead, Pager, TierDot, TierName } from "../components/ui";
 import { FEATURE_LABEL, TIER_LABEL, epss, int, signed } from "../format";
 import { CveCard, LinkRow } from "./Threats";
@@ -103,6 +103,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const focusCard = focus
     ? data.threats.linked_cves.find((k) => k.cve === focus) ?? data.kev.entries.find((k) => k.cve === focus)
     : undefined;
+  const record = notRanked && !focusCard ? data.cves.entries.find((c) => c.cve === focus) : undefined;
   const reset = () => setPage(0);
 
   const header = (key: SortKey, text: string, className?: string) => (
@@ -124,12 +125,13 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
           <p className="note">
             {focusCard.source === "kev"
               ? <>{focus} is already known to be exploited (CISA KEV), so it isn't scored. Patch it first: see its place in <a href={`#/kev/${focus}`}>Known exploited</a>.</>
-              : `${focus} isn't ranked (older than 2024 or lower risk). Its record is below.`}
+              : `${focus} isn't in the queue (scored below it, or published before 2024). Its record is below.`}
           </p>
           <CveCard entry={focusCard} />
         </div>
       )}
-      {notRanked && !focusCard && (
+      {notRanked && !focusCard && record && <RecordCard card={record} />}
+      {notRanked && !focusCard && !record && (
         <p className="note">
           {focus} isn't in the queue: already known to be exploited, scored below the queue, or published before 2024 (not scored).
         </p>
@@ -307,6 +309,38 @@ function Detail({
       <div className="mono muted" style={{ fontSize: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
         EPSS {epss(row.epss, row.epss_percentile)} · model {epssVersion} · scored {snapshot}
       </div>
+    </div>
+  );
+}
+
+/** A referenced CVE with no other detail: why it isn't in the queue, then its NVD record. */
+function RecordCard({ card: c }: { card: CveCardData }) {
+  const what = [c.vendor, c.product].filter(Boolean).join(" ");
+  const why =
+    c.status === "below_queue"
+      ? `${c.cve} was scored but ranks below the queue (baseline tier, under the top 5%).`
+      : c.status === "not_scored"
+        ? c.published && c.published < "2024"
+          ? `${c.cve} wasn't scored: it was published ${c.published}, before the scored window (2024 onward).`
+          : `${c.cve} wasn't scored: it is outside the scored population.`
+        : `${c.cve} isn't in our NVD snapshot, so there is no record to show.`;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <p className="note">{why}</p>
+      {c.status !== "no_record" && (
+        <div className="note" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {/* NVD text: plain text only, never HTML or a link */}
+          <span style={{ fontWeight: 600, color: "var(--text)" }}>
+            {c.name ?? c.cve}
+            {c.name && <span className="faint" style={{ fontSize: 12, fontWeight: 400 }}> (derived name)</span>}
+          </span>
+          <span className="muted" style={{ fontSize: 12.5 }}>
+            NVD record{what ? ` · ${what}` : ""}{c.published ? ` · published ${c.published}` : ""}
+          </span>
+          <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>{c.description}</span>
+          <span className="mono muted" style={{ fontSize: 12 }}>{c.cwes.join(", ") || "no CWE"}</span>
+        </div>
+      )}
     </div>
   );
 }

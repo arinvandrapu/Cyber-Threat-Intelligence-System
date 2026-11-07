@@ -332,6 +332,22 @@ export interface KevCatalog {
   entries: KevEntry[];
 }
 
+/** A referenced CVE with no other detail: its NVD record and why it isn't in the queue. */
+export interface CveCard {
+  cve: string;
+  status: "below_queue" | "not_scored" | "no_record";
+  name: string | null;
+  vendor: string;
+  product: string;
+  description: string;
+  published: string | null;
+  cwes: string[];
+}
+
+export interface CveCards {
+  entries: CveCard[];
+}
+
 export interface Data {
   meta: Meta;
   risk: Risk;
@@ -340,4 +356,5 @@ export interface Data {
   evals: Eval;
   threats: Threats;
   kev: KevCatalog;
+  cves: CveCards;
 }

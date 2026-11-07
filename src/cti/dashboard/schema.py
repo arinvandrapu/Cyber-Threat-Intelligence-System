@@ -281,6 +281,24 @@ class KevCatalog(_Model):
     entries: list[KevEntry]  # every KEV CVE (source "kev"), in priority_rank order
 
 
+class CveCard(_Model):
+    """A CVE the dashboard references that has no other detail: its NVD record, and why it
+    is not in the queue (``export.build_cve_cards``)."""
+
+    cve: str
+    status: Literal["below_queue", "not_scored", "no_record"]
+    name: str | None  # derived (approximate); defanged
+    vendor: str  # first NVD affected entry only; defanged
+    product: str
+    description: str  # defanged and truncated
+    published: str | None  # YYYY-MM-DD
+    cwes: list[str]
+
+
+class CveCards(_Model):
+    entries: list[CveCard]
+
+
 FILES: dict[str, type[_Model]] = {
     "meta.json": Meta,
     "risk.json": Risk,
@@ -289,4 +307,5 @@ FILES: dict[str, type[_Model]] = {
     "eval.json": Eval,
     "threats.json": Threats,
     "kev.json": KevCatalog,
+    "cves.json": CveCards,
 }

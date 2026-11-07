@@ -135,11 +135,8 @@ export function Indicators({ data }: { data: Data }) {
                 <tr key={`${i.type}:${i.value}`}>
                   <td className="mono muted">{TYPE_LABEL[i.type] ?? i.type}</td>
                   <td className="mono wrap" style={{ maxWidth: 520, overflowWrap: "anywhere" }}>{i.value}</td>
-                  <td className="mono muted">
-                    {i.cves.slice(0, 2).map((c) => (
-                      <button key={c} type="button" className="linkish" style={{ color: "var(--muted)", marginRight: 6 }} onClick={() => openCve(c)}>{c}</button>
-                    ))}
-                    {i.cve_count > 2 ? `+${i.cve_count - 2}` : ""}
+                  <td className="mono">
+                    <IndicatorCves cves={i.cves} total={i.cve_count} />
                   </td>
                   <td className="num">{i.occurrences}</td>
                   <td className="muted">{i.public === null ? "—" : i.public ? "public IP" : "non-public IP"}</td>
@@ -251,5 +248,25 @@ function SharedHosts({ graph }: { graph: Graph }) {
         highlight its CVEs; labels on the 10 largest. Shared vendor and advisory sites dominate: a shared host is a lead, not a link to an actor.
       </figcaption>
     </figure>
+  );
+}
+
+/** First two CVEs, the rest on request; the export keeps at most 10 per indicator, and says
+ * how many more it dropped. */
+function IndicatorCves({ cves, total }: { cves: string[]; total: number }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? cves : cves.slice(0, 2);
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", gap: "2px 8px", alignItems: "baseline" }}>
+      {shown.map((c) => (
+        <button key={c} type="button" className="linkish" onClick={() => openCve(c)}>{c}</button>
+      ))}
+      {cves.length > 2 && (
+        <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "show fewer" : `+${total - 2} more`}
+        </button>
+      )}
+      {(open || cves.length <= 2) && total > cves.length && <span className="faint">+{total - cves.length} not exported</span>}
+    </span>
   );
 }

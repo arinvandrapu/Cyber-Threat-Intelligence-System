@@ -494,17 +494,41 @@ def build() -> dict[str, dict]:
             ),
         ],
     }
-    return export.validate(
-        {
-            "meta.json": meta,
-            "risk.json": risk,
-            "iocs.json": iocs,
-            "graphs.json": graphs,
-            "eval.json": evals,
-            "threats.json": threats,
-            "kev.json": export.build_kev([kev_row, *_extra_kev_rows()], threats["families"]),
-        }
+    files = {
+        "meta.json": meta,
+        "risk.json": risk,
+        "iocs.json": iocs,
+        "graphs.json": graphs,
+        "eval.json": evals,
+        "threats.json": threats,
+        "kev.json": export.build_kev([kev_row, *_extra_kev_rows()], threats["families"]),
+    }
+    files["cves.json"] = export.build_cve_cards(
+        files, _nvd_rows(files), export.tier_lookup(scored), {"CWE-78": "OS Command Injection"}
     )
+    return export.validate(files)
+
+
+def _nvd_rows(files: dict[str, dict]) -> list[dict]:
+    """Synthetic NVD records for the CVEs the fixture references without a detail, all but
+    the last, so the cards show both a record and the "no record" case."""
+    detail = {r["cve"] for r in files["risk.json"]["rows"]}
+    detail |= {e["cve"] for e in files["kev.json"]["entries"]}
+    detail |= {e["cve"] for e in files["threats.json"]["linked_cves"]}
+    wanted = sorted(export.referenced_cves(files) - detail, key=export.cve_sort_key)
+    return [
+        {
+            "source_id": cve,
+            "text": "Synthetic fixture: an example flaw.",
+            "published": "2023-06-01T00:00:00",
+            "metadata": {
+                "affected": [{"vendor": "Example Vendor", "product": "Example Product"}],
+                "cwes": ["CWE-78"],
+                "cwe_assignments": [],
+            },
+        }
+        for cve in wanted[:-1]
+    ]
 
 
 if __name__ == "__main__":
