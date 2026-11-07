@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=77"]  # PEP 639 license metadata
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,8 @@ name = "cti"
 version = "0.1.0"
 description = "Cyber threat intelligence pipeline: ingest, enrich, prioritize, and present."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12.4"  # 3.12.4 fixes ipaddress is_global/is_private (CVE-2024-4032)
 dependencies = [
     "httpx>=0.28,<1",
@@ -47,6 +49,7 @@ dev = [
     "moto[s3]>=5.0",
     "ruff>=0.8",
     "pip-audit>=2.7",
+    "setuptools>=77",  # build backend, hashed in the lock for `--no-build-isolation -e .`
 ]
 
 [tool.setuptools.packages.find]
