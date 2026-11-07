@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Tier } from "../types";
 import { TIER_LABEL } from "../format";
 
@@ -50,7 +50,50 @@ export function Shell({
         </div>
       </header>
       <main>{children}</main>
+      <BackToTop />
     </>
+  );
+}
+
+/** Floating "Top" button, shown once the reader is a screen down; returns focus to the page heading. */
+function BackToTop() {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      setShown(window.scrollY > window.innerHeight);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+  if (!shown) return null;
+  const toTop = () => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    // the button disappears at the top: put keyboard focus on the page heading, not <body>
+    const h1 = document.querySelector<HTMLElement>("main h1");
+    if (h1) {
+      h1.tabIndex = -1;
+      h1.focus({ preventScroll: true });
+    }
+  };
+  return (
+    <button type="button" className="to-top" onClick={toTop} aria-label="Back to top">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+        <path d="M12 19V5M5 12l7-7 7 7" />
+      </svg>
+      Top
+    </button>
   );
 }
 
