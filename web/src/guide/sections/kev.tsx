@@ -25,7 +25,7 @@ export const kev: SectionBuilder = (data) => {
           <>
             <p>A fixed rule, agreed before it was run. Nothing is predicted or scored. CVEs are sorted by:</p>
             <ol className="gd-steps">
-              {threats && <li>Linked to a threat family first.</li>}
+              {threats && <li>Linked to a threat family shown on the Threats tab first.</li>}
               <li>Then CISA's "known ransomware use".</li>
               <li>Then the newest CISA listing date.</li>
               <li>Then the CVE number, as a tie-break.</li>

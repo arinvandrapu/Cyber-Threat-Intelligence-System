@@ -148,7 +148,7 @@ export const attack: SectionBuilder = (data) => {
           <Example>
             {int(cves)} KEV CVEs have an exploitation-technique mapping. The most common exploitation technique is {techniques[0].id} ({techniques[0].label}) with{" "}
             {int(techniques[0].count ?? 0)} CVEs.
-            {mapper && majority ? <> In a first test the automatic mapper put a correct technique in its top 5 for {pct(mapper["hit@5"].value, 0)} of held-out CVEs, against {pct(majority["hit@5"].value, 0)} for always guessing the most common ones. That gain was fragile and a later test on new CVEs found no reliable gain, so its output isn't drawn.</> : null}
+            {mapper && majority ? <> In a first test the automatic mapper put a correct technique in its top 5 for {pct(mapper["hit@5"].value, 0)} of held-out CVEs, against {pct(majority["hit@5"].value, 0)} for always guessing the most common ones. That gain was fragile. A later pre-registered test on older, non-KEV CVEs found at most a small gain, resting on a rule written after the counts were seen, so the mapper's output isn't drawn.</> : null}
           </Example>
         ) : (
           <Example>No ATT&amp;CK mappings in this export.</Example>

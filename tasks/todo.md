@@ -623,7 +623,13 @@ per-tab "How to read this" links, ~1–2 screens per tab, methods link to Evalua
 - [x] G7 Implementation audit (code) + fact-check audit (every claim vs view code/export):
       2 scroll-spy fixes; ~40 wording fixes (overclaims on threat coverage, calibration,
       ATT&CK mapper and IOC precision; wrong SSVC owner, bootstrap and bar-scale details)
-- [x] G8 Vault (`dashboard.md`, `dashboard-web.md`, new `dashboard-guide.md`) + README; open PR (don't merge)
+- [x] G8 Vault (`dashboard.md`, `dashboard-web.md`, new `dashboard-guide.md`) + README — merged #51
+- [x] Follow-ups merged: #52 Guide sidebar section links stay in place while scrolling;
+      #53 floating "Top" button on every view
+- [x] Post-merge fact check (2026-11-07, `fix/guide-accuracy`): ATT&CK v2 wording (older
+      non-KEV CVEs; formally passed, gain rests on a post-hoc rule), "MD5 and IPv4" not
+      "hashes and IPs", KEV sort says a *shown* family, CWE says frozen embeddings; vault
+      note admits the few typed qualitative claims. Not done: export `TOP_THREATS` (schema change)
 
 ## Review
 

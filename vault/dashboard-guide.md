@@ -16,8 +16,12 @@ tags: [dashboard, web, docs, decision]
   per tab plus `start` and `reference` (Concepts glossary, Data & freshness).
 - Each tab section: what it answers, one part per panel (encodings, interactions), how
   it's computed (methods link to Evaluation, not repeated), common misreadings, and an
-  "In this snapshot" example built from export numbers. No real number is hard-coded;
-  claims that depend on results (e.g. "EPSS has the higher AP") are conditional.
+  "In this snapshot" example built from export numbers. Counts and metrics are computed
+  from the export, and some result claims are conditional (e.g. "EPSS has the higher AP").
+  A few qualitative result statements are typed (TF-IDF beat SecureBERT embeddings; MD5
+  and IPv4 are the weak extraction types; Nuclei carries weight; most of the queue sits
+  below EPSS p50): recheck them if the data or evaluations change. Fact-checked 2026-11-07
+  (fixed: the ATT&CK v2 test is older non-KEV CVEs and formally passed; "hashes" was MD5 only).
 - `PageHead` takes a required `guide: View | null`, so every view shows "How to read this
   tab →" and a new view can't forget it. Overview's tab cards link to their section.
 

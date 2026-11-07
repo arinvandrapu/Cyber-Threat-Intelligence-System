@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-11-06 (Overview redesign; Phase 12; 11c dashboard; 11b docs in review). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-11-07 (11d PR (a) merged #50; Guide tab #51–#53; Guide fact-check fix). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -35,7 +35,9 @@
 | 12. Connect threats to what to patch (Known exploited view, queue threat badge, Overview) | ✅ merged | #44 |
 | 11c. Dashboard (UI fixes; scored vs queue terms, NVD cards, vendor search; Evaluation grid) | ✅ merged, re-stamped (export at `51d932c`, clean, schema 2) | #45, #46, #47 |
 | 11b. Docs catch-up | ✅ merged, export re-stamped at `1382819` (clean) | #48 |
-| **11d. Robustness + hygiene** | **⏭ next** | — |
+| 11d (a). MIT licence, hashed locks, CI hardening, scraper + S3 manifest | ✅ merged (no export change) | #50 |
+| Dashboard Guide tab + sidebar fix + Top button | ✅ merged; fact-check fixes in follow-up PR | #51, #52, #53 |
+| **11d (b). Export/threats recovery, KEV version check, refactors** | **⏭ next** | — |
 | 9. Security deliverables + polish | after 11 | — |
 
 `main` is green (562 offline tests; CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
@@ -46,10 +48,11 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 2. After any merge that changes export code: `cti export --date 2026-10-26` from clean `main`
    and check `meta.json` shows `dirty: false` (restart `cti serve`; it builds its file
    allowlist at startup).
-3. **Next: 11d robustness/hygiene** (`tasks/todo.md` → 11d, incl. "How to run it"):
-   due diligence on `main` first, then plan audit; ask the owner MIT vs Apache-2.0 for the
-   LICENSE; one or two PRs (LICENSE + CI hashed locks + scraper hardening; export/threats
-   recovery + KEV version check + refactors). Re-stamp and smoke after export/scraper changes.
+3. **Next: 11d (b)** (`tasks/todo.md` → 11d → PR (b), items b1–b8, already plan-audited):
+   branch `chore/11d-correctness` from `main`; b1 export writes everything, marks threats
+   stale and exits non-zero; b2 KEV version check; b3 `--archive-date`; b4 cwe-eval
+   provenance; b5–b8 refactors. Re-stamp the export and smoke both exports after merge.
+   Local venvs predating #50 need the hashed reinstall (README Setup) to get setuptools.
 4. **Then Phase 9**, one PR per item, in order (`tasks/todo.md` → 9): 9.1 sample intel
    report (first: it shows the problem statement answered), 9.2 STRIDE threat model, 9.3
    STIX 2.1 export, 9.4 SBOM + screenshots, 9.5 limitations + final README.
