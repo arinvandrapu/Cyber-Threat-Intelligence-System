@@ -75,9 +75,10 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   (`export.build_kev`); `#/queue/<CVE>` shows the ranked detail, else a KEV or NVD card.
   ATT&CK panel CVEs expand inline; Indicators' KEV nodes click through.
 - Overview top (2026-11-05): the three intro cards and four stat tiles became one
-  `.brief` panel, a column per question (CVEs | threats), each holding its own numbers
-  (`<dl class="stats">`, label above value) and button; "how they connect" is the footer
-  strip. Stacks to one column under 760px. `.tile` stays for Threats/Indicators.
+  `.brief` panel, a column per question (KEV to patch | CVEs next | threats; KEV added in
+  12.3), each holding its own numbers (`<dl class="stats">`, label above value) and
+  button; "how they connect" footer uses export counts ([[threat-queue-overlap]]).
+  One column under 1100px. `.tile` stays for Threats/Indicators.
 - Overview queue card (2026-11-05): `.row.match` stretches it to the Risk tiers card's
   height; the top-5 list sits in `.queue-viewport` (relative, min-height 260px) with an
   absolutely positioned `.queue-scroll`, so the list never sets the row height and scrolls

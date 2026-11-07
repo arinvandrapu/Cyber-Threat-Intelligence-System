@@ -424,12 +424,14 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
     - Done 2026-11-06: badge + filter use the KEV view's rule (a link that counts for
       priority), so both views agree; the detail still lists every non-rejected link with
       its review state. Badge is neutral grey: KEV orange would read as "in KEV"
-  - [ ] **12.3 Overview + docs say what the data shows** — "How they connect": threats
+  - [x] **12.3 Overview + docs say what the data shows** — "How they connect": threats
         explain KEV CVEs (patch first, ranked on the new view); a threat link on a queued
         CVE is an early warning. Overview briefing gains the KEV list; tab guide entry for
         the new view (numbers from the export). README (views table, view count,
         Overview row), `vault/dashboard.md`, `vault/dashboard-web.md`,
         `vault/threat-queue-overlap.md` ("proposed" → built), handoff
+    - Done 2026-11-06: three-column briefing (one column under 1100px); footer and tab
+      guide numbers computed from the export; README "Where links land" bullet
   - [ ] Verify each step: `pytest`, `ruff`, `npm run build`, `npm run check`, `smoke.py`
         on fixture + real export, screenshots; plan audit before 12.1, implementation
         audit before the PR

@@ -33,7 +33,8 @@ Finding 2026-11-06 (snapshot 2026-10-26). Sources: [[threat-links]], [[threat-ca
 
 ## Consequence
 
-- The Overview's "Threats explain CVEs" is true for KEV, almost never for the queue.
+- The old Overview line "Threats explain CVEs" was true for KEV, almost never for the
+  queue; 12.3 replaced it with counts from the export (26 of 1,756 KEV linked; 1 queued).
 - A threat link on a queued CVE is an early-warning signal (exploitation evidence before
   CISA lists it), not a ranking input: threats never feed the risk score.
 
@@ -44,4 +45,5 @@ Finding 2026-11-06 (snapshot 2026-10-26). Sources: [[threat-links]], [[threat-ca
 2. Built (12.2): "threat" badge + "Linked to a threat" filter in the risk queue, same
    rule as the KEV view (`counts_for_priority`); flags 1 CVE today; neutral grey badge
    (KEV orange would read as "in KEV"); early-warning caption when filtered.
-3. Then (12.3): rewrite Overview "How they connect" to match the counts above.
+3. Built (12.3): Overview gains a KEV column and a "How they connect" footer computed from
+   the export; tab guide entry; README views table and a "Where links land" bullet.

@@ -80,7 +80,7 @@ main { max-width: 1360px; margin: 0 auto; padding: 28px 32px 56px; display: flex
 .tile { display: flex; flex-direction: column; gap: 6px; }
 .tile .value { font-family: var(--mono); font-size: 30px; font-weight: 600; }
 /* Overview briefing: one panel, a column per question, numbers sit with the question they answer */
-.brief { padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.brief { padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .brief-col { display: flex; flex-direction: column; gap: 16px; padding: 22px 24px; min-width: 0; }
 .brief-col + .brief-col { border-left: 1px solid var(--border); }
 .brief-head p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
@@ -94,10 +94,12 @@ main { max-width: 1360px; margin: 0 auto; padding: 28px 32px 56px; display: flex
 .brief-foot { grid-column: 1 / -1; margin: 0; padding: 12px 24px; border-top: 1px solid var(--border); background: var(--bar);
   border-radius: 0 0 10px 10px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
 .brief-foot strong { color: var(--text); font-weight: 600; }
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .brief { grid-template-columns: minmax(0, 1fr); }
-  .brief-col { padding: 18px 16px; }
   .brief-col + .brief-col { border-left: 0; border-top: 1px solid var(--border); }
+}
+@media (max-width: 760px) {
+  .brief-col { padding: 18px 16px; }
   .brief-foot { padding: 12px 16px; }
 }
 .note { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--text-2); background: var(--raised); border-radius: 8px; padding: 12px 14px; }
