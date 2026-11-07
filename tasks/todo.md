@@ -310,7 +310,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       (hash chain verified, deterministic re-runs, no leakage, numbers match outputs);
       fixes are about claims, docs, UX and robustness. Three batches, one PR each; verify
       each claim against the outputs before editing.
-  - [ ] **11a. Credibility (do first; before any interview)**
+  - [ ] **11a. Credibility**
     - [x] README: drop or mark planned "threat modeling (STRIDE)" (skills table, ~:291)
           and "a documented threat model" (~:413); STIX 2.1 listed as a skill (~:289)
           but planned (~:37)
