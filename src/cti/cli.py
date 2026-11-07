@@ -882,9 +882,8 @@ def cmd_export(args, settings: Settings) -> int:
     return 0
 
 
-def cmd_serve(args, settings: Settings) -> int:
-    from cti.dashboard import serve
-
+def _export_dir(args, settings: Settings) -> Path:
+    """``--export-dir``, else ``--date``, else the newest export (``serve``, ``report``)."""
     root = settings.data_dir / "export"
     if args.export_dir and args.date:
         raise ConfigError("use --date or --export-dir, not both")
@@ -903,6 +902,43 @@ def cmd_serve(args, settings: Settings) -> int:
     day = export_dir.name
     if not (export_dir / "meta.json").exists():
         raise ConfigError(f"no export for {day}; run `cti export --date {day}`")
+    return export_dir
+
+
+def cmd_report(args, settings: Settings) -> int:
+    import os
+
+    from cti.dashboard import brief
+
+    export_dir = _export_dir(args, settings)
+    if args.check:
+        stated = brief.stated_export_sha256(Path(args.check).read_text(encoding="utf-8"))
+        current = brief.export_sha256(export_dir)
+        if stated != current:
+            print(
+                f"error: {args.check} states export {stated}, current is {current}; regenerate it",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"  {args.check} matches the {export_dir.name} export")
+        return 0
+    text = brief.render(brief.facts(export_dir))
+    out = (
+        Path(args.out) if args.out else settings.data_dir / "reports" / export_dir.name / "brief.md"
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_name(f".{out.name}.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, out)
+    print(f"  wrote {out} ({len(text.split())} words)")
+    return 0
+
+
+def cmd_serve(args, settings: Settings) -> int:
+    from cti.dashboard import serve
+
+    export_dir = _export_dir(args, settings)
+    day = export_dir.name
     server = serve.make_server(Path(args.dist), export_dir, args.port)
     host, port = server.server_address[:2]
     print(f"  serving the {day} export at http://{host}:{port}/ (Ctrl-C to stop)", flush=True)
@@ -1170,6 +1206,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("export", help="dashboard data into data/export/<date>/ (Phase 8)")
     p.add_argument("--date", required=True)
     p.set_defaults(func=cmd_export)
+
+    p = sub.add_parser("report", help="analyst brief (Markdown) from a dashboard export")
+    p.add_argument("--date", help="export to read (default: the newest)")
+    p.add_argument("--export-dir", help="read this export folder (e.g. web/fixtures)")
+    p.add_argument("--out", help="output file (default: data/reports/<date>/brief.md)")
+    p.add_argument("--check", metavar="BRIEF", help="exit 1 if BRIEF was not made from this export")
+    p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("serve", help="the dashboard on 127.0.0.1, read-only")
     p.add_argument("--date", help="export to serve (default: the newest)")
