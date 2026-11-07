@@ -150,7 +150,7 @@ flowchart LR
 
 ```
 src/cti/
-  cli.py             `cti` command, one subcommand per stage in the table above, plus
+  cli.py             `cti` command: subcommands for the stages in the table above, plus
                      upload and gold-import
   config.py          typed settings from CTI_* env vars; fail fast on missing values
   models.py          Document: the normalized record every source produces

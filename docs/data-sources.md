@@ -16,14 +16,14 @@ per later cutoff ([decisions.md §4](decisions.md#4-forward-looking-risk-evaluat
 | | |
 |---|---|
 | Sources | 12 (11 feeds + reference pages), all complete |
-| Raw snapshot | ≈ 235 MB gzip'd (297 MB including the kept first references attempt) |
+| Raw snapshot | ≈ 335 MB gzip'd with all five capture dates (63 objects in S3); per-source sizes below are from the first two-date capture |
 | Parsed records | ≈ 70 MB gzip'd JSONL |
 | Documents | **≈ 455,900** |
 | Point-in-time signal rows (latest cutoff + snapshot) | **≈ 1,138,000** |
 
 ## Sources
 
-| Source | Provider | Captured | Pinned by | Raw (gz) |
+| Source | Provider | Captured | Pinned by | Raw (gz, first capture) |
 |---|---|---|---|---|
 | NVD CVE 2.0 | NIST | Yearly feeds 2023–2026; CVEs published ≥ 2024-01-01 kept | `.meta` SHA-256 + `lastModifiedDate` | 111.9 MB |
 | CISA KEV | CISA | Full catalog with `dateAdded` | `catalogVersion` 2026.10.23 | 0.2 MB |
@@ -185,7 +185,7 @@ mappings), so an edited or updated copy cannot change a result.
   payment methods, suspected victims and Tor (.onion) links. The upstream SHA-256s are in
   the notice. Malpedia's cluster is not used: CC BY-NC-SA, and it has no category field.
 - **The NVD archive** is fetched once by `cti fetch-nvd-archive` into
-  `data/reference-snapshots/2026-10-29/`: 21 feeds, ≈ 131 MB gzip'd, 203,721 non-rejected
+  `data/reference-snapshots/2026-10-29/`: 21 feeds, ≈ 125 MiB (131 MB) gzip'd, 203,721 non-rejected
   CVEs. It is local only (NVD data stays out of the repository like the main snapshot) and
   is not a risk source.
 

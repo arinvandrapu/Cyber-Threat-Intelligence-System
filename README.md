@@ -34,7 +34,7 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   KEV additions, with rank-based tiers whose hit rates fall monotonically. Of 167,844 CVEs
   scored at the snapshot, 8,392 form the queue (critical, high and elevated tiers).
 - **Tracks threats**: 467 malware and tool families from ThreatFox, the top 20 ranked by a
-  pre-declared rule (linked KEV CVEs, linked queue CVEs, ransomware, indicator growth),
+  pre-declared rule (linked KEV CVEs, linked critical/high CVEs, ransomware, indicator growth),
   with reviewed categories, ATT&CK techniques and CVE links. Threats order the Known
   exploited list (every CISA KEV CVE, patch-first) and flag queued CVEs as early
   warnings; they never feed the risk score.
@@ -292,7 +292,7 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
 | Overview | The question and the three lists that answer it (exploited CVEs to patch first, CVEs likeliest to be exploited next, threats to watch), how they connect, risk tiers, top of the queue, and one line per tab |
 | Known exploited | Every CISA KEV CVE in a fixed patch-first order agreed before it was run (linked to a threat family, then CISA known ransomware use, then newest listing), each with a one-line reason naming its sources |
 | Risk queue | The critical, high and elevated tiers: sortable, filterable, searchable by vendor or product, with each CVE's per-feature contribution to its rank and any linked malware families; a CVE a threat is tied to is flagged as an early warning (never a rank input) |
-| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, linked queue CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
+| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, linked critical/high CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, queue CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
@@ -399,14 +399,16 @@ cti embed    --date 2026-10-26      # bi-encoder embeddings of NVD descriptions 
 cti embed    --date 2026-10-26 --cwe-id-masked   # re-embed with literal CWE IDs masked
 cti cwe-eval  --date 2026-10-26     # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
 cti risk-eval --date 2026-10-26     # forward-looking KEV prediction, rolling-origin folds (~30 s)
-cti fetch-nvd-archive               # NVD 2002-2022 reference data -> data/reference-snapshots/ (never uploaded)
+cti fetch-nvd-archive --date 2026-10-29  # NVD 2002-2022 reference data -> data/reference-snapshots/ (never uploaded)
 .venv-nlp/bin/cti attack-eval2 --date 2026-10-26 --archive-date 2026-10-29  # pre-registered re-test (10b)
 
 # 4. Threat catalog and dashboard (threats need the export's risk tiers)
 cti export --date 2026-10-26        # dashboard JSON into data/export/<date>/ (~10 s)
-cti threats-sheet --date 2026-10-26             # blank review sheet of the top ThreatFox families
-cti threats-sheet --date 2026-10-26 --priority  # add unlabelled families from the priority top 20
+cti threats-sheet --date 2026-10-26 # blank review sheet of the top ThreatFox families
+#   label the sheet -> data/reference/threat-categories-<date>.csv
 cti threats --date 2026-10-26       # categories, ATT&CK techniques, CVE links, priority
+cti threats-sheet --date 2026-10-26 --priority  # add priority-top-20 families not yet on the sheet
+#   label them, rerun `cti threats`; repeat until no new family enters the top 20
 cti export --date 2026-10-26        # again, now with threats and the Known exploited order
 (cd web && npm ci && npm run build) # build the dashboard once (pinned, no install scripts)
 cti serve                           # dashboard at http://127.0.0.1:8000/ (local only)

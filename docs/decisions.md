@@ -232,8 +232,9 @@ CVEs; they are never inputs to the CVE risk score.
 
 **Why.** No labels exist to train or evaluate a threat ranking, and fitting a model on
 ThreatFox data is not allowed ([decision 12](#12-never-train-a-model-on-abusech-data)). As
-risk features, the links would leak: they come from snapshot-time reference pages, which
-were chosen KEV-first, so they encode the label the risk model is tested on.
+risk features, the links would leak: every link source (reference pages, ThreatFox tags,
+ATT&CK text) is snapshot-time, and the reference pages were chosen KEV-first, so links
+encode the label the risk model is tested on.
 
 **Cost.** The priority is not validated. Some rules were added after the first run, each
 in its own commit and listed in the config header (the KEV-link key, which links count, the
@@ -262,7 +263,7 @@ human review can replace them.
 
 **Decision.** The Known exploited view lists all 1,756 KEV CVEs in a fixed order: linked to
 a shown threat family by a link that counts for priority (26 CVEs), then CISA known
-ransomware use (361), then newest CISA listing date, then CVE ID. The owner signed off the
+ransomware use (350 more; 361 overall), then newest CISA listing date, then CVE ID. The owner signed off the
 rule on 2026-11-06 before any output was seen. `cti export` writes each entry's
 `priority_rank` and a `why` line naming its source.
 
@@ -270,9 +271,9 @@ rule on 2026-11-06 before any output was seen. `cti export` writes each entry's
 need an order to patch in. Nothing labels which KEV CVE matters more, so the order cannot be
 evaluated; it is presented as a sort order, not a prediction.
 
-**Alternatives.** Ransomware before threat links; newest listing only; CISA's due date
-(1,751 of 1,756 are past due at the snapshot, and it is a US federal deadline, so it
-separates nothing).
+**Alternatives.** Ransomware before threat links; newest listing only. CISA's due date was
+also dropped as a column (owner, 2026-11-06): 1,751 of 1,756 are past due at the
+snapshot and it is a US federal deadline, so it would separate nothing as a sort key either.
 
 **Cost.** Unevaluated. The listing date says when CISA added a CVE, not how active it is;
 287 entries share CISA's first batch date (2021-11-03) and sort last within their group.

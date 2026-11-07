@@ -574,7 +574,7 @@ As of 2026-11-06 (`main` 51d932c; export re-stamped clean, schema 2; 562 tests).
 | 11a Credibility | #40, #41 | Overclaims corrected (KEV wording, link precision, tier lift) |
 | Overview redesign | #42, #43 | One briefing panel; queue card matches tiers card |
 | 12 Threats → what to patch | #44 | Known exploited view (fixed order, 26 threat-linked first); queue early-warning badge; Overview counts |
-| 11c Dashboard | #45–#47 | One sign convention without changing numbers; scored vs in the queue; NVD cards for all 10,304 clickable CVEs; vendor search; equal Evaluation panels |
+| 11c Dashboard | #45–#47 | One sign convention without changing numbers; scored vs in the queue; every one of 10,304 clickable CVEs opens a detail (154 new NVD cards); vendor search; equal Evaluation panels |
 
 Lessons from these phases are in `tasks/lessons.md` (stranded pushes, stacked PRs,
 pre-registration before results, checking third-party data before committing).
