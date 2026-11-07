@@ -16,7 +16,12 @@ SYMBOL = re.compile(r"^[A-Za-z_]\w*(?:\.\w+)?$")
 
 
 def _defines(source: str, name: str) -> bool:
-    pattern = rf"^\s*(?:def|class)\s+{re.escape(name)}\b|^\s*{re.escape(name)}\s*[:=]"
+    """A def or class (top level or a method), or a module-level assignment; keyword
+    arguments and other indented ``name=`` lines don't count."""
+    pattern = (
+        rf"^(?: {{4}})?(?:async\s+)?(?:def|class)\s+{re.escape(name)}\b"
+        rf"|^{re.escape(name)}\s*(?::[^=\n]*)?="
+    )
     return re.search(pattern, source, re.MULTILINE) is not None
 
 
@@ -25,7 +30,7 @@ def _citations(text: str):
     current, prev_end = None, None
     for m in TOKEN.finditer(text):
         token = m.group(1)
-        chained = prev_end is not None and text[prev_end : m.start()] == ", "
+        chained = prev_end is not None and re.fullmatch(r",\s+", text[prev_end : m.start()])
         if token.startswith("test_"):
             yield "test", token, None
             current = None
@@ -42,8 +47,7 @@ def _citations(text: str):
         prev_end = m.end()
 
 
-def test_every_citation_in_the_threat_model_exists():
-    text = DOC.read_text(encoding="utf-8")
+def _missing(text: str) -> tuple[list[str], int]:
     tests = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "tests").rglob("test_*.py"))
     missing, checked = [], 0
     for kind, value, path in _citations(text):
@@ -56,12 +60,25 @@ def test_every_citation_in_the_threat_model_exists():
             source = (ROOT / path).read_text(encoding="utf-8")
             if not all(_defines(source, part) for part in value.split(".")):
                 missing.append(f"{path}::{value}")
+    return missing, checked
+
+
+def test_every_citation_in_the_threat_model_exists():
+    missing, checked = _missing(DOC.read_text(encoding="utf-8"))
     assert checked > 50  # the parser still finds the citations
     assert missing == []
 
 
-def test_the_checker_catches_a_stale_citation():
-    stale = "`src/cti/http/safe_fetch.py::no_such_function`, `test_no_such_test`"
-    found = list(_citations(stale))
-    assert ("symbol", "no_such_function", "src/cti/http/safe_fetch.py") in found
-    assert ("test", "test_no_such_test", None) in found
+def test_the_checker_catches_stale_citations():
+    stale = (
+        "`src/cti/http/safe_fetch.py::is_public_ip`,\n  `no_such_function`; "
+        "`src/no/such/file.py`; `test_no_such_test`; "
+        "`src/cti/dashboard/serve.py::timeout`"  # only a keyword argument there
+    )
+    missing, _ = _missing(stale)
+    assert missing == [
+        "src/cti/http/safe_fetch.py::no_such_function",  # chained across a line break
+        "src/no/such/file.py",
+        "test_no_such_test",
+        "src/cti/dashboard/serve.py::timeout",
+    ]
