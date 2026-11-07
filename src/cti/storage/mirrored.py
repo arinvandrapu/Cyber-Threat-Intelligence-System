@@ -22,6 +22,13 @@ class MirroredStorage:
         if not (wrote_primary or wrote_replica):
             raise FileExistsError(key)
 
+    def replace(self, key: str, data: bytes, *, expected: bytes) -> None:
+        # Like put_bytes: a retry after a half-done replace skips the side already holding
+        # ``data`` instead of failing on it.
+        for side in (self.primary, self.replica):
+            if side.get_bytes(key) != data:
+                side.replace(key, data, expected=expected)
+
     def get_bytes(self, key: str) -> bytes:
         if self.primary.exists(key):
             return self.primary.get_bytes(key)
