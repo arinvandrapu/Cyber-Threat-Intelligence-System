@@ -911,18 +911,21 @@ def cmd_report(args, settings: Settings) -> int:
     from cti.dashboard import brief
 
     export_dir = _export_dir(args, settings)
+    text = brief.render(brief.facts(export_dir))
     if args.check:
-        stated = brief.stated_export_sha256(Path(args.check).read_text(encoding="utf-8"))
-        current = brief.export_sha256(export_dir)
-        if stated != current:
+        # the whole text, not just the stated hash: catches a hand edit or a brief made by
+        # an older generator, as well as a different export
+        stated = Path(args.check).read_text(encoding="utf-8")
+        if stated != text:
+            other = brief.stated_export_sha256(stated) != brief.export_sha256(export_dir)
             print(
-                f"error: {args.check} states export {stated}, current is {current}; regenerate it",
+                f"error: {args.check} differs from this export's brief "
+                f"({'another export' if other else 'other text'}); regenerate it",
                 file=sys.stderr,
             )
             return 1
         print(f"  {args.check} matches the {export_dir.name} export")
         return 0
-    text = brief.render(brief.facts(export_dir))
     out = (
         Path(args.out) if args.out else settings.data_dir / "reports" / export_dir.name / "brief.md"
     )

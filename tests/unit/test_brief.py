@@ -90,9 +90,36 @@ def test_feature_labels_match_the_dashboard():
 
 def test_cli_writes_and_checks(tmp_path, capsys):
     out = tmp_path / "brief.md"
-    assert main(["report", "--export-dir", str(FIXTURE), "--out", str(out)]) == 0
-    assert out.read_text() == _render()
-    assert main(["report", "--export-dir", str(FIXTURE), "--check", str(out)]) == 0
-    out.write_text(out.read_text().replace(brief.export_sha256(FIXTURE), "0" * 64))
-    assert main(["report", "--export-dir", str(FIXTURE), "--check", str(out)]) == 1
-    assert "regenerate it" in capsys.readouterr().err
+    args = ["report", "--export-dir", str(FIXTURE)]
+    assert main([*args, "--out", str(out)]) == 0
+    good = out.read_text()
+    assert good == _render()
+    assert main([*args, "--check", str(out)]) == 0
+    out.write_text(good.replace(brief.export_sha256(FIXTURE), "0" * 64))
+    assert main([*args, "--check", str(out)]) == 1
+    assert "another export" in capsys.readouterr().err
+    out.write_text(good.replace("Bottom line", "Bottom-line"))  # a hand edit
+    assert main([*args, "--check", str(out)]) == 1
+    assert "other text" in capsys.readouterr().err
+
+
+def test_edge_cases_render_without_errors():
+    f = brief.facts(FIXTURE)
+    f["watch"] = f["watch"][:2]
+    f["watch"][0] |= {"epss": 0.5, "epss_percentile": None}
+    f["watch"][1] |= {"epss": 0.999, "epss_percentile": 1.0}
+    f |= {"epss_train": [], "commit": None, "dirty": None}
+    text = brief.render(f)
+    assert "50.0% |" in text and "99.90% (highest)" in text
+    assert "; the model was trained on" not in text  # no dangling "trained on ."
+    assert "an unknown commit (state unknown)" in text
+    assert "of the 2 highest-ranked" in text
+
+
+def test_exploit_code_excludes_nuclei_and_cells_are_escaped():
+    assert "nuclei" not in brief.EXPLOIT_CODE
+    assert brief._cell("a|b*c_d") == "a\\|b\\*c\\_d"
+    assert (
+        brief._cell("Gitea: Improper Limitation of a Pathname (x", 30)
+        == "Gitea: Improper Limitation…"
+    )

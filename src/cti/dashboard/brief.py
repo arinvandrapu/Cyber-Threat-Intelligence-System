@@ -21,9 +21,12 @@ import re
 from pathlib import Path
 
 from cti.dashboard import schema
+from cti.stats import wilson
 from cti.threats.config import KEV_LINK_SOURCES
 
 TOP = 10  # rows in the KEV and watch-list tables
+EXPLOIT_CODE = ("exploitdb", "metasploit")  # Nuclei templates are mostly detection checks
+Z95 = 1.959964  # as risk-eval
 TOP_FAMILIES = 5
 RECENT_DAYS = 30
 
@@ -53,8 +56,9 @@ def export_sha256(export_dir: Path) -> str:
 
 
 def confidence(positives: int, counter_evidence: bool) -> str:
-    """The brief's confidence key: low under 10 positives; moderate under 50 or when
-    another measure points the other way; otherwise high."""
+    """The brief's confidence key, on the number of positive events a judgement rests on:
+    low under 10; moderate under 50 or when another measure points the other way; else
+    high."""
     if positives < 10:
         return "low"
     if positives < 50 or counter_evidence:
@@ -104,8 +108,8 @@ def facts(export_dir: Path) -> dict:
         "kev_catalog_version": meta["kev_catalog_version"],
         "epss_snapshot": ", ".join(versions.get("snapshot", [])) or "unknown",
         "epss_train": sorted({v for k, vs in versions.items() if k != "snapshot" for v in vs}),
-        "commit": meta["git"]["commit"],
-        "dirty": meta["git"]["dirty"],
+        "commit": meta["git"].get("commit"),
+        "dirty": meta["git"].get("dirty"),
         "export_sha256": export_sha256(export_dir),
         "disclosures": meta["disclosures"],
         "kev_total": len(kev),
@@ -124,6 +128,9 @@ def facts(export_dir: Path) -> dict:
         "ranked_cves": risk["ranked_cves"],
         "queue": len(rows),
         "tiers": {t: tiers[t] for t in ("critical", "high", "elevated")},
+        "critical_fraction": next(
+            t["max_rank_fraction"] for t in risk["tiers"] if t["name"] == "critical"
+        ),
         "watch": [
             {
                 "rank": r["rank"],
@@ -133,14 +140,21 @@ def facts(export_dir: Path) -> dict:
                 "age_days": r["age_days"],
                 "epss": r["epss"],
                 "epss_percentile": r["epss_percentile"],
-                "exploit_code": bool(r["exploit_sources"]),
+                "exploit_code": any(s in EXPLOIT_CODE for s in r["exploit_sources"]),
                 "drivers": _drivers(r["contributions"]),
             }
             for r in watch
         ],
         "watch_recent": sum(1 for r in watch if r["age_days"] <= RECENT_DAYS),
-        "watch_exploit_code": sum(1 for r in watch if r["exploit_sources"]),
-        "history": [hist[t] for t in ("critical", "high", "elevated", "baseline")],
+        "watch_exploit_code": sum(
+            1 for r in watch if any(s in EXPLOIT_CODE for s in r["exploit_sources"])
+        ),
+        # recomputed from the counts: the export's interval is rounded to 4 places, too
+        # coarse for the baseline tier's 0.016%
+        "history": [
+            hist[t] | {"wilson95": list(wilson(hist[t]["kev_positives"], hist[t]["cves"], Z95, 6))}
+            for t in ("critical", "high", "elevated", "baseline")
+        ],
         "test_windows": len(ev["folds"]),
         "positives": pooled["logistic"]["positives"],
         "hits_model": pooled["logistic"]["hits@100"],
@@ -153,9 +167,12 @@ def facts(export_dir: Path) -> dict:
         "ap_epss": pooled["epss"]["mean_average_precision"],
         "top1_diff": top1["difference_hits"],
         "top1_ci": top1["ci95"],
+        # rests on the model's top-100 hits (6 today), not on all 68 positives
         "confidence_model": confidence(
-            int(pooled["logistic"]["positives"]), ap_counter or not top1["excludes_zero"]
+            int(pooled["logistic"]["hits@100"]), ap_counter or not top1["excludes_zero"]
         ),
+        "ap_counter": ap_counter,
+        "top1_excludes_zero": top1["excludes_zero"],
         "confidence_tier": confidence(hist["critical"]["kev_positives"], False),
         "threats_available": threats["available"],
         "threats_stale": threats["stale"],
@@ -219,32 +236,37 @@ def _ci(ci: list[float], pct: bool = False, digits: int = 1) -> str:
     return f"{lo:+,.0f} to {hi:+,.0f}"
 
 
+def _plural(n: float, one: str, many: str) -> str:
+    return one if n == 1 else many
+
+
+_MD = re.compile(r"([|*_`\\])")
+
+
 def _cell(text: str, limit: int | None = None) -> str:
+    """Escape Markdown; shorten at a word boundary to ``limit`` characters."""
     if limit and len(text) > limit:
-        text = text[: limit - 1].rstrip() + "…"
-    return text.replace("|", "\\|")
+        cut = text[: limit - 1].rsplit(" ", 1)[0]
+        text = cut.rstrip(" ([{'\"-:,;\u2013") + "…"  # \u2013: en dash
+    return _MD.sub(r"\\\1", text)
 
 
-def _epss(p: float, percentile: float) -> str:
+def _epss(p: float, percentile: float | None) -> str:
     """EPSS as a probability, with its rank as "top x%" (clearer than "99.98th")."""
     prob = f"{p * 100:.2f}%" if p >= 0.995 else _pct(p)
+    if percentile is None:
+        return prob
     top = (1 - percentile) * 100
+    if top <= 0:
+        return f"{prob} (highest)"
     return f"{prob} (top {top:.2g}%)" if top < 1 else f"{prob} (top {top:.0f}%)"
-
-
-def _cves(n: int, what: str = "") -> str:
-    """ "1 threat-linked KEV CVE", "26 threat-linked KEV CVEs"."""
-    return f"{_n(n)} {what + ' ' if what else ''}CVE{'' if n == 1 else 's'}"
-
-
-def _all_or(k: int, n: int) -> str:
-    return f"all {n}" if k == n else f"{k} of the top {n}"
 
 
 def render(f: dict) -> str:
     day = f["snapshot_date"]
     crit, hist = f["tiers"]["critical"], {h["name"]: h for h in f["history"]}
-    c = hist["critical"]
+    c, base = hist["critical"], hist["baseline"]
+    shown = len(f["watch"])
     lines: list[str] = []
     add = lines.append
 
@@ -257,49 +279,65 @@ def render(f: dict) -> str:
     )
     add(
         "> Portfolio sample built only from public data; not an operational product. "
-        "Every number is read from the export; judgements are labelled as such.\n"
+        "Every number is read or computed from the export; judgements are labelled as such.\n"
     )
 
     add("## Bottom line up front\n")
     add(
-        f"- **Known exploited (observed):** all {_n(f['kev_total'])} CVEs in CISA KEV are "
-        f"confirmed exploited and warrant remediation. {_n(f['kev_linked'])} "
-        f"{'is' if f['kev_linked'] == 1 else 'are'} linked to a tracked threat family and "
-        f"{_n(f['kev_ransomware'])} have known ransomware use; Section 1 lists them in that "
-        "order."
+        f"- **Known exploited (observed):** CISA lists {_n(f['kev_total'])} CVEs with reliable "
+        f"evidence of active exploitation; all warrant remediation. {_n(f['kev_linked'])} "
+        f"{_plural(f['kev_linked'], 'is', 'are')} linked to a tracked threat family and "
+        f"{_n(f['kev_ransomware'])} {_plural(f['kev_ransomware'], 'has', 'have')} known "
+        f"ransomware use (the groups overlap); Section 1 shows the first {len(f['kev_top'])} "
+        "in that order."
     )
+    ex = f["watch_exploit_code"]
     add(
-        f"- **Watch (ranked, not predicted):** {_n(crit)} CVEs not yet in KEV sit in the "
-        f"critical tier (top 0.1% of {_n(f['ranked_cves'])} scored); "
-        f"{_all_or(f['watch_exploit_code'], TOP)} of the highest-ranked have public exploit "
-        "code (Section 2)."
+        f"- **Watch (ranked, not predicted):** {_n(crit)} "
+        f"{_plural(crit, 'CVE', 'CVEs')} not yet in KEV sit in the critical tier (top "
+        f"{f['critical_fraction'] * 100:g}% of {_n(f['ranked_cves'])} scored); "
+        f"{'all' if ex == shown else ex} of the {shown} highest-ranked "
+        f"{_plural(ex, 'has', 'have')} a public exploit (ExploitDB or Metasploit; Section 2)."
     )
     if f["threats_available"]:
+        k = len(f["early"])
         add(
-            f"- **Early warning (observed):** {len(f['early'])} of {_n(f['queue'])} queued CVEs "
-            "is linked to a threat family before any KEV listing (Section 3)."
-            if len(f["early"]) == 1
-            else f"- **Early warning (observed):** {len(f['early'])} of {_n(f['queue'])} queued "
-            "CVEs are linked to a threat family before any KEV listing (Section 3)."
+            f"- **Early warning (observed):** {k} of {_n(f['queue'])} queued CVEs "
+            f"{_plural(k, 'is', 'are')} linked to a threat family and not yet in KEV "
+            "(Section 3)."
         )
+    counter = f["ap_counter"] or not f["top1_excludes_zero"]
+    judged = (
+        "the model adds value over EPSS only at the very top of the list"
+        if counter
+        else "the model ranks future KEV additions better than EPSS"
+    )
+    against = []
+    if f["ap_counter"]:
+        against.append("EPSS has the higher mean average precision")
+    if not f["top1_excludes_zero"]:
+        against.append("the two are level at the top 1%")
     add(
-        f"- **Judgement:** over {f['test_windows']} forward test windows the model's top 100 "
+        f"- **Judgement:** {judged}. Over {f['test_windows']} forward test windows its top 100 "
         f"caught {_n(f['hits_model'])} of {_n(f['positives'])} later KEV additions against "
         f"{_n(f['hits_epss'])} for EPSS ({f['diff']:+.0f}, 95% CI {_ci(f['diff_ci'])}; "
-        f"pre-registered verdict: {f['verdict']}). *Confidence: {f['confidence_model']}* "
-        f"({_n(f['positives'])} positives; EPSS has the higher mean average precision)."
-        if f["ap_epss"] > f["ap_model"]
-        else f"- **Judgement:** over {f['test_windows']} forward test windows the model's top "
-        f"100 caught {_n(f['hits_model'])} of {_n(f['positives'])} later KEV additions against "
-        f"{_n(f['hits_epss'])} for EPSS ({f['diff']:+.0f}, 95% CI {_ci(f['diff_ci'])}; "
-        f"pre-registered verdict: {f['verdict']}). *Confidence: {f['confidence_model']}* "
-        f"({_n(f['positives'])} positives)."
+        f"pre-registered verdict: {f['verdict']})"
+        + (f", but {' and '.join(against)}." if against else ".")
+        + f" *Confidence: {f['confidence_model']}* (rests on {_n(f['hits_model'])} hits)."
     )
+    ratio = c["hit_rate"] / base["hit_rate"] if base["hit_rate"] else None
     add(
-        f"- **Judgement:** historically, critical-tier CVEs entered KEV within 180 days at "
-        f"{_pct(c['hit_rate'])} (95% CI {_ci(c['wilson95'], True)}) against "
-        f"{_pct(hist['baseline']['hit_rate'], 3)} for the baseline tier. "
-        f"*Confidence: {f['confidence_tier']}* ({c['kev_positives']} critical-tier positives).\n"
+        "- **Judgement:** the critical tier concentrates future KEV listings. Historically its "
+        f"CVEs entered KEV within 180 days at {_pct(c['hit_rate'])} (95% CI "
+        f"{_ci(c['wilson95'], True)})"
+        + (
+            f", about {float(f'{ratio:.2g}'):,.0f} times the baseline tier's "
+            f"{_pct(base['hit_rate'], 3)}"
+            if ratio
+            else ""
+        )
+        + f". *Confidence: {f['confidence_tier']}* ({c['kev_positives']} critical-tier "
+        f"{_plural(c['kev_positives'], 'positive', 'positives')}).\n"
     )
 
     order = (
@@ -311,35 +349,38 @@ def render(f: dict) -> str:
     )
     add("## 1. Known exploited: threat-linked first\n")
     add(
-        "Every CVE here is in CISA's Known Exploited Vulnerabilities catalog, so exploitation "
-        "is confirmed and all of them warrant remediation. The order is a fixed sort, not a "
-        f'risk ranking: {order}. "Known ransomware use" is CISA\'s '
+        "Every CVE here is in CISA's Known Exploited Vulnerabilities catalog (reliable "
+        "evidence of active exploitation), so all of them warrant remediation. The order is a "
+        f'fixed sort, not a risk ranking: {order}. "Known ransomware use" is CISA\'s '
         f"`knownRansomwareCampaignUse` field ({_n(f['kev_ransomware'])} of "
         f'{_n(f["kev_total"])}); "Unknown" means CISA is not aware of ransomware use, not '
-        f"that there is none. CISA's due dates bind US federal civilian agencies; "
-        f"{_n(f['kev_past_due'])} of {_n(f['kev_total'])} have passed.\n"
+        "that there is none. CISA's due dates bind US federal civilian agencies; "
+        f"{_n(f['kev_past_due'])} of {_n(f['kev_total'])} have passed. A family named on a "
+        "reference page is the weakest link type (see the link review in Section 4).\n"
     )
-    add("| # | CVE | Product | Why it is first |")
+    add("| # | CVE | Product | Why it is in this position |")
     add("|---|---|---|---|")
     for e in f["kev_top"]:
         add(f"| {e['rank']} | {e['cve']} | {_cell(e['product'])} | {_cell(e['why'])} |")
     add("")
 
     add("## 2. Watch list: highest-ranked CVEs not yet in KEV\n")
+    train = " and ".join(f["epss_train"])
     add(
         "A ranking, not a prediction: the model's score is not a probability and this "
         "snapshot's ranking is not itself evaluated (only past tiers are, below). Newer CVEs "
-        f"rank higher: {f['watch_recent']} of these {TOP} were published within {RECENT_DAYS} "
-        f"days of the snapshot. Snapshot EPSS is model {f['epss_snapshot']}; the model was "
-        f"trained on {' and '.join(f['epss_train'])}.\n"
+        f"rank higher: {f['watch_recent']} of these {shown} were published within "
+        f"{RECENT_DAYS} days of the snapshot. Snapshot EPSS is model {f['epss_snapshot']}"
+        + (f"; the model was trained on {train}." if train else ".")
+        + " Nuclei templates are mostly detection checks, not exploits.\n"
     )
     add("| Rank | CVE | Name | Age (days) | EPSS (rank among all CVEs) | Top drivers |")
     add("|---|---|---|---|---|---|")
     for r in f["watch"]:
         epss = _epss(r["epss"], r["epss_percentile"]) if r["epss"] is not None else "none"
         add(
-            f"| {_n(r['rank'])} | {r['cve']} | {_cell(r['name'], 60)} | {r['age_days']} | {epss} | "
-            f"{', '.join(r['drivers'])} |"
+            f"| {_n(r['rank'])} | {r['cve']} | {_cell(r['name'], 60)} | {r['age_days']} | "
+            f"{epss} | {', '.join(r['drivers'])} |"
         )
     add("")
     add("Tier back-test (the same procedure on past windows; KEV listing within 180 days):\n")
@@ -361,12 +402,12 @@ def render(f: dict) -> str:
     else:
         k = len(f["early"])
         add(
-            f"{k} of {_n(f['queue'])} queued CVEs {'carries' if k == 1 else 'carry'} a "
+            f"{k} of {_n(f['queue'])} queued CVEs {_plural(k, 'carries', 'carry')} a "
             "threat-family link that counts for priority. Threat links never change the rank, "
             "and this signal has not been evaluated as a predictor.\n"
         )
         for e in f["early"]:
-            add(f"- {e['cve']} (rank {_n(e['rank'])}, {e['tier']}): {'; '.join(e['via'])}")
+            add(f"- {e['cve']} (rank {_n(e['rank'])}, {e['tier']}): {_cell('; '.join(e['via']))}")
         add("")
 
     add("## 4. Threat context\n")
@@ -378,21 +419,23 @@ def render(f: dict) -> str:
             "declared priority heuristic (not validated). A link records that a source "
             "connects the family and the CVE (its ATT&CK entry cites it, a ThreatFox reporter "
             "tagged it, or a reference page names both); it does not show the family "
-            "exploited the CVE. Rejected links are left out.\n"
+            "exploited the CVE. Rejected links are left out. IOC counts are the family's "
+            "ThreatFox rows in the snapshot; the change is IOCs first seen in the last 30 days "
+            "minus the 30 days before.\n"
         )
         add(
-            "| # | Family | Categories | KEV / queued CVEs | IOC rows (30-day change) "
+            "| # | Family | Categories | KEV / queued CVEs | ThreatFox IOCs (30-day change) "
             "| Linked CVEs |"
         )
         add("|---|---|---|---|---|---|")
         for fam in f["families"]:
             name = fam["family"] + (f" (ATT&CK {fam['attack']})" if fam["attack"] else "")
-            shown = [f"{x['cve']} ({x['source']})" for x in fam["links"][:3]]
-            more = len(fam["links"]) - len(shown)
-            linked = "; ".join(shown) + (f"; +{more} more" if more else "") or "none"
+            listed = [f"{x['cve']} ({x['source']})" for x in fam["links"][:3]]
+            more = len(fam["links"]) - len(listed)
+            linked = "; ".join(listed) + (f"; +{more} more" if more else "") or "none"
             add(
-                f"| {fam['rank']} | {_cell(name)} | {', '.join(fam['categories']) or 'none'} | "
-                f"{fam['kev_cves']} / {fam['queued_cves']} | {_n(fam['ioc_rows'])} "
+                f"| {fam['rank']} | {_cell(name)} | {_cell(', '.join(fam['categories']) or 'none')}"
+                f" | {fam['kev_cves']} / {fam['queued_cves']} | {_n(fam['ioc_rows'])} "
                 f"({fam['ioc_growth']:+,}) | {_cell(linked)} |"
             )
         add("")
@@ -407,12 +450,14 @@ def render(f: dict) -> str:
 
     add("## 5. Recommended actions\n")
     add(
-        f"1. Confirm exposure to the {_cves(f['kev_linked'], 'threat-linked KEV')}, then the "
+        f"1. Confirm exposure to the {_n(f['kev_linked'])} threat-linked KEV "
+        f"{_plural(f['kev_linked'], 'CVE', 'CVEs')}, then the rest of the "
         f"{_n(f['kev_ransomware'])} with known ransomware use; remediate per vendor guidance."
     )
     add(
-        f"2. Triage the {_cves(crit, 'critical-tier')}, starting with the highest-ranked that "
-        "have public exploit code (Section 2); recheck as EPSS and KEV update."
+        f"2. Triage the {_n(crit)} critical-tier {_plural(crit, 'CVE', 'CVEs')}, starting with "
+        "the highest-ranked that have a public exploit (Section 2); recheck as EPSS and KEV "
+        "update."
     )
     step = 3
     if f["threats_available"] and f["early"]:
@@ -421,49 +466,57 @@ def render(f: dict) -> str:
     hunts = [x for x in f["families"] if x["attack"]]
     if hunts:
         add(
-            f"{step}. Hunt: check detection coverage against the ATT&CK technique sets of "
+            f"{step}. Hunt: map detection coverage against the ATT&CK techniques attributed to "
             + ", ".join(
                 f"{x['family']} ({x['attack']}, {x['techniques']} techniques)" for x in hunts
             )
-            + "."
+            + " (e.g. as ATT&CK Navigator layers) and close gaps, rather than hunting every "
+            "technique."
         )
     add("")
 
-    add("## 6. Confidence and method\n")
+    add("## Annex\n")
+    add("### A. Confidence and method\n")
     add(
         f"- Forward test: {f['rule']}; {f['test_windows']} rolling windows, "
         f"{_n(f['positives'])} KEV additions. Model {_n(f['hits_model'])} vs EPSS "
         f"{_n(f['hits_epss'])} in the top 100 ({f['diff']:+.0f}, 95% CI {_ci(f['diff_ci'])})."
     )
     add(
-        f"- Against it: EPSS has mean average precision {f['ap_epss']:.4f} vs "
-        f"{f['ap_model']:.4f} for the model, and at the top 1% the difference is "
-        f"{f['top1_diff']:+.0f} (95% CI {_ci(f['top1_ci'])})."
+        f"- Against it: EPSS mean average precision {f['ap_epss']:.4f} vs {f['ap_model']:.4f} "
+        f"for the model; at the top 1% the difference is {f['top1_diff']:+.0f} "
+        f"(95% CI {_ci(f['top1_ci'])})."
     )
     add(
-        "- Confidence key: low under 10 positives; moderate under 50 or when another "
-        "measure points the other way; otherwise high. Confidence labels never share a "
-        "sentence with a likelihood word.\n"
+        "- Confidence key, on the number of positive events a judgement rests on: low under "
+        "10; moderate under 50 or when another measure points the other way; otherwise high. "
+        "A confidence label never shares a sentence with a likelihood word.\n"
     )
 
-    add("## 7. Limitations\n")
+    add("### B. Limitations\n")
     add("From the export's own disclosures, verbatim:\n")
     for line in f["disclosures"]:
         add(f"- {line}")
     add("")
 
-    add("## 8. Sources\n")
+    add("### C. Sources\n")
     add("| Source | Version / date | Use and reliability |")
     add("|---|---|---|")
     add(
-        f"| CISA KEV | catalog {f['kev_catalog_version']} | Confirmed exploitation; "
-        "authoritative for listing, not for exploitation start dates |"
+        f"| CISA KEV | catalog {f['kev_catalog_version']} | Labels and Section 1: reliable "
+        "evidence of active exploitation; authoritative for listing, not for when "
+        "exploitation began |"
     )
     add(
-        f"| FIRST EPSS | model {f['epss_snapshot']}, scores of {day} | Model estimate of "
-        "exploitation activity in the next 30 days; a probability, not a risk measure |"
+        f"| FIRST EPSS | model {f['epss_snapshot']}, scores of {day} | Model input "
+        "(percentile at each cutoff). FIRST's estimate of the probability that exploitation "
+        "activity is observed in the next 30 days: threat only, not a risk score (no impact "
+        "or exposure) |"
     )
-    add(f"| NVD | snapshot {day} | CVE records and dates; context only, not a model input |")
+    add(
+        f"| NVD | snapshot {day} | Scope and the age input (publication date); CVSS, CWE, "
+        "assigner and descriptions are context only |"
+    )
     add(
         f"| CISA Vulnrichment (SSVC); ExploitDB, Metasploit, Nuclei | snapshot {day} | Model "
         "inputs as of each test cutoff |"
@@ -477,10 +530,12 @@ def render(f: dict) -> str:
         "only (no indicators); community-reported, unvetted |"
     )
     add("")
-    state = "dirty working tree" if f["dirty"] else "clean"
+    commit = f"`{f['commit']}`" if f["commit"] else "an unknown commit"
+    state = {True: "dirty working tree", False: "clean"}.get(f["dirty"], "state unknown")
     add(
-        f"Reproducibility: export from commit `{f['commit']}` ({state}); export files SHA-256 "
-        f"`{f['export_sha256']}`. Regenerate with `cti report --date {day}`.\n"
+        f"Reproducibility: export from {commit} ({state}); export files SHA-256 "
+        f"`{f['export_sha256']}`. Regenerate with `cti report --date {day}`; "
+        f"`cti report --check <this file>` confirms it.\n"
     )
     add("**TLP:CLEAR**")
     return "\n".join(lines) + "\n"
