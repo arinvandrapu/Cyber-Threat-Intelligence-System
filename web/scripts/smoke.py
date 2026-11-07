@@ -31,6 +31,12 @@ VIEWS = {
     "indicators": "<h1>Indicators",
     "evaluation": "<h1>Evaluation",
 }
+# extra routes: (hash, view whose heading must render); a family focus and a malformed
+# escape must both render the Threats view, never a blank page
+ROUTES = [
+    ("threats/Agent%20Tesla", "threats"),
+    ("threats/%E0%A4", "threats"),
+]
 CHROMES = (
     "google-chrome",
     "google-chrome-stable",
@@ -84,7 +90,8 @@ def main() -> int:
         if server.poll() is not None:  # something else answered on the port
             return print(f"cti serve exited; is port {args.port} in use?") or 1
         with tempfile.TemporaryDirectory() as profile:
-            for view, marker in VIEWS.items():
+            for route, view in [(v, v) for v in VIEWS] + ROUTES:
+                marker = VIEWS[view]
                 run = subprocess.run(  # noqa: S603 - fixed argv
                     [
                         chrome,
@@ -96,7 +103,7 @@ def main() -> int:
                         "--v=0",
                         "--virtual-time-budget=5000",
                         "--dump-dom",
-                        f"{base}#/{view}",
+                        f"{base}#/{route}",
                     ],
                     capture_output=True,
                     text=True,
@@ -107,10 +114,10 @@ def main() -> int:
                 active = f'href="#/{view}" aria-current="page"'
                 rendered = marker in run.stdout and active in run.stdout
                 status = "ok" if rendered and not console else "FAIL"
-                print(f"  {status:4} {view}")
+                print(f"  {status:4} {route}")
                 if not rendered:
-                    failures.append(f"{view}: did not render ({marker!r} missing)")
-                failures += [f"{view}: {line.split('CONSOLE', 1)[1][:300]}" for line in console]
+                    failures.append(f"{route}: did not render ({marker!r} missing)")
+                failures += [f"{route}: {line.split('CONSOLE', 1)[1][:300]}" for line in console]
     finally:
         server.terminate()
         try:

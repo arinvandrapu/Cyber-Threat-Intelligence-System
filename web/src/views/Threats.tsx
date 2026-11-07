@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Data, LinkedCve, ThreatFamily, ThreatLink } from "../types";
-import { cveHref } from "../App";
+import { cveHref, threatHref } from "../App";
 import { PageHead, TierName } from "../components/ui";
 import { int, linkReview, signed } from "../format";
 
@@ -20,10 +20,17 @@ const VIA_LABEL: Record<ThreatLink["via"], string> = {
   "attack:software": "cited by MITRE ATT&CK for this software",
 };
 
-export function Threats({ data }: { data: Data }) {
+export function Threats({ data, focus }: { data: Data; focus: string | null }) {
   const { threats } = data;
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<string | null>(threats.families[0]?.family ?? null);
+
+  // a family opened by link (#/threats/<name>): only a shown family's exact name selects
+  useEffect(() => {
+    if (!focus || !threats.families.some((f) => f.family === focus)) return;
+    setSelected(focus);
+    setCategory("all");
+  }, [focus, threats.families]);
 
   // only categories some shown family has, so no filter leads to an empty table
   const categories = useMemo(
@@ -144,17 +151,26 @@ export function Threats({ data }: { data: Data }) {
       <section className="panel">
         <div className="panel-head">
           <h2>Indicators by category</h2>
-          <span className="muted" style={{ fontSize: 12.5 }}>ThreatFox indicators per category</span>
+          <span className="muted" style={{ fontSize: 12.5 }}>ThreatFox indicators per category, all {int(threats.families_total)} families</span>
         </div>
-        {threats.categories.map((c) => (
-          <div key={c.category} className="bar-row">
-            <span>{c.category}</span>
-            <svg className="chart" viewBox="0 0 100 10" preserveAspectRatio="none" height="10" aria-hidden="true">
-              <rect x="0" y="1" width={(100 * c.ioc_rows) / maxRows} height="8" fill="var(--accent)" />
-            </svg>
-            <span className="mono" style={{ textAlign: "right" }}>{int(c.ioc_rows)}</span>
-          </div>
-        ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {threats.categories.map((c) => {
+            const filterable = categories.includes(c.category);
+            return (
+              <div key={c.category} className="bar-row">
+                <span className={filterable ? undefined : "faint"}>{c.category}</span>
+                <span className="bar-track" aria-hidden="true">
+                  <span className="bar-fill" style={{ width: `${(100 * c.ioc_rows) / maxRows}%`, background: filterable ? undefined : "var(--edge)" }} />
+                </span>
+                <span className="mono" style={{ textAlign: "right" }}>{int(c.ioc_rows)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="caption">
+          This chart counts every ThreatFox family; the filters above list only categories of the {int(threats.families.length)} families
+          shown. Grey bars have no shown family.
+        </p>
       </section>
 
       <details className="panel">
@@ -192,7 +208,7 @@ function FamilyDetail({ family: f, cards }: { family: ThreatFamily; cards: Map<s
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span className="label">Rank {f.rank}</span>
-        {/* family names come from ThreatFox: plain text, never a link */}
+        {/* family names come from ThreatFox: rendered as text; links to them are in-app only */}
         <span style={{ fontSize: 20, fontWeight: 600, overflowWrap: "anywhere" }}>{f.family}</span>
         <span className="muted" style={{ fontSize: 13 }}>
           {f.categories.join(", ") || "no category"} · {SOURCE_LABEL[f.category_source]}
@@ -248,7 +264,17 @@ const SOURCE_SHORT: Record<ThreatLink["via"], string> = {
 };
 const REVIEW_MARK: Record<ThreatLink["review"], string> = { correct: "✓", rejected: "✗", unreviewed: "" };
 
-export function LinkRow({ link: l, label, card }: { link: ThreatLink; label?: string; card?: LinkedCve }) {
+/** Family names as in-app links to the Threats view (exported families are all shown ones). */
+export function FamilyLinks({ names }: { names: string[] }): ReactNode {
+  return names.map((n, i) => (
+    <span key={n}>
+      {i > 0 && ", "}
+      <a href={threatHref(n)}>{n}</a>
+    </span>
+  ));
+}
+
+export function LinkRow({ link: l, label, card, href }: { link: ThreatLink; label?: string; card?: LinkedCve; href?: string }) {
   const [open, setOpen] = useState(false);
   const detail = `${VIA_LABEL[l.via]}${l.surface.length ? ` ("${l.surface.join('", "')}")` : ""} · ${REVIEW_LABEL[l.review]}${
     l.counts_for_priority ? "" : " · not counted in the ranking"
@@ -262,8 +288,8 @@ export function LinkRow({ link: l, label, card }: { link: ThreatLink; label?: st
     <div style={{ display: "flex", flexDirection: "column", gap: 2, opacity: l.review === "rejected" ? 0.55 : 1 }}>
       <span style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
         {/* a queued CVE opens in the risk queue; anything else expands in place */}
-        {!label && l.tier ? <a className="mono" href={cveHref(l.cve)}>{l.cve}</a> : toggle}
-        {!label && l.tier && (
+        {!label && l.tier ? <a className="mono" href={cveHref(l.cve)}>{l.cve}</a> : label && href ? <a href={href}>{label}</a> : toggle}
+        {((!label && l.tier) || (label && href)) && (
           <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)} title={detail}>
             {open ? "▾" : "▸"}
           </button>
@@ -317,7 +343,7 @@ export function CveCard({ entry: k }: { entry: LinkedCve }) {
       <span style={{ fontSize: 13, overflowWrap: "anywhere" }}>{k.description}</span>
       <span className="mono muted" style={{ fontSize: 12 }}>
         {k.cwes.join(", ") || "no CWE"}
-        {k.families.length > 0 && ` · linked threats: ${k.families.join(", ")}`}
+        {k.families.length > 0 && <> · linked threats: <FamilyLinks names={k.families} /></>}
       </span>
     </div>
   );

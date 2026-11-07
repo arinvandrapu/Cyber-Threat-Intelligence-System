@@ -12,11 +12,24 @@ import { Indicators } from "./views/Indicators";
 import { Evaluation } from "./views/Evaluation";
 import { Threats } from "./views/Threats";
 
-/** Hash routes: #/<view>[/<CVE>] (no server rewrites needed under `cti serve`). */
-function parseHash(): { view: View; arg: string | null } {
-  const [, view = "", arg = ""] = window.location.hash.split("/");
+/** Hash routes: #/<view>[/<CVE or encoded family name>] (no server rewrites needed under
+ * `cti serve`). `arg` is set only for a CVE ID; `name` is the decoded raw segment, which a
+ * view must check against its own data (Threats: a shown family) before using it. */
+function parseHash(): { view: View; arg: string | null; name: string | null } {
+  const [, view = "", raw = ""] = window.location.hash.split("/");
   const known = VIEWS.some(([id]) => id === view);
-  return { view: known ? (view as View) : "overview", arg: CVE_ID.test(arg) ? arg : null };
+  let name: string | null = null;
+  try {
+    name = raw ? decodeURIComponent(raw) : null;
+  } catch {
+    name = null; // malformed escape: ignore it
+  }
+  return { view: known ? (view as View) : "overview", arg: CVE_ID.test(raw) ? raw : null, name };
+}
+
+/** In-app link to a threat family on the Threats view (the name is URI-encoded). */
+export function threatHref(family: string): string {
+  return `#/threats/${encodeURIComponent(family)}`;
 }
 
 export const CVE_ID = /^CVE-\d{4}-\d{4,7}$/;
@@ -50,6 +63,14 @@ export function App() {
       .catch((e: unknown) => setError(e instanceof DataError ? e.message : "could not load the export"));
   }, []);
 
+  // a KEV CVE opened in the risk queue (any older link) shows its place in Known exploited;
+  // replace(), not a new history entry, so Back doesn't bounce into the redirect again
+  useEffect(() => {
+    if (data && route.view === "queue" && route.arg && data.kev.entries.some((k) => k.cve === route.arg)) {
+      window.location.replace(`#/kev/${route.arg}`);
+    }
+  }, [data, route.view, route.arg]);
+
   useEffect(() => {
     const label = VIEWS.find(([id]) => id === route.view)?.[1] ?? "";
     document.title = `CTI Console · ${label}`;
@@ -72,7 +93,7 @@ export function App() {
     overview: () => <Overview data={data} />,
     kev: () => <KnownExploited data={data} focus={route.arg} />,
     queue: () => <RiskQueue data={data} focus={route.arg} />,
-    threats: () => <Threats data={data} />,
+    threats: () => <Threats data={data} focus={route.name} />,
     landscape: () => <RiskLandscape data={data} />,
     weakness: () => <WeaknessGraph data={data} />,
     attack: () => <AttackGraph data={data} />,

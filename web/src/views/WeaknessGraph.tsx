@@ -5,7 +5,7 @@ import { TIER_LABEL, int } from "../format";
 import { cveHref, openCve } from "../App";
 
 const W = 980, TOP = 34, ROW = 40, CVE_ROW = 22, MAX_CWES = 16, MAX_CVES = 26;
-const PX = 16, PW = 230, CX = 360, CW = 270, VX = 760;
+const PX = 16, PW = 230, CX = 360, CW = 320, VX = 760;
 
 export function WeaknessGraph({ data }: { data: Data }) {
   const g = data.graphs.weakness;
@@ -120,9 +120,10 @@ export function WeaknessGraph({ data }: { data: Data }) {
                   tabIndex={0} role="button" aria-label={`${c.node.id} ${c.node.label}, ${c.cves.length} CVEs`} aria-pressed={on}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPicked(c.node.id); } }}
                   onMouseMove={(e) => tip.show(e, <><b className="mono">{c.node.id}</b> {c.node.label}<br />{c.cves.length} CVEs in scope</>)}>
+                  <title>{`${c.node.id} ${c.node.label}`}</title>
                   <rect x={CX} y={cy} width={CW} height="30" rx="6" fill={on ? "#262626" : "var(--raised)"} stroke={on ? "var(--accent)" : "var(--border-2)"} />
                   <text className="node-label" x={CX + 10} y={cy + 19}>
-                    <tspan className="mono">{c.node.id}</tspan> <tspan className="node-sub">{truncate(c.node.label, 22)}</tspan>
+                    <tspan className="mono">{c.node.id}</tspan> <tspan className="node-sub">{truncate(c.node.label, 30)}</tspan>
                   </text>
                   <text className="node-sub" x={CX + CW - 10} y={cy + 19} textAnchor="end">{c.cves.length}</text>
                 </g>

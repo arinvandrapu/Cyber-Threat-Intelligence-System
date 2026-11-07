@@ -45,8 +45,7 @@ export function Shell({
         </nav>
         <div className="chips">
           {synthetic && <span className="chip" style={{ color: "var(--kev)", borderColor: "var(--kev)" }}>SYNTHETIC DATA</span>}
-          <span className="chip">snapshot {snapshot}</span>
-          <span className="chip">127.0.0.1 · read-only</span>
+          <span className="chip" title={`Data snapshot ${snapshot}; served on 127.0.0.1 only, read-only`}>{snapshot} · read-only</span>
         </div>
       </header>
       <main>{children}</main>

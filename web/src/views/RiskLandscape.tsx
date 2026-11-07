@@ -148,9 +148,11 @@ export function RiskLandscape({ data }: { data: Data }) {
             ))}
           </div>
           <figcaption className="caption">
-            Negative age weight = newer CVEs rank higher. Weights describe correlated signals, not causes. Refit on{" "}
-            {int(risk.training_rows)} CVE-windows with {Object.values(risk.training_positives).reduce((a, b) => a + b, 0)} KEV
-            additions.
+            Bar: the model ranking today, refit on {int(risk.training_rows)} CVE-windows with{" "}
+            {Object.values(risk.training_positives).reduce((a, b) => a + b, 0)} KEV additions. In brackets: the version tested
+            on the last fold. With so few additions, correlated signals (EPSS, SSVC impact, Nuclei) trade credit between fits,
+            so single weights move a lot. Negative age weight: older CVEs rank lower. Weights describe correlated signals, not
+            causes.
           </figcaption>
         </figure>
       </section>

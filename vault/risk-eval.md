@@ -49,7 +49,7 @@ Label: KEV `date_added` in (cutoff, min(next cutoff, 2026-10-23)]. Population: `
   0.016%.
 - Exploratory (no CIs): no-EPSS 9 @100, AP 0.033 mostly from the latest fold (0.072);
   no-SSVC 6 @100, 18 @1%; text 20 @500 vs 16; last-fold EPSS ROC-AUC 0.41, median
-  percentile of positives 0.16 (16 scored). Largest last-fold LR weights: recency −0.70,
+  percentile of positives 0.16 (16 scored). Largest last-fold LR weights: log age −0.70 (newer ranks higher),
   SSVC total impact 0.64, EPSS 0.63.
 - No deviations from the config. Plan-audit changes were applied before the commit.
 
@@ -74,4 +74,4 @@ Deviations after test scoring must be listed here.
   `1ff8527` and the results commit `5c519e4`.
 - Refit for the dashboard ([[dashboard]]): same config on all four windows (262,612
   rows, 88 positives). Standardized weights shift from the last fold: EPSS 0.63 → 0.22,
-  SSVC total impact 0.64 → 0.45, recency −0.70 → −0.57, Nuclei 0.16 → 0.27.
+  SSVC total impact 0.64 → 0.45, log age −0.70 → −0.57, Nuclei 0.16 → 0.27.

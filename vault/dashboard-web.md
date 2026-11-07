@@ -11,7 +11,10 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
 - `src/types.ts` mirrors `dashboard/schema.py`; `tests/unit/test_web_contract.py` fails
   on a schema field missing from the TS interface of the same name.
 - `src/data.ts` fetches `/data/*.json` (no-store, no credentials), checks content type
-  and `schema_version`. `src/App.tsx`: hash routes `#/<view>[/<CVE>]`, no router.
+  and `schema_version`. `src/App.tsx`: hash routes `#/<view>[/<arg>]`, no router: `arg`
+  is a CVE ID, or a URI-encoded family name (`threatHref`) decoded in try/catch and used
+  only if it is a shown family; a KEV CVE under `#/queue/` is `location.replace`d to
+  `#/kev/` (11c).
 - `src/views/*`: 9 views (list: [[dashboard]]). Charts and graphs are hand-rolled SVG with deterministic
   layouts (`hash01` jitter): weakness = layered pillar → CWE → CVE; ATT&CK = radial, one
   angular sector per tactic sized by its techniques; shared hosts = ring + inner CVEs.
@@ -68,7 +71,7 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   IDs; labels by Claude for the owner; +4 vs EPSS is from back-tests).
 - Plain-language pass: answers up front, method on request. One-sentence ledes and
   cards; tab guide is one line per tab with "How it works" folded; disclosures moved
-  from Overview to Evaluation ("Data versions & limitations"); Threats tiles are
+  from Overview to Evaluation ("Data versions & disclosures", renamed 11c); Threats tiles are
   analyst facts (QA numbers in a folded "How this list is built"); link rows are one
   line (source badge + ✓/✗, details on ▸); bar caption one line, full text in a tooltip.
 - Any CVE anywhere opens a detail: `kev.json` holds CISA's entry for all 1,756 KEV CVEs

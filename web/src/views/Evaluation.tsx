@@ -145,10 +145,10 @@ export function Evaluation({ data }: { data: Data }) {
               const h = r.tiers.tiers[t];
               if (!h) return null;
               return (
-                <div key={t} style={{ display: "grid", gridTemplateColumns: "100px 226px 1fr", gap: 10, alignItems: "center", fontSize: 13 }}>
+                <div key={t} style={{ display: "grid", gridTemplateColumns: "100px minmax(120px, 200px) auto", gap: 10, alignItems: "center", fontSize: 13 }}>
                   <TierName tier={t} />
                   <IntervalBar value={h.kev_positives / h.cves} ci={wilson(h.kev_positives, h.cves)} color={`var(--${t})`} scale={logScale} />
-                  <span className="mono">{pct(h.kev_positives / h.cves)} · {h.kev_positives}/{int(h.cves)} · CI {interval(wilson(h.kev_positives, h.cves))}</span>
+                  <span className="mono" style={{ whiteSpace: "nowrap" }}>{pct(h.kev_positives / h.cves)} · {h.kev_positives}/{int(h.cves)} · CI {interval(wilson(h.kev_positives, h.cves))}</span>
                 </div>
               );
             })}
@@ -189,7 +189,6 @@ export function Evaluation({ data }: { data: Data }) {
         <ul className="plain" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "8px 32px" }}>
           <li>KEV is a lagging, incomplete label: exploited-but-unlisted CVEs count as misses.</li>
           <li>{positives} positives: one hit is about {pct(1 / positives)} of recall, so only large gains are detectable.</li>
-          <li>The snapshot uses a newer EPSS model than training saw; that shift is untested.</li>
           <li>Only CVEs published inside the NVD window are ranked; older CVEs are out of scope.</li>
           <li>Exploratory results (no-EPSS ablation, text features) are not shown as findings.</li>
           <li>ATT&amp;CK and CWE ground truths have known biases (KEV-only mappings; assigner-dependent labels).</li>
@@ -198,7 +197,7 @@ export function Evaluation({ data }: { data: Data }) {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Data versions &amp; limitations</h2>
+          <h2>Data versions &amp; disclosures</h2>
           <span className="mono muted" style={{ fontSize: 12 }}>
             commit {String(data.meta.git.commit ?? "unknown").slice(0, 7)}
             {data.meta.git.dirty ? " (uncommitted changes)" : ""} · config sha256 {data.meta.config_sha256.slice(0, 8)}… ·
