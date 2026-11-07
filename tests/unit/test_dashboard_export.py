@@ -357,12 +357,51 @@ def test_load_threats_is_optional_and_date_checked(tmp_path):
         export.load_threats(path, "2026-10-26")
 
 
-def test_build_threats_refuses_stale_tiers_and_handles_not_run():
-    with pytest.raises(ConfigError, match="rerun `cti threats`"):
-        export.build_threats(_threats_doc(), {"CVE-2026-0001": "high"}, {})
+def test_build_threats_leaves_out_stale_tiers_and_handles_not_run():
+    stale = export.build_threats(_threats_doc(), {"CVE-2026-0001": "high"}, {})
+    assert stale["available"] is False and stale["stale"] is True and stale["families"] == []
+    schema.Threats.model_validate(stale)
     empty = export.build_threats(None, {}, {})
-    assert empty["available"] is False and empty["families"] == []
+    assert empty["available"] is False and empty["stale"] is False and empty["families"] == []
     schema.Threats.model_validate(empty)
+
+
+def test_stale_threats_are_accepted_once_rebuilt_with_the_new_tiers():
+    """The old loop: a refusal kept the old risk.json, so `cti threats` re-read old tiers.
+
+    Now the export writes the new tiers; `cti threats` records them on its links (modelled
+    here by rebuilding the document with the new tier) and the next export accepts it.
+    """
+    new_tiers = {"CVE-2026-0001": "high"}
+    assert export.build_threats(_threats_doc("critical"), new_tiers, {})["stale"] is True
+    rerun = export.build_threats(_threats_doc("high"), new_tiers, {})
+    assert rerun["available"] is True and rerun["stale"] is False
+
+
+def test_cli_export_exits_nonzero_after_writing_a_stale_export(monkeypatch, tmp_path, capsys):
+    from cti import cli
+
+    stale = export.build_threats(_threats_doc(), {"CVE-2026-0001": "high"}, {})
+    written = {}
+    monkeypatch.setattr(export, "inputs", lambda data_dir, day: {})
+    files = {"risk.json": {"rows": []}, "threats.json": stale, "meta.json": {"disclosures": []}}
+    monkeypatch.setattr(export, "run", lambda paths, revoked, git: files)
+
+    def write(out, files):
+        written.update(files)
+        written["_out"] = out
+        return {}
+
+    monkeypatch.setattr(export, "write", write)
+    monkeypatch.setattr(cli, "_check_kev_version", lambda settings, day: None)
+    monkeypatch.setattr(cli.Snapshot, "open", lambda *a, **k: None)
+    monkeypatch.setattr("cti.nlp.attack_catalog.revocations", lambda snap: {})
+    monkeypatch.setenv("CTI_DATA_DIR", str(tmp_path))
+    assert cli.main(["export", "--date", "2026-10-26"]) == 1
+    assert written["threats.json"]["stale"] is True  # written before the non-zero exit
+    assert "risk.json" in written  # incl. the new tiers ...
+    assert written["_out"] == tmp_path / "export" / "2026-10-26"  # ... where `cti threats` reads
+    assert "cti threats --date 2026-10-26" in capsys.readouterr().err
 
 
 def test_derived_name():
@@ -694,3 +733,22 @@ def test_vendor_product_uses_the_first_entry_drops_placeholders_and_defangs():
     affected = [{"vendor": "n/a", "product": "evil.example.com"}, {"vendor": "Other"}]
     assert export._vendor_product(affected) == {"vendor": "", "product": "evil[.]example[.]com"}
     assert export._vendor_product([]) == {"vendor": "", "product": ""}
+
+
+@pytest.mark.parametrize(
+    ("version", "ok"), [(risk_config.KEV_CATALOG_VERSION, True), ("1999.01.01", False)]
+)
+def test_kev_catalog_version_must_match_the_pre_registration(tmp_path, version, ok):
+    from cti.cli import _check_kev_version
+    from cti.config import Settings
+    from cti.snapshot import Snapshot
+    from cti.storage import LocalStorage
+
+    settings = Settings(_env_file=None, contact="t@example.com", data_dir=tmp_path)
+    snap = Snapshot.create(LocalStorage(tmp_path / "snapshots"), "2026-10-26")
+    snap.write_raw("kev", "kev.json", b"{}", source_version=version)
+    if ok:
+        _check_kev_version(settings, "2026-10-26")
+    else:
+        with pytest.raises(ConfigError, match="pre-registered"):
+            _check_kev_version(settings, "2026-10-26")

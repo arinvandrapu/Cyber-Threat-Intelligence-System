@@ -19,7 +19,7 @@ import numpy as np
 
 from cti.nlp import attack2_config as cfg
 from cti.nlp import attack_data
-from cti.nlp.attack_eval import _per_cve, log_prior, rank_matrix
+from cti.nlp.attack_eval import log_prior, per_cve, rank_matrix
 
 Gold = dict[str, dict[str, set[str]]]
 
@@ -153,7 +153,7 @@ def _rankings_by(cves, parents, primary: np.ndarray, tiebreak: np.ndarray) -> di
 
 def per_cve_table(rankings, gold: Gold, mapping_type: str) -> tuple[list[str], np.ndarray, list]:
     cves = sorted(c for c in rankings if gold.get(c, {}).get(mapping_type))
-    rows = [_per_cve(rankings[c], gold[c][mapping_type]) for c in cves]
+    rows = [per_cve(rankings[c], gold[c][mapping_type]) for c in cves]
     names = list(rows[0]) if rows else []
     return names, np.array([[r[n] for n in names] for r in rows]), cves
 

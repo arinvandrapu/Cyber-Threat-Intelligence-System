@@ -516,24 +516,25 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
             hashed lock (done: 569 passed on 3.12 and 3.14, `pip check` clean, pip-audit
             clean); no export change (no re-stamp needed); implementation audit
     - **PR (b) `chore/11d-correctness`: recovery, version checks, refactors**
-      - [ ] b1 export/threats loop: when tiers changed, write the whole export with
+      - [x] b1 export/threats loop: when tiers changed, write the whole export with
             threats `available:false, stale:true`, then **exit non-zero** with the
             recovery commands (plan audit: KEV order and Overview change without threats;
             smoke can't tell). Schema + `types.ts` + contract test + a stale message in the
             view; fixtures if the schema changes. The unlabelled-top-N check stays a hard
             error (only labelling fixes it). Test the loop end to end
-      - [ ] b2 `cmd_risk_eval` refuses when the snapshot's KEV `source_version` ≠
+      - [x] b2 `cmd_risk_eval` refuses when the snapshot's KEV `source_version` ≠
             `KEV_CATALOG_VERSION` (both `2026.10.23` today)
-      - [ ] b3 `cti threats --archive-date` (default: newest reference snapshot, as now);
+      - [x] b3 `cti threats --archive-date` (default: newest reference snapshot, as now);
             refuse an archive without an `nvd` feed
-      - [ ] b4 cwe-eval output gains `provenance` (`config_sha256`, `_git_state()`,
+      - [x] b4 cwe-eval output gains `provenance` (`config_sha256`, `_git_state()`,
             library versions), like risk-eval
-      - [ ] b5 one `wilson()` in `nlp/evaluate.py`; `risk_eval` imports it with its own
-            z (outputs unchanged)
-      - [ ] b6 public `nvd.affected`, `attack_eval.per_cve`
-      - [ ] b7 move `cmd_threats` and `cmd_attack_eval2` orchestration into
+      - [x] b5 one `wilson()` in a neutral `cti/stats.py` (not `nlp/evaluate.py`: risk-eval
+            importing from IOC eval read oddly); risk_eval passes `Z95 = 1.959964`
+      - [x] b6 public `nvd.affected`, `attack_eval.per_cve`
+      - [ ] ~~b7~~ **deferred** (plan audit: move-only refactor, low value, some risk before the
+            interview; noted in `vault/code-layout.md`). Was: move `cmd_threats` and `cmd_attack_eval2` orchestration into
             `threats/` and `nlp/attack_eval2.py`; `build_parser` stays (declarative)
-      - [ ] b8 `embed.mean_pool(hidden, mask)` written to work on NumPy arrays too, so
+      - [x] b8 `embed.mean_pool(hidden, mask)` written to work on NumPy arrays too, so
             its test runs in CI without torch (plan audit)
       - [ ] Verify: pytest, ruff, rerun risk-eval/threats/export on real data and diff
             outputs (expect identical except provenance), re-stamp export from clean

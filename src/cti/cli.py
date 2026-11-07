@@ -534,6 +534,15 @@ def cmd_cwe_eval(args, settings: Settings) -> int:
         name: hashlib.sha256((extracted / f"{name}-index.jsonl.gz").read_bytes()).hexdigest()
         for name in ("nvd-embeddings", "nvd-embeddings-masked")
     }
+    import sklearn
+
+    from cti.nlp import cwe_config
+
+    result["provenance"] = {
+        "config_sha256": hashlib.sha256(Path(cwe_config.__file__).read_bytes()).hexdigest(),
+        "git": _git_state(),
+        "versions": {"numpy": np.__version__, "scikit-learn": sklearn.__version__},
+    }
     gold_path = settings.data_dir / "gold" / "gold.jsonl.gz"
     if gold_path.exists():
         result["gold_sanity_check"] = cwe_eval.gold_check(gold.load_gold(gold_path))
@@ -571,6 +580,42 @@ def _git_state(here: Path | None = None) -> dict:
         return {"commit": None, "dirty": None}
 
 
+def _check_kev_version(settings: Settings, day: str) -> None:
+    """Refuse if the snapshot's KEV catalog isn't the one the risk config pre-registered.
+
+    Every rolling-origin fold takes its labels from this one catalog, so a different
+    version would silently change the positives the pre-registered numbers refer to.
+    """
+    from cti.nlp import risk_config
+
+    try:
+        snap = Snapshot.open(_snapshots(settings), day)
+    except FileNotFoundError as exc:
+        raise ConfigError(f"no snapshot {day}; run `cti ingest` first") from exc
+    found = {e.source_version for e in snap.entries("kev")}
+    if found != {risk_config.KEV_CATALOG_VERSION}:
+        raise ConfigError(
+            f"snapshot {day} has KEV catalog version {sorted(map(str, found))}, but "
+            f"nlp/risk_config.py pre-registered {risk_config.KEV_CATALOG_VERSION}"
+        )
+
+
+def _nvd_archive(settings: Settings, requested: str | None) -> str | None:
+    """The NVD 2002-2022 reference snapshot to read: ``requested``, else the newest one.
+
+    Refuses a missing snapshot or one without an ``nvd`` feed, which would otherwise make
+    every lookup silently find nothing.
+    """
+    keys = _reference_snapshots(settings).list_keys("")
+    ids = sorted({k.split("/", 1)[0] for k in keys if k.endswith("manifest.json")})
+    if requested is not None and requested not in ids:
+        raise ConfigError(f"no reference snapshot {requested}; have {ids}")
+    chosen = requested or (ids[-1] if ids else None)
+    if chosen and not Snapshot.open(_reference_snapshots(settings), chosen).entries("nvd"):
+        raise ConfigError(f"reference snapshot {chosen} has no nvd feed")
+    return chosen
+
+
 def cmd_risk_eval(args, settings: Settings) -> int:
     if importlib.util.find_spec("sklearn") is None:
         raise ConfigError("risk evaluation needs the ml extra: pip install -e '.[ml]'")
@@ -589,6 +634,7 @@ def cmd_risk_eval(args, settings: Settings) -> int:
     ]
     if missing := [str(p) for p in needed if not p.exists()]:
         raise ConfigError(f"missing {missing}; run `cti enrich` and `cti embed` first")
+    _check_kev_version(settings, args.date)
     summary = json.loads((enriched / "cves-summary.json").read_text())
     if absent := [c for c in risk_config.CUTOFFS if c not in summary["as_of_dates"]]:
         raise ConfigError(f"enriched data has no {absent}; refetch with extra cutoffs")
@@ -775,9 +821,10 @@ def cmd_threats(args, settings: Settings) -> int:
         for c in f["cves"]
         if c["cve"] not in tiers and c["cve"] not in in_kev
     }
-    archives = sorted(_reference_snapshots(settings).list_keys(""))
-    archive_ids = sorted({k.split("/", 1)[0] for k in archives if k.endswith("manifest.json")})
-    snaps = [snap] + [Snapshot.open(_reference_snapshots(settings), a) for a in archive_ids[-1:]]
+    archive_id = _nvd_archive(settings, args.archive_date)
+    snaps = [snap] + (
+        [Snapshot.open(_reference_snapshots(settings), archive_id)] if archive_id else []
+    )
     records = attack_data.nvd_records(snaps, orphans) if orphans else {}
     result["nvd_cves"] = {
         c: {
@@ -791,7 +838,7 @@ def cmd_threats(args, settings: Settings) -> int:
     result["summary"]["linked_cves_without_nvd"] = sorted(orphans - set(records))
     result["provenance"] = {
         "config_sha256": hashlib.sha256(Path(threat_cfg.__file__).read_bytes()).hexdigest(),
-        "nvd_archive": archive_ids[-1] if archive_ids else None,
+        "nvd_archive": archive_id,
         "git": _git_state(),
         "misp_sha256": {n: reference.PINNED[f"misp-galaxy/{n}.json"] for n in clusters},
     }
@@ -815,12 +862,23 @@ def cmd_export(args, settings: Settings) -> int:
     from cti.nlp import attack_catalog
 
     date.fromisoformat(args.date)
+    _check_kev_version(settings, args.date)
     paths = export.inputs(settings.data_dir, args.date)
     revoked = attack_catalog.revocations(Snapshot.open(_snapshots(settings), args.date))
     files = export.run(paths, revoked, _git_state())
     out = settings.data_dir / "export" / args.date
     for name, size in export.write(out, files).items():
         print(f"  wrote {out / name} ({size / 1e6:.1f} MB)")
+    if files["threats.json"]["stale"]:
+        # Everything is written (incl. the new risk.json that `cti threats` reads), so the
+        # rerun below recovers; exit non-zero so this export isn't mistaken for a full one.
+        print(
+            "error: threats.json was built from an older risk.json (tiers changed), so this "
+            "export has no threats. Recover with:\n"
+            f"  cti threats --date {args.date}\n  cti export --date {args.date}",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 
@@ -1048,6 +1106,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("threats", help="threat catalog: categories, ATT&CK, CVE links, priority")
     p.add_argument("--date", required=True)
+    p.add_argument(
+        "--archive-date", help="NVD 2002-2022 reference snapshot (default: the newest one)"
+    )
     p.set_defaults(func=cmd_threats)
 
     p = sub.add_parser("status", help="show a snapshot's manifest")

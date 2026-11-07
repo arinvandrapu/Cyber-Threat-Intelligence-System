@@ -7,6 +7,7 @@ pytest.importorskip("sklearn")
 
 from cti.cli import main  # noqa: E402
 from cti.nlp import risk_config, risk_eval  # noqa: E402
+from cti.stats import wilson  # noqa: E402
 
 DATES = {
     "cutoff4": "2024-11-05",
@@ -48,9 +49,9 @@ def test_hits_at_k_gives_ties_fractional_credit():
 
 
 def test_wilson_interval():
-    lo, hi = risk_eval.wilson(20, 68)
+    lo, hi = wilson(20, 68, z=risk_eval.Z95)
     assert (lo, hi) == (0.1992, 0.4111)  # p = 0.294, n = 68, checked by hand
-    assert risk_eval.wilson(0, 0) == (0.0, 0.0)
+    assert wilson(0, 0) == (0.0, 0.0)
 
 
 def test_label_windows_and_kev_last_date():

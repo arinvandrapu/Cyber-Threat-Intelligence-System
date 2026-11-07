@@ -8,6 +8,7 @@ import pytest
 from cti.cli import main
 from cti.gold import GoldEntity, GoldRecord
 from cti.nlp import evaluate
+from cti.stats import wilson
 
 from .conftest import gzip_bytes, jsonl
 
@@ -179,8 +180,8 @@ def test_read_labels_rejects_unknown_marks(tmp_path):
 
 
 def test_wilson():
-    assert evaluate.wilson(0, 0) == (0.0, 0.0)
-    lo, hi = evaluate.wilson(12, 12)
+    assert wilson(0, 0) == (0.0, 0.0)
+    lo, hi = wilson(12, 12)
     assert lo < 1.0 and hi == 1.0
 
 

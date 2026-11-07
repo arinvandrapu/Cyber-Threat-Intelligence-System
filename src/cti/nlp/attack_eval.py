@@ -102,7 +102,7 @@ def log_prior(counts: Counter, parents: list[str], exclude: Iterable[str] = ()) 
     return np.log((c + 1) / (c.sum() + len(parents)))
 
 
-def _per_cve(ranking: list[str], labels: set[str]) -> dict[str, float]:
+def per_cve(ranking: list[str], labels: set[str]) -> dict[str, float]:
     out = {}
     for k in KS:
         top = set(ranking[:k])
@@ -115,7 +115,7 @@ def _per_cve(ranking: list[str], labels: set[str]) -> dict[str, float]:
 
 def _table(rankings: Ranking, gold: Gold, mapping_type: str) -> tuple[list[str], np.ndarray]:
     cves = sorted(c for c in rankings if gold.get(c, {}).get(mapping_type))
-    rows = [_per_cve(rankings[c], gold[c][mapping_type]) for c in cves]
+    rows = [per_cve(rankings[c], gold[c][mapping_type]) for c in cves]
     names = list(rows[0]) if rows else []
     return names, np.array([[r[n] for n in names] for r in rows])
 

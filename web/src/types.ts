@@ -7,7 +7,7 @@ export type Interval = [number, number];
 // ---- meta.json ----
 
 export interface Meta {
-  schema_version: 2;
+  schema_version: 3;
   snapshot_date: string;
   as_of_dates: Record<string, string>;
   kev_catalog_version: string;
@@ -303,6 +303,8 @@ export interface ThreatReview {
 
 export interface Threats {
   available: boolean;
+  /** true: `cti threats` ran against an older risk.json; left out until it is rerun */
+  stale: boolean;
   snapshot_date: string | null;
   families_total: number;
   families: ThreatFamily[];

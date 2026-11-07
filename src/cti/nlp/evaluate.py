@@ -31,18 +31,10 @@ from urllib.parse import urlsplit
 from cti.defang import refang
 from cti.gold import GoldRecord
 from cti.nlp import iocs
+from cti.stats import wilson
 
 REVIEW_FIELDS = ("doc_id", "origin", "type", "start", "end", "value", "context", "correct")
 CONTEXT = 60
-
-
-def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
-    if n == 0:
-        return 0.0, 0.0
-    p = k / n
-    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
-    return round(max(0.0, centre - half), 4), round(min(1.0, centre + half), 4)
 
 
 def _prf(tp: int, fp: int, fn: int) -> dict:

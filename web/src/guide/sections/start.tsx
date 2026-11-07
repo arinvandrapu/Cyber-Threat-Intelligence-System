@@ -41,7 +41,9 @@ export const start: SectionBuilder = (data) => {
                 <strong><a href="#/threats">Threats</a></strong>: the malware and attack tools behind those CVEs.
                 {threats.available
                   ? ` Sources tie a family to only some CVEs (${int(kevLinked)} in KEV, ${int(early)} in the queue today), and a link doesn't show the family exploited the CVE. Threats never change a CVE's rank.`
-                  : " Not built for this snapshot."}
+                  : threats.stale
+                    ? " Out of date for this export: rebuild it with cti threats, then re-export."
+                    : " Not built for this snapshot."}
               </li>
               <li>
                 The remaining tabs explain the ranking (<a href="#/landscape">Risk landscape</a>), the weaknesses

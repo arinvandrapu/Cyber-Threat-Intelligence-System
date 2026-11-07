@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA = 2  # 2: cves.json, context.vendor/product (11c)
+SCHEMA = 3  # 2: cves.json, context.vendor/product (11c); 3: threats.stale (11d)
 Tier = Literal["critical", "high", "elevated", "baseline"]
 Interval = tuple[float, float]
 
@@ -24,7 +24,7 @@ class _Model(BaseModel):
 
 
 class Meta(_Model):
-    schema_version: Literal[2] = SCHEMA
+    schema_version: Literal[3] = SCHEMA
     snapshot_date: str
     as_of_dates: dict[str, str]
     kev_catalog_version: str
@@ -256,7 +256,10 @@ class ThreatReview(_Model):
 
 
 class Threats(_Model):
-    available: bool  # False when `cti threats` has not run for this snapshot
+    available: bool  # False when `cti threats` has not run for this snapshot, or is stale
+    # True: `cti threats` ran against an older risk.json (tiers changed); the export still
+    # wrote everything, without threats, and exited non-zero: rerun `cti threats`, then export
+    stale: bool
     snapshot_date: str | None
     families_total: int
     families: list[ThreatFamily]  # hand-checked priority top N, plus families with a link

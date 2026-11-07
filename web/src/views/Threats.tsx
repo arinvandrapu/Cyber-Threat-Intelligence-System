@@ -48,7 +48,11 @@ export function Threats({ data, focus }: { data: Data; focus: string | null }) {
       <>
         <PageHead title="Threats" guide="threats" />
         <div className="panel empty">
-          <p>The threat catalog has not been built for this snapshot.</p>
+          <p>
+            {threats.stale
+              ? "The threat catalog is out of date: it was built before the risk tiers last changed, so it is left out of this export. Rebuild it, then re-export:"
+              : "The threat catalog has not been built for this snapshot."}
+          </p>
           <pre className="mono note">cti threats --date {data.meta.snapshot_date}{"\n"}cti export --date {data.meta.snapshot_date}</pre>
         </div>
       </>
