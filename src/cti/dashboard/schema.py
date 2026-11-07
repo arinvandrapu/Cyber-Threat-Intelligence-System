@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA = 1
+SCHEMA = 2  # 2: cves.json, context.vendor/product (11c)
 Tier = Literal["critical", "high", "elevated", "baseline"]
 Interval = tuple[float, float]
 
@@ -24,7 +24,7 @@ class _Model(BaseModel):
 
 
 class Meta(_Model):
-    schema_version: Literal[1] = SCHEMA
+    schema_version: Literal[2] = SCHEMA
     snapshot_date: str
     as_of_dates: dict[str, str]
     kev_catalog_version: str
@@ -45,6 +45,8 @@ class Context(_Model):
     cvss_cna: float | None
     cwes: list[str]
     assigner: str | None
+    vendor: str  # first NVD affected entry only ("" when none); defanged; for search
+    product: str
     # derived, never a model input: "<vendor> <product>: <CWE name>" from the CVE record's
     # affected data and its first CWE (queue CVEs are not in KEV, so CISA gives no name)
     name: str | None
@@ -93,7 +95,7 @@ class Coefficient(_Model):
 
 class Risk(_Model):
     snapshot_date: str
-    ranked_cves: int
+    ranked_cves: int  # every CVE scored (given a tier); the queue is `rows`
     tiers: list[TierCount]
     rows: list[RiskRow]  # critical, high and elevated only
     coefficients: list[Coefficient]
@@ -281,6 +283,24 @@ class KevCatalog(_Model):
     entries: list[KevEntry]  # every KEV CVE (source "kev"), in priority_rank order
 
 
+class CveCard(_Model):
+    """A CVE the dashboard references that has no other detail: its NVD record, and why it
+    is not in the queue (``export.build_cve_cards``)."""
+
+    cve: str
+    status: Literal["below_queue", "not_scored", "no_record"]
+    name: str | None  # derived (approximate); defanged
+    vendor: str  # first NVD affected entry only; defanged
+    product: str
+    description: str  # defanged and truncated
+    published: str | None  # YYYY-MM-DD
+    cwes: list[str]
+
+
+class CveCards(_Model):
+    entries: list[CveCard]
+
+
 FILES: dict[str, type[_Model]] = {
     "meta.json": Meta,
     "risk.json": Risk,
@@ -289,4 +309,5 @@ FILES: dict[str, type[_Model]] = {
     "eval.json": Eval,
     "threats.json": Threats,
     "kev.json": KevCatalog,
+    "cves.json": CveCards,
 }

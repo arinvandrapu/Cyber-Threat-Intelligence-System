@@ -7,7 +7,7 @@ export type Interval = [number, number];
 // ---- meta.json ----
 
 export interface Meta {
-  schema_version: 1;
+  schema_version: 2;
   snapshot_date: string;
   as_of_dates: Record<string, string>;
   kev_catalog_version: string;
@@ -25,6 +25,8 @@ export interface Context {
   cvss_cna: number | null;
   cwes: string[];
   assigner: string | null;
+  vendor: string; // first NVD affected entry only
+  product: string;
   name: string | null;
   description: string; // plain text only: never rendered as HTML or linkified
 }
@@ -332,6 +334,22 @@ export interface KevCatalog {
   entries: KevEntry[];
 }
 
+/** A referenced CVE with no other detail: its NVD record and why it isn't in the queue. */
+export interface CveCard {
+  cve: string;
+  status: "below_queue" | "not_scored" | "no_record";
+  name: string | null;
+  vendor: string;
+  product: string;
+  description: string;
+  published: string | null;
+  cwes: string[];
+}
+
+export interface CveCards {
+  entries: CveCard[];
+}
+
 export interface Data {
   meta: Meta;
   risk: Risk;
@@ -340,4 +358,5 @@ export interface Data {
   evals: Eval;
   threats: Threats;
   kev: KevCatalog;
+  cves: CveCards;
 }

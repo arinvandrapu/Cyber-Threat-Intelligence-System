@@ -518,7 +518,12 @@ def test_disclosures_are_derived():
     versions = {"cutoff4": ["v1"], "cutoff": ["v2"], "snapshot": ["v3"]}
     text = " ".join(export.disclosures(versions, 88 / 262612, folds, 5, 10, -0.5725))
     assert "0.034% prevalence" in text and "2025-05-04 to 2026-10-23" in text
-    assert "v3" in text and "v1 and v2" in text and "5 of the 10 tiered" in text and "-0.57" in text
+    assert (
+        "v3" in text
+        and "v1 and v2" in text
+        and "5 of the 10 CVEs in the queue" in text
+        and "-0.57" in text
+    )
     assert risk_config.NVD_WINDOW_START in text
 
 
@@ -641,3 +646,51 @@ def test_a_link_that_does_not_count_neither_lists_nor_ranks():
     families = [{"family": "F", "links": [link]}]
     (entry,) = export.build_kev([_kev_row("CVE-2020-0001", "2024-01-01")], families)["entries"]
     assert entry["families"] == [] and entry["why"] == "listed by CISA 2024-01-01"
+
+
+def test_referenced_cves_walks_cve_keys_and_cve_nodes_not_text():
+    files = {
+        "iocs.json": {"indicators": [{"value": "x", "cves": ["CVE-2023-0001", "junk"]}]},
+        "graphs.json": {"nodes": [{"id": "CVE-2023-0002", "kind": "cve"}, {"id": "T1190"}]},
+        "risk.json": {"rows": [{"cve": "CVE-2024-0003", "description": "see CVE-2023-0009"}]},
+    }
+    assert export.referenced_cves(files) == {"CVE-2023-0001", "CVE-2023-0002", "CVE-2024-0003"}
+
+
+def test_cve_cards_status_comes_from_the_scored_set():
+    files = {
+        "risk.json": {"rows": [{"cve": "CVE-2024-0001"}]},
+        "kev.json": {"entries": [{"cve": "CVE-2024-0002"}]},
+        "threats.json": {"linked_cves": []},
+        "iocs.json": {
+            "indicators": [
+                {"cves": ["CVE-2024-0001", "CVE-2024-0002", "CVE-2024-0003", "CVE-2023-0004"]},
+                {"cves": ["CVE-2025-0005"]},
+            ]
+        },
+    }
+
+    def nvd(cve, published):
+        meta = {"affected": [{"vendor": "evil.example.com", "product": "n/a"}], "cwes": []}
+        return {"source_id": cve, "text": "t", "published": published, "metadata": meta}
+
+    rows = [
+        nvd("CVE-2024-0003", "2024-02-01T00:00:00"),
+        nvd("CVE-2023-0004", "2023-05-01T00:00:00"),
+    ]
+    out = export.build_cve_cards(files, rows, {"CVE-2024-0003": "baseline"}, {})
+    schema.CveCards.model_validate(out)
+    by = {c["cve"]: c for c in out["entries"]}
+    assert set(by) == {"CVE-2024-0003", "CVE-2023-0004", "CVE-2025-0005"}  # queued/KEV skipped
+    assert by["CVE-2024-0003"]["status"] == "below_queue"
+    assert by["CVE-2023-0004"]["status"] == "not_scored"
+    assert by["CVE-2023-0004"]["published"] == "2023-05-01"
+    assert by["CVE-2025-0005"]["status"] == "no_record" and by["CVE-2025-0005"]["description"] == ""
+    assert by["CVE-2024-0003"]["vendor"] == "evil[.]example[.]com"  # defanged like the name
+    assert by["CVE-2024-0003"]["product"] == ""  # placeholder dropped
+
+
+def test_vendor_product_uses_the_first_entry_drops_placeholders_and_defangs():
+    affected = [{"vendor": "n/a", "product": "evil.example.com"}, {"vendor": "Other"}]
+    assert export._vendor_product(affected) == {"vendor": "", "product": "evil[.]example[.]com"}
+    assert export._vendor_product([]) == {"vendor": "", "product": ""}

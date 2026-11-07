@@ -135,11 +135,8 @@ export function Indicators({ data }: { data: Data }) {
                 <tr key={`${i.type}:${i.value}`}>
                   <td className="mono muted">{TYPE_LABEL[i.type] ?? i.type}</td>
                   <td className="mono wrap" style={{ maxWidth: 520, overflowWrap: "anywhere" }}>{i.value}</td>
-                  <td className="mono muted">
-                    {i.cves.slice(0, 2).map((c) => (
-                      <button key={c} type="button" className="linkish" style={{ color: "var(--muted)", marginRight: 6 }} onClick={() => openCve(c)}>{c}</button>
-                    ))}
-                    {i.cve_count > 2 ? `+${i.cve_count - 2}` : ""}
+                  <td className="mono">
+                    <IndicatorCves cves={i.cves} total={i.cve_count} />
                   </td>
                   <td className="num">{i.occurrences}</td>
                   <td className="muted">{i.public === null ? "—" : i.public ? "public IP" : "non-public IP"}</td>
@@ -208,7 +205,7 @@ function SharedHosts({ graph }: { graph: Graph }) {
           <span><TierDot tier="elevated" />elevated</span>
           <span><TierDot tier="baseline" />baseline (below the queue)</span>
           <span><span className="dot" style={{ background: "var(--kev)" }} />in KEV</span>
-          <span><span className="dot" style={{ background: "var(--other)" }} />not ranked</span>
+          <span><span className="dot" style={{ background: "var(--other)" }} />not scored</span>
         </div>
       </div>
       {tip.node}
@@ -227,7 +224,7 @@ function SharedHosts({ graph }: { graph: Graph }) {
             <circle key={c.n.id} className="hit" cx={c.x} cy={c.y} r={c.hosts.length > 1 ? 5 : 3.8} fill={fill} stroke="var(--bar)" strokeWidth="1.5"
               opacity={picked === null || linked(c.hosts) ? 1 : 0.3}
               onClick={() => openCve(c.n.id)}
-              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue)" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not ranked"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
+              onMouseMove={(e) => tip.show(e, <><b className="mono">{c.n.id}</b><br />{inQueue(c.n.tier) ? `${c.n.tier} tier · click to open` : c.n.tier === "baseline" ? "baseline tier (below the queue) · click for its record" : c.n.in_kev ? "in KEV · click for CISA's entry" : "not scored · click for its record"}<br />{c.hosts.length} shared host{c.hosts.length > 1 ? "s" : ""}</>)} />
           );
         })}
         {layout.hosts.map((h) => {
@@ -251,5 +248,25 @@ function SharedHosts({ graph }: { graph: Graph }) {
         highlight its CVEs; labels on the 10 largest. Shared vendor and advisory sites dominate: a shared host is a lead, not a link to an actor.
       </figcaption>
     </figure>
+  );
+}
+
+/** First two CVEs, the rest on request; the export keeps at most 10 per indicator, and says
+ * how many more it dropped. */
+function IndicatorCves({ cves, total }: { cves: string[]; total: number }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? cves : cves.slice(0, 2);
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", gap: "2px 8px", alignItems: "baseline" }}>
+      {shown.map((c) => (
+        <button key={c} type="button" className="linkish" onClick={() => openCve(c)}>{c}</button>
+      ))}
+      {cves.length > 2 && (
+        <button type="button" className="linkish muted" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "show fewer" : `+${cves.length - 2} more${total > cves.length ? ` (+${total - cves.length} not exported)` : ""}`}
+        </button>
+      )}
+      {cves.length <= 2 && total > cves.length && <span className="faint">+{total - cves.length} not exported</span>}
+    </span>
   );
 }

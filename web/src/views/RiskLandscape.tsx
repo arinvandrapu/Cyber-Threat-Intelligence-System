@@ -17,8 +17,8 @@ const SIGNALS: [string, string][] = [
   ["nuclei_template", "Nuclei template"],
   ["ssvc_exploitation_poc_or_active", "SSVC exploitation: PoC or active"],
   ["ssvc_automatable", "SSVC automatable: yes"],
-  ["ssvc_missing", "SSVC not yet scored"],
-  ["epss_missing", "EPSS not scored"],
+  ["ssvc_missing", "No SSVC assessment"],
+  ["epss_missing", "No EPSS score"],
 ];
 
 function heat(p: number): [string, string] {
@@ -82,7 +82,7 @@ export function RiskLandscape({ data }: { data: Data }) {
             className="chart"
             viewBox={`0 0 ${W} ${H}`}
             role="img"
-            aria-label="Scatter of each tiered CVE's model rank against its EPSS percentile, coloured by tier"
+            aria-label="Scatter of each queue CVE's model rank against its EPSS percentile, coloured by tier"
             onMouseMove={(e) => {
               const i = (e.target as SVGElement).dataset?.i;
               const p = i !== undefined ? risk.rows[Number(i)] : undefined;
@@ -123,7 +123,7 @@ export function RiskLandscape({ data }: { data: Data }) {
             ))}
           </svg>
           <figcaption className="caption">
-            Each point is one tiered CVE ({int(points.length)} with an EPSS score). Points high on the chart but toward
+            Each point is one CVE in the queue ({int(points.length)} with an EPSS score). Points high on the chart but toward
             the left are CVEs the model ranks well above where EPSS alone would. Hover for details; click to open in the
             risk queue.
           </figcaption>

@@ -351,7 +351,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           ingest-once-snapshot.md (82)
     - [ ] `cli.py` module docstring (lists 7 commands); future-extensions.md status;
           this file's Review section
-  - [ ] **11c. Dashboard**
+  - [x] **11c. Dashboard**
     - [ ] Every referenced CVE opens a detail: 154 Indicators-table CVEs are neither
           queued nor KEV (export a small NVD card for every CVE the export references);
           make "+N more" expandable; normal link colour
@@ -400,7 +400,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
             `location.replace` (Back doesn't bounce; `cveHref` stays pure)
       - [x] Smoke adds `#/threats/Agent%20Tesla` and a malformed `%E0%A4` route
       Data/export items (all open on `main`; no new data needed except as noted):
-      - [ ] Every clickable CVE opens a detail: 155 have none today (154 from indicators,
+      - [x] Every clickable CVE opens a detail: 155 have none today (154 from indicators,
             CVE-2025-66478 from a threat link). NVD cards for every CVE the export
             references (~85 KB) in a top-level list that doesn't depend on threats
             (schema, types, loadAll, fixture, smoke). Plan audit: a card's status comes
@@ -409,29 +409,37 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
             our NVD snapshot" card; `focusCard` looks them up.
             Indicators: "+N more" expands, CVEs in normal link colour; indicators past the
             10-CVE export cap say "+N not exported"
-      - [ ] Terms: "scored" = the 167,844 CVEs given a tier, "in the queue" = the 8,392
+      - [x] Terms: "scored" = the 167,844 CVEs given a tier, "in the queue" = the 8,392
             critical/high/elevated, "below the queue" = baseline. Fix every use
             (Overview, RiskQueue, Indicators, Evaluation, RiskLandscape, export
             disclosures, README); missing EPSS/SSVC reads "no EPSS/SSVC data", not "not
             scored"
-      - [ ] Vendor/product (gap 3): export `context.vendor`/`product` for queue rows
+      - [x] Vendor/product (gap 3): export `context.vendor`/`product` for queue rows
             (`_real()`, NVD affected, 89% coverage); queue search covers name + vendor +
             product; vendor type-ahead (`<datalist>`) on Risk queue and Known exploited
             (1,985 / 291 vendors: too many for a dropdown); match case-insensitively;
             plan audit: check how much the derived name already covers first; defang
             vendor/product consistently (`_linked_cves` doesn't today); first affected
             entry only, say so; `vault/dashboard.md:43` "ranked" → "scored"
-      - [ ] Assigners: no CNA-name source on disk (93.8% of queue rows are emails, 6.2%
+      - [x] Assigners: no CNA-name source on disk (93.8% of queue rows are emails, 6.2%
             UUIDs). Owner 2026-11-06: emails as is, UUIDs as "CNA (ID 416baaa9…)"; no
             outside name map (keeps the one ingest)
-      - [ ] Threats rows with no linked CVE: reason reads "ransomware family (no linked
+      - [x] Threats rows with no linked CVE: reason reads "ransomware family (no linked
             CVEs)" (`threats/catalog.py:184`) and the table shows the second reason
             line; plan audit: say "no linked CVEs in our data" and build the line in the
             export/UI rather than rerun `cti threats` (which may pick a newer reference
             snapshot, 11d)
-      - [ ] MimiKatz category: owner 2026-11-06: keep the "unknown" label (no post-hoc
+      - [x] MimiKatz category: owner 2026-11-06: keep the "unknown" label (no post-hoc
             relabel); Threats view explains it: "a tool, not malware: outside the
             category list" (from the owner's note in the labels CSV)
+      - Done 2026-11-06 (PR 2, `feat/11c-data`): `cves.json` (154 cards, all "scored,
+        below the queue"; 31 2023-ID CVEs were published in 2024, so status from data
+        mattered); every one of 10,304 clickable CVEs now opens a detail.
+        CVE-2025-66478 is only in description text (rejected CVE), not clickable, so no
+        card. Indicators "+N more" counts the true total. MimiKatz: the reviewer's note
+        isn't exported (rerunning `cti threats` was ruled out), so the view says "none of
+        the categories fits", not "a tool, not malware"
+
   - [ ] **11d. Robustness + hygiene**
     - [ ] export/threats recovery loop: if tiers change, `cti export` refuses before
           writing risk.json and `cti threats` re-reads the old one; write risk.json first

@@ -51,7 +51,8 @@ GRAPH_TIERS = ("critical", "high")
 TIER_NAMES = [name for name, _ in cfg.TIERS]
 
 DISCLOSURES = [
-    "Ranks only CVEs published from {window_start} that were not in CISA KEV at the snapshot.",
+    "Scores only CVEs published from {window_start} that were not in CISA KEV at the snapshot; "
+    "the queue is the critical, high and elevated tiers.",
     "Rank and tier only: the model's output is not a probability (fit at {prevalence} "
     "prevalence; snapshot EPSS is a newer model version than training saw).",
     "Snapshot EPSS is model {snapshot_epss}; the risk model was trained on {train_epss}. "
@@ -59,7 +60,7 @@ DISCLOSURES = [
     "The snapshot ranking itself is not evaluated. Tier hit rates are historical: the "
     "same procedure on the rolling-origin test folds ({test_span}), next 180 days.",
     "Newer CVEs rank higher (standardized log-age weight {age_weight:+.2f}): {recent:,} of "
-    "the {tiered:,} tiered CVEs are 30 days old or younger.",
+    "the {tiered:,} CVEs in the queue are 30 days old or younger.",
     "Weights describe correlated signals, not causes; the refit's weights differ from the "
     "evaluated folds' (both shown).",
     "CVSS, CWE, assigner and descriptions are context only and were never model inputs.",
@@ -272,6 +273,7 @@ def build_risk(
                     "cvss_cna": (ctx_snap.get("cvss_cna") or {}).get("base_score"),
                     "cwes": [c["id"] for c in ctx_snap.get("cwes", [])],
                     "assigner": nvd.get("assigner"),
+                    **_vendor_product(nvd.get("affected", [])),
                     "name": defang_text(
                         derived_name(
                             nvd.get("affected", []),
@@ -340,6 +342,16 @@ def nvd_context(nvd_rows: Iterable[dict], cves: set[str]) -> dict[str, dict]:
 
 
 _PLACEHOLDER = frozenset({"", "n/a", "na", "unknown", "unspecified", "-"})
+
+
+def _vendor_product(affected: list[dict]) -> dict[str, str]:
+    """Vendor and product from the CVE record's first affected entry (only the first: a CVE
+    can list several), placeholders dropped and defanged like the derived name."""
+    first = affected[0] if affected else {}
+    return {
+        "vendor": defang_text(_real(first.get("vendor", ""))),
+        "product": defang_text(_real(first.get("product", ""))),
+    }
 
 
 def derived_name(
@@ -1002,6 +1014,87 @@ def _linked_cves(
     return sorted(out.values(), key=lambda e: cve_sort_key(e["cve"]))
 
 
+_CVE_ID = re.compile(r"^CVE-\d{4}-\d{4,7}$")
+
+
+def referenced_cves(files: dict[str, dict]) -> set[str]:
+    """Every CVE the dashboard can open: values of ``cve``/``cves`` keys and ids of
+    ``kind: "cve"`` graph nodes, anywhere in the export files (description text is not
+    clickable, so it is not walked)."""
+    out: set[str] = set()
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key == "cve" and isinstance(value, str) and _CVE_ID.match(value):
+                    out.add(value)
+                elif key == "cves" and isinstance(value, list):
+                    out.update(v for v in value if isinstance(v, str) and _CVE_ID.match(v))
+                else:
+                    walk(value)
+            if node.get("kind") == "cve" and isinstance(node.get("id"), str):
+                out.add(node["id"])
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(files)
+    return out
+
+
+def _scored_status(cve: str, tiers: dict[str, str]) -> str:
+    """A carded CVE has no queue row, so if scored it must be baseline; check, don't assume."""
+    if cve not in tiers:
+        return "not_scored"
+    if tiers[cve] != "baseline":
+        raise ValueError(f"{cve} is in tier {tiers[cve]} but has no queue row")
+    return "below_queue"
+
+
+def build_cve_cards(
+    files: dict[str, dict], nvd_rows: Iterable[dict], tiers: dict[str, str], cwe_names: dict
+) -> dict:
+    """``cves.json``: a card for every CVE the export references that has no other detail
+    (not in the queue, not in KEV, no threat card), so no CVE link leads nowhere. Its
+    ``status`` comes from the scored set, never assumed: ``below_queue`` (scored, baseline
+    tier), ``not_scored`` (outside the scored population, e.g. published before the
+    window), or ``no_record`` (not in our NVD snapshot)."""
+    has_detail = {r["cve"] for r in files["risk.json"]["rows"]}
+    has_detail |= {e["cve"] for e in files["kev.json"]["entries"]}
+    has_detail |= {e["cve"] for e in files["threats.json"]["linked_cves"]}
+    wanted = referenced_cves(files) - has_detail
+    cards: dict[str, dict] = {}
+    for row in nvd_rows:
+        cve = row["source_id"]
+        if cve not in wanted:
+            continue
+        m = row["metadata"]
+        affected = m.get("affected") or []
+        cwes = [{"id": c, "name": cwe_names.get(c)} for c in m.get("cwes", [])]
+        cards[cve] = {
+            "cve": cve,
+            "status": _scored_status(cve, tiers),
+            "name": defang_text(derived_name(affected, cwes, m.get("cwe_assignments", [])) or "")
+            or None,
+            **_vendor_product(affected),
+            "description": truncate(defang_text(row.get("text") or "")),
+            "published": (row.get("published") or "")[:10] or None,
+            "cwes": sorted(m.get("cwes", [])),
+        }
+    for cve in wanted - set(cards):
+        cards[cve] = {
+            "cve": cve,
+            "status": "no_record",
+            "name": None,
+            "vendor": "",
+            "product": "",
+            "description": "",
+            "published": None,
+            "cwes": [],
+        }
+    return {"entries": sorted(cards.values(), key=lambda c: cve_sort_key(c["cve"]))}
+
+
 def tier_lookup(scored: dict) -> dict[str, str]:
     return {r["cve"]: t for r, t in zip(scored["records"], scored["tier"], strict=True)}
 
@@ -1118,17 +1211,19 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
         )
         + ([THREATS_DISCLOSURE] if threats_doc else []),
     }
-    return validate(
-        {
-            "meta.json": meta,
-            "risk.json": risk,
-            "iocs.json": iocs,
-            "graphs.json": graphs,
-            "eval.json": evals,
-            "threats.json": threats,
-            "kev.json": build_kev(read_jsonl(paths["kev"]), threats["families"]),
-        }
+    files = {
+        "meta.json": meta,
+        "risk.json": risk,
+        "iocs.json": iocs,
+        "graphs.json": graphs,
+        "eval.json": evals,
+        "threats.json": threats,
+        "kev.json": build_kev(read_jsonl(paths["kev"]), threats["families"]),
+    }
+    files["cves.json"] = build_cve_cards(
+        files, read_jsonl(paths["nvd"]), tier_lookup(scored), cwe_names
     )
+    return validate(files)
 
 
 def write(out_dir: Path, files: dict[str, dict]) -> dict[str, int]:

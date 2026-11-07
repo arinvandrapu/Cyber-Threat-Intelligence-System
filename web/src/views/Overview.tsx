@@ -74,11 +74,11 @@ export function Overview({ data }: { data: Data }) {
         <div className="brief-col">
           <div className="brief-head">
             <h2>Which CVEs to fix next</h2>
-            <p>The {int(risk.rows.length)} CVEs ranked likeliest to join CISA KEV, best first.</p>
+            <p>The {int(risk.rows.length)} CVEs in the queue: those likeliest to join CISA KEV, best first.</p>
           </div>
           <dl className="stats">
             <div className="stat">
-              <dt>CVEs ranked, not in CISA KEV</dt>
+              <dt>CVEs scored, not in CISA KEV</dt>
               <dd>{int(risk.ranked_cves)}</dd>
             </div>
             <div className="stat">

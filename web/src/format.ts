@@ -59,7 +59,7 @@ export function ordinal(n: number): string {
 
 /** EPSS as FIRST recommends: probability first, then percentile. */
 export function epss(p: number | null, percentile: number | null): string {
-  if (p === null || percentile === null) return "not scored";
+  if (p === null || percentile === null) return "no EPSS score";
   const pctl = percentile * 100;
   // floor, never round up: 99.981 -> "99.98th", not "100.0th"
   const rank =
