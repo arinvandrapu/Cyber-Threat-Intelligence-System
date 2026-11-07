@@ -1,4 +1,13 @@
-"""Command-line interface: ``cti probe | ingest | status | parse | enrich | extract | upload``."""
+"""Command-line interface ``cti``, by pipeline stage.
+
+- Ingest and archive: ``probe``, ``ingest`` (network, once), ``status``, ``upload``,
+  ``gold-import``; reference downloads outside the snapshot: ``fetch-nvd-archive``,
+  ``models fetch``.
+- Offline processing: ``parse``, ``enrich``, ``extract``, ``extract-eval``.
+- NLP and evaluations: ``models verify``, ``attack-eval``, ``attack-eval2``, ``ner``,
+  ``ner-eval``, ``embed``, ``cwe-eval``, ``risk-eval``.
+- Threats and dashboard: ``export``, ``threats-sheet``, ``threats``, ``serve``.
+"""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-11-06 (Overview redesign; Phase 12: connect threats to what to patch). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-11-06 (Overview redesign; Phase 12; 11c dashboard; 11b docs in review). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -32,20 +32,22 @@
 | Plain-language pass + every CVE opens a detail | ✅ merged | #39 |
 | 11a. Credibility fixes | ✅ merged, re-stamped (export at `b8b2e17`, clean) | #40, #41 |
 | Overview redesign + queue card scroll | ✅ merged | #42, #43 |
-| **12. Connect threats to what to patch** (Known exploited view, queue threat badge, Overview) | in review | `feat/connect-threats-kev` |
-| **11b–d. Review fixes** (docs, dashboard, robustness) | **⏭ next** | — |
+| 12. Connect threats to what to patch (Known exploited view, queue threat badge, Overview) | ✅ merged | #44 |
+| 11c. Dashboard (UI fixes; scored vs queue terms, NVD cards, vendor search; Evaluation grid) | ✅ merged, re-stamped (export at `51d932c`, clean, schema 2) | #45, #46, #47 |
+| 11b. Docs catch-up | in review | `docs/11b-catch-up` |
+| **11d. Robustness + hygiene** | **⏭ next** | — |
 | 9. Security deliverables + polish | after 11 | — |
 
-`main` is green (offline tests on the Phase 8 PR 2 branch, CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+`main` is green (562 offline tests; CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
-1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`
-   (Phase 11 is the plan, in batches 11a → 11d).
-2. After the 11a PR merges, re-stamp from clean `main`: `cti extract`, `cti extract-eval --labels
-   data/reference/ioc-review-2026-10-26.csv`, `cti export`, `cti threats`, `cti export`, then check
-   `meta.json` shows `dirty: false`.
-3. Then 11b docs, 11c dashboard, 11d robustness/hygiene, one PR each. Phase 9 after.
+1. `git checkout main && git pull`, then read this file, `tasks/lessons.md`, `tasks/todo.md`.
+2. After any merge that changes export code: `cti export --date 2026-10-26` from clean `main`
+   and check `meta.json` shows `dirty: false` (restart `cti serve`; it builds its file
+   allowlist at startup).
+3. Next: 11d robustness/hygiene (one PR), then Phase 9, starting with the sample intel
+   report (the clearest demonstration of the problem statement).
 4. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
    are at the end of Phase 11 in `tasks/todo.md`.
 
@@ -180,7 +182,7 @@ The prototype repo used for porting was a temporary clone. If it's needed again:
 ```bash
 cd ~/Projects/Threat-Intel-Project
 git checkout main && git pull
-.venv/bin/pytest -q          # expect 551 passed
+.venv/bin/pytest -q          # expect 562 passed
 .venv/bin/cti status --date 2026-10-26   # all 12 complete
 ```
 

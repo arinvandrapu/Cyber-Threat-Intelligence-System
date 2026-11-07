@@ -4,8 +4,9 @@ How the Cyber Threat Intelligence System is put together: what runs where, how d
 moves, and where it is stored. The reasoning behind each choice is in
 [decisions.md](decisions.md).
 
-> Phases 0–8 are built (ingest through the local dashboard); Phase 9 (STIX, threat model,
-> polish) is next. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
+> Built: Phases 0–8 (ingest through the local dashboard), 10 (threat layer and the
+> ATT&CK mapping re-test), 12 (the Known exploited view), and the 11a and 11c review fixes.
+> Phase 9 (STIX 2.1, threat model, polish) is next. Stages marked *planned* are designed but not implemented yet. Progress: [`tasks/todo.md`](../tasks/todo.md).
 
 ## Overview
 
@@ -19,7 +20,7 @@ flowchart LR
         PROC[(Parsed records<br/>data/processed/DATE/)]
         ENR[(Per-CVE join · cleaned pages<br/>data/enriched/DATE/)]
         EXT[(Regex IOCs · aliases<br/>data/extracted/DATE/)]
-        DOWN[SecureBERT NER · embeddings · ATT&CK<br/>CWE + risk evaluations]
+        DOWN[SecureBERT NER · embeddings · ATT&CK<br/>CWE + risk evaluations · threat catalog]
         OUT[cti export JSON → cti serve<br/>dashboard on 127.0.0.1<br/>STIX 2.1 planned]
     end
     S3[(Private S3 bucket<br/>write-once archive)]
@@ -32,7 +33,9 @@ flowchart LR
 Three properties shape everything:
 
 1. **The network is touched once.** `cti ingest` is the only command that downloads
-   source data. Every later stage reads the stored snapshot.
+   source data. Every later stage reads the stored snapshot. Two other commands download
+   once, and neither result is uploaded to S3: `cti fetch-nvd-archive` (older NVD feeds,
+   reference data for the ATT&CK re-test) and `cti models fetch` (model weights).
 2. **All compute is local.** Parsing, NLP (SecureBERT 2.0 on CPU), and modeling run on
    one machine. There is no EC2, Lambda, or SageMaker.
 3. **S3 is an archive, not a workspace.** It receives a write-once, checksummed copy of
@@ -53,7 +56,11 @@ Three properties shape everything:
 | NLP | `cti models` / `ner` / `ner-eval` / `embed` → `nlp/models.py`, `ner.py`, `embed.py`, `semantic.py` | `models fetch` only (once) | SecureBERT 2.0 on CPU: NER over reference pages (entities linked to ATT&CK/ThreatFox names), bi-encoder embeddings of every NVD description with a KEV-language flag. Models pinned by commit and weight SHA-256, loaded offline |
 | Classify + evaluate | `cti cwe-eval` → `nlp/cwe_config.py`, `nlp/cwe_eval.py` | no | NVD descriptions → 118 CWE classes (human labels with assigner kept), time split, pre-registered choices; majority, TF-IDF + LR, SecureBERT embeddings + LR, nearest centroid; plus one circular gold-set row |
 | Risk evaluation | `cti risk-eval` → `nlp/risk_config.py`, `nlp/risk_eval.py` | no | Pre-registered rolling-origin KEV prediction: logistic model vs EPSS, SSVC and CVSS baselines, rank-based tiers |
-| Export | `cti export` → `dashboard/export.py`, `dashboard/schema.py` | no | The pre-registered model refit on all labelled windows ranks the snapshot; defanged IOCs, feed aggregates, CWE/ATT&CK/shared-host graphs, evaluation summaries → schema-validated JSON in `data/export/<date>/` |
+| NVD archive | `cti fetch-nvd-archive` → `sources/nvd.py` (`NVDArchiveSource`) | yes (once) | NVD yearly feeds 2002–2022 → `data/reference-snapshots/<date>/` (same manifest and checks as the main snapshot; not in the ingest registry; never uploaded) |
+| ATT&CK re-test | `cti attack-eval2` → `nlp/attack2_config.py`, `nlp/attack_data.py`, `nlp/attack_eval2.py` | no | Pre-registered re-test of CVE → ATT&CK ranking on a CVE-disjoint set (CTID `attack_to_cve`), trained on the CTID KEV mappings; text from the main snapshot plus the NVD archive; adds a CWE → CAPEC → ATT&CK chain and a CVSS rule |
+| Export | `cti export` → `dashboard/export.py`, `dashboard/schema.py` | no | The pre-registered model refit on all labelled windows ranks the snapshot → schema-validated JSON (schema version 2) in `data/export/<date>/`: `meta` (dates, versions, input hashes, disclosures), `risk` (ranked CVEs, tiers, per-signal contributions), `iocs` (defanged IOCs, feed aggregates), `graphs` (CWE/ATT&CK/shared-host), `eval` (evaluation summaries), `threats` (if `cti threats` has run), `kev` (every KEV CVE in the fixed patch-first order, with `priority_rank` and a `why` line), `cves` (NVD cards for referenced CVEs that no other file details) |
+| Threat review sheets | `cti threats-sheet` → `threats/review.py` | no | ThreatFox family counts → a blank category sheet of the top 34 named families in `data/reference/`; `--priority` appends families from the priority top 20 |
+| Threats | `cti threats` → `threats/config.py`, `threats/catalog.py` | no | ThreatFox families → categories (review sheet, else pinned MISP galaxy), ATT&CK software and techniques, CVE links (reference pages, ThreatFox tags, ATT&CK text), and a pre-declared priority → `data/threats/<date>/threats.json`; writes the link review sheet and reads it back once filled. Reads `risk.json` for tiers, so it runs after `cti export`, and `cti export` runs again to include it. Never feeds the risk score |
 | Serve | `cti serve` → `dashboard/serve.py` | loopback only | Built dashboard + export over HTTP on 127.0.0.1: exact-match file allowlist, Host-header check, strict CSP and security headers |
 | Dashboard | `web/` (Vite + React + TypeScript) | no | Nine views over the exported JSON (incl. Known exploited: every KEV CVE in a fixed patch-first order), hand-rolled SVG charts and graphs; CI builds it against `web/fixtures/` and loads every view in headless Chrome under the CSP |
 | STIX *(planned)* | Phase 9 | no | STIX 2.1 export |
@@ -72,7 +79,9 @@ by re-running `cti parse`, never by re-downloading.
 | `data/extracted/<date>/` (local) | `iocs`, `aliases`, `entities` (`.jsonl.gz` + `*-summary.json`; values defanged), `nvd-embeddings.npy` (float16) + `nvd-embeddings-index` | Regenerated freely; never uploaded |
 | `~/.cache/huggingface/` (local) | SecureBERT 2.0 weights at pinned revisions | Fetched once; SHA-256 checked on every load |
 | `data/eval/<date>/` (local) | Evaluation outputs (aggregates) and review sheets (defanged context) | Regenerated freely; never uploaded |
-| `data/reference/` (in git) | IOC review labels (document ID, span, y/n; no feed content) and the CTID KEV → ATT&CK mapping file with its Apache-2.0 notice | Committed; the CTID file's SHA-256 is pinned in code |
+| `data/reference/` (in git) | Pinned third-party files, each with a `NOTICE.md`: CTID KEV → ATT&CK mappings and `attack_to_cve` (`ctid/`), CAPEC 3.9 (`capec/`), nine trimmed MISP galaxy clusters (`misp-galaxy/`). Review sheets: IOC review labels (document ID, span, y/n; no feed content), threat category labels and threat ↔ CVE link reviews (`threat-categories-<date>.csv`, `threat-links-<date>.csv`) | Committed; third-party SHA-256s pinned in code (`cti.reference.PINNED`, `attack_eval.CTID_SHA256`) and checked on every read |
+| `data/reference-snapshots/<date>/` (local) | NVD 2002–2022 yearly feeds + manifest, from `cti fetch-nvd-archive` | Write-once like a snapshot; never uploaded |
+| `data/threats/<date>/` (local) | `threats.json` from `cti threats` | Regenerated freely; never uploaded |
 | `data/gold/gold.jsonl.gz` (local) | Frozen evaluation gold set | Frozen; SHA-256 committed in `cti/gold.py` |
 | S3 `snapshots/<date>/…` | Copy of the raw snapshot | Write-once, enforced by code **and** IAM |
 | S3 `gold/` | Copy of the gold set | Write-once |
@@ -91,7 +100,8 @@ Snapshot key layout (same locally and in S3):
 - The storage layer (`storage/`) has no delete operation. Writes use no-overwrite by
   default (S3 `If-None-Match: *`); retrying with identical bytes is accepted, different
   bytes are rejected.
-- `data/` is gitignored. Raw feed data never enters the public repo (licensing).
+- `data/` is gitignored except `data/reference/`. Raw feed data never enters the public
+  repo (licensing).
 
 ## Point-in-time data
 
@@ -140,7 +150,8 @@ flowchart LR
 
 ```
 src/cti/
-  cli.py             `cti` command: probe / ingest / status / parse / enrich / upload / gold-import
+  cli.py             `cti` command: subcommands for the stages in the table above, plus
+                     upload and gold-import
   config.py          typed settings from CTI_* env vars; fail fast on missing values
   models.py          Document: the normalized record every source produces
   ingest.py          one-time ingest: per-source isolation, resume, logged refetch
@@ -149,6 +160,14 @@ src/cti/
   enrich/            offline per-CVE join (cves.py), CWE lookup (cwe.py), page cleaning
                      (cleaner.py, references.py)
   sources/           one module per feed (fetch + parse); registry.py sets ingest order
+  nlp/               regex IOCs and aliases, SecureBERT models / NER / embeddings, and the
+                     pre-registered evaluations: ATT&CK (attack_eval, attack_eval2), CWE,
+                     risk (each with a *_config.py fixed before scoring)
+  threats/           threat catalog: config.py (pre-declared rules), review.py (review
+                     sheets), catalog.py (categories, ATT&CK, CVE links, priority)
+  dashboard/         export.py (dashboard JSON), schema.py (its pydantic contract),
+                     serve.py (loopback server)
+  reference.py       pinned third-party files in data/reference/ (SHA-256 checked on read)
   references/        reference-link classifier, target selection, scraper, HTML→text
   http/              retrying client, rate limiter, SSRF-safe fetcher
   storage/           LocalStorage, S3Storage, MirroredStorage (no delete)

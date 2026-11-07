@@ -20,6 +20,10 @@ pipeline (a university capstone), referred to below as *the prototype*.
 10. [Evaluate classification on CWE labels, with choices fixed before scoring](#10-evaluate-classification-on-cwe-labels-with-choices-fixed-before-scoring)
 11. [A local dashboard: Vite + React, served by Python with a strict CSP](#11-a-local-dashboard-vite--react-served-by-python-with-a-strict-csp)
 12. [Never train a model on abuse.ch data](#12-never-train-a-model-on-abusech-data)
+13. [Threat priority is a declared rule, kept out of the risk score](#13-threat-priority-is-a-declared-rule-kept-out-of-the-risk-score)
+14. [Claude labelled the threat reviews for the owner, and the export says so](#14-claude-labelled-the-threat-reviews-for-the-owner-and-the-export-says-so)
+15. [Known exploited order: a fixed rule signed off before any output](#15-known-exploited-order-a-fixed-rule-signed-off-before-any-output)
+16. [The dashboard shows the model's numbers as they are](#16-the-dashboard-shows-the-models-numbers-as-they-are)
 
 ---
 
@@ -218,3 +222,80 @@ and reports the exclusion. No headline result used abuse.ch data.
 **Cost.** A planned classifier over the threat reports that ThreatFox links to was
 dropped. Threat categories come from MISP galaxies (CC0) instead.
 
+## 13. Threat priority is a declared rule, kept out of the risk score
+
+**Decision.** `cti threats` ranks malware families by a fixed key order in
+`src/cti/threats/config.py`: linked CISA KEV CVEs, linked critical- or high-tier queue CVEs,
+ransomware category, 30-day IOC growth, then IOC volume. Every row says why it ranks where
+it does, and the dashboard calls it a fixed rule, not a trained model. Threat links explain
+CVEs; they are never inputs to the CVE risk score.
+
+**Why.** No labels exist to train or evaluate a threat ranking, and fitting a model on
+ThreatFox data is not allowed ([decision 12](#12-never-train-a-model-on-abusech-data)). As
+risk features, the links would leak: every link source (reference pages, ThreatFox tags,
+ATT&CK text) is snapshot-time, and the reference pages were chosen KEV-first, so links
+encode the label the risk model is tested on.
+
+**Cost.** The priority is not validated. Some rules were added after the first run, each
+in its own commit and listed in the config header (the KEV-link key, which links count, the
+manual-label top 20). 47 of 53 links point at KEV CVEs, which the risk queue excludes, so
+threats mostly explain KEV CVEs ([decision 15](#15-known-exploited-order-a-fixed-rule-signed-off-before-any-output)).
+
+## 14. Claude labelled the threat reviews for the owner, and the export says so
+
+**Decision.** The plan was for the owner to label the top families' categories blind and to
+review every threat ↔ CVE link. On 2026-10-29 the owner delegated both reviews to Claude.
+This is recorded in `REVIEW_LABELLER` (`src/cti/threats/config.py`) and shipped in
+`threats.json` (`review.labeller`): not fully blind, because MISP name matches for some top
+families had appeared in earlier tool output; links judged from the evidence page text;
+ThreatFox tags accepted as reporter attributions.
+
+**Why.** The labels change the ranking, so who made them, and how independent they were,
+belongs next to the results. Judged link precision, 25 of 43 (58%, Wilson 95% CI 43–72%),
+is reported apart from the 10 accepted tags; counting them (35/53) would overstate what was
+checked.
+
+**Cost.** Category agreement measures Claude against MISP, not an analyst against MISP.
+The 56 hand-labelled families and the link reviews are committed in `data/reference/`, so a
+human review can replace them.
+
+## 15. Known exploited order: a fixed rule signed off before any output
+
+**Decision.** The Known exploited view lists all 1,756 KEV CVEs in a fixed order: linked to
+a shown threat family by a link that counts for priority (26 CVEs), then CISA known
+ransomware use (350 more; 361 overall), then newest CISA listing date, then CVE ID. The owner signed off the
+rule on 2026-11-06 before any output was seen. `cti export` writes each entry's
+`priority_rank` and a `why` line naming its source.
+
+**Why.** The risk queue excludes KEV CVEs by design, but confirmed-exploited CVEs still
+need an order to patch in. Nothing labels which KEV CVE matters more, so the order cannot be
+evaluated; it is presented as a sort order, not a prediction.
+
+**Alternatives.** Ransomware before threat links; newest listing only. CISA's due date was
+also dropped as a column (owner, 2026-11-06): 1,751 of 1,756 are past due at the
+snapshot and it is a US federal deadline, so it would separate nothing as a sort key either.
+
+**Cost.** Unevaluated. The listing date says when CISA added a CVE, not how active it is;
+287 entries share CISA's first batch date (2021-11-03) and sort last within their group.
+
+## 16. The dashboard shows the model's numbers as they are
+
+**Decision.** Display wording follows the exported numbers, even when they read oddly:
+- **No sign flip for age.** The label is "Age (older ranks lower)" next to the model's
+  negative weight (−0.57 in the refit), not a renamed "Newness" with the sign reversed.
+- **No "≈ 0" for small weights.** A contribution is weight × standardized value, so a
+  rare signal with a small weight can still move a row: ExploitDB's −0.010 weight
+  contributes −0.19 on 90 queue rows. A queue note explains when a public exploit or SSVC
+  pulls a row down.
+- **"Scored" vs "in the queue".** 167,844 CVEs are scored (given a tier); 8,392 are in the
+  queue (critical, high, elevated).
+- **"SSVC: PoC / exploited".** The feature is ordinal (none, PoC, active); no queued CVE
+  has "active", so every negative contribution comes from a PoC.
+
+**Why.** The sign flip and "≈ 0" were in the first dashboard-fix plan and were rejected by
+its audit; the SSVC wording was caught by the implementation audit. A flipped sign or a rounded-away contribution would make the dashboard disagree with
+`risk.json` and the tests, and the 0.02 rounding threshold had been picked after seeing the
+weights.
+
+**Cost.** Some rows read counter-intuitively (a public exploit lowering rank) and need an
+explanatory note rather than a cleaner number.
