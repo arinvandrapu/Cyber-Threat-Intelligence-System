@@ -1,8 +1,13 @@
 """HTTP client with bounded retries.
 
 Retries only what is worth retrying: transport errors, 429, and 5xx. Other 4xx
-responses fail immediately. Credentials belong in headers, never in URLs, so they
-can't leak into logs or exception messages.
+responses fail immediately.
+
+Credentials go in headers where the API allows it. abuse.ch's v2 export endpoint does not:
+its Auth-Key is part of the URL path, so a request URL can carry a secret. Two things keep
+it out of logs and errors: ``FetchContext.redact`` scrubs recorded URLs and exception text
+(``httpx.HTTPStatusError`` messages include the URL), and the CLI keeps the httpx/httpcore
+loggers at WARNING so request lines are never logged.
 """
 
 from __future__ import annotations

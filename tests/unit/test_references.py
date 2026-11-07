@@ -300,7 +300,9 @@ def test_redirect_target_robots_checked():
         respx.get("https://93.184.216.34/go").mock(
             return_value=httpx.Response(302, headers={"location": "https://other.example/page"})
         )
-        respx.get("https://151.101.1.69/page").mock(return_value=httpx.Response(200, text="x"))
+        page = respx.get("https://151.101.1.69/page").mock(
+            return_value=httpx.Response(200, text="x")
+        )
         record = scrape_one(
             Target("CVE-1", "https://site.example/go", RefType.ARTICLE),
             f,
@@ -308,7 +310,35 @@ def test_redirect_target_robots_checked():
             no_wait(),
         )
     assert record["skipped"] == "robots (redirect target)"
+    assert record["final_url"] == "https://other.example/page"
     assert "body_b64" not in record
+    assert not page.called  # checked before the disallowed hop is requested
+
+
+@respx.mock
+def test_intermediate_redirect_hop_robots_checked():
+    """site → other (disallowed) → back to site: the middle hop alone blocks the page."""
+    ips = {"site.example": ["93.184.216.34"], "other.example": ["151.101.1.69"]}
+    with SafeFetcher("ua", resolver=lambda h, p: ips[h]) as f:
+        respx.get("https://93.184.216.34/robots.txt").mock(return_value=httpx.Response(404))
+        respx.get("https://151.101.1.69/robots.txt").mock(
+            return_value=httpx.Response(200, text="User-agent: *\nDisallow: /hop\n")
+        )
+        respx.get("https://93.184.216.34/go").mock(
+            return_value=httpx.Response(302, headers={"location": "https://other.example/hop"})
+        )
+        hop = respx.get("https://151.101.1.69/hop").mock(
+            return_value=httpx.Response(302, headers={"location": "https://site.example/end"})
+        )
+        respx.get("https://93.184.216.34/end").mock(return_value=httpx.Response(200, text="x"))
+        record = scrape_one(
+            Target("CVE-1", "https://site.example/go", RefType.ARTICLE),
+            f,
+            RobotsCache(f),
+            no_wait(),
+        )
+    assert record["skipped"] == "robots (redirect target)"
+    assert not hop.called
 
 
 @respx.mock
