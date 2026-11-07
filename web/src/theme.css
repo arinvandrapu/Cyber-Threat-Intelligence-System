@@ -197,11 +197,13 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 .gd-toc { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: thin;
   scrollbar-color: var(--edge) transparent; font-size: 13px; }
 .gd-toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.gd-toc ul ul { margin: 2px 0 8px 12px; padding-left: 8px; border-left: 1px solid var(--border); }
+.gd-toc-parts { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.gd-toc-parts .label { display: block; padding: 0 8px 6px; }
+.gd-toc-parts ul { padding-left: 8px; border-left: 1px solid var(--border); margin-left: 8px; }
 .gd-toc a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; line-height: 1.35; }
 .gd-toc a:hover { color: var(--text); background: var(--raised); }
 .gd-toc a[aria-current="location"] { color: var(--text); background: var(--active); box-shadow: inset 2px 0 0 var(--accent); font-weight: 600; }
-.gd-toc ul ul a[aria-current="location"] { background: transparent; box-shadow: none; color: var(--accent-2); font-weight: 500; }
+.gd-toc-parts a[aria-current="location"] { background: transparent; box-shadow: none; color: var(--accent-2); font-weight: 500; }
 .gd-select { display: none; }
 .gd-content { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .gd-section { scroll-margin-top: 16px; font-size: 14px; line-height: 1.6; color: var(--text-2); }

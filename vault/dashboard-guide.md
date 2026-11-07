@@ -9,8 +9,10 @@ tags: [dashboard, web, docs, decision]
 
 ## Layout
 
-- `src/views/Guide.tsx`: sticky sidebar (sections; parts listed only for the active one),
-  native `<select>` "Jump to" under 900px. Content in `src/guide/sections/*.tsx`, one file
+- `src/views/Guide.tsx`: sticky sidebar. The 12 section links never move; the active
+  section's parts are listed in a separate "In <section>" block below them (owner,
+  2026-11-07: expanding parts inline made the links below jump while scrolling).
+  Native `<select>` "Jump to" under 900px. Content in `src/guide/sections/*.tsx`, one file
   per tab plus `start` and `reference` (Concepts glossary, Data & freshness).
 - Each tab section: what it answers, one part per panel (encodings, interactions), how
   it's computed (methods link to Evaluation, not repeated), common misreadings, and an

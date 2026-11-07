@@ -132,6 +132,7 @@ export function Guide({ data, focus }: { data: Data; focus: string | null }) {
         lede="How to read every tab in depth: what each panel shows, how it is built, and the readings that are easy to get wrong."
       />
       <div className="gd-layout" onClick={onClick}>
+        {/* sections never move; only the "In this section" block below them changes as you scroll */}
         <nav className="gd-toc" aria-label="Guide sections">
           <ul>
             {sections.map((s) => (
@@ -139,23 +140,26 @@ export function Guide({ data, focus }: { data: Data; focus: string | null }) {
                 <a href={`${PREFIX}${s.id}`} aria-current={s.id === active.section ? "location" : undefined}>
                   {s.title}
                 </a>
-                {s.id === current.id && s.parts.length > 0 && (
-                  <ul>
-                    {s.parts.map((p) => {
-                      const key = `${s.id}-${p.id}`;
-                      return (
-                        <li key={key}>
-                          <a href={`${PREFIX}${key}`} aria-current={key === active.part ? "location" : undefined}>
-                            {p.title}
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
               </li>
             ))}
           </ul>
+          {current.parts.length > 0 && (
+            <div className="gd-toc-parts">
+              <span className="label">In {current.title}</span>
+              <ul>
+                {current.parts.map((p) => {
+                  const key = `${current.id}-${p.id}`;
+                  return (
+                    <li key={key}>
+                      <a href={`${PREFIX}${key}`} aria-current={key === active.part ? "location" : undefined}>
+                        {p.title}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </nav>
 
         <label className="gd-select">
