@@ -573,6 +573,71 @@ def test_build_kev_has_a_card_for_every_kev_cve():
     ]
     out = export.build_kev(rows)
     schema.KevCatalog.model_validate(out)
+    # same date, no links, no ransomware: CVE ID order
     assert [e["cve"] for e in out["entries"]] == ["CVE-2023-0009", "CVE-2024-0002"]
+    assert [e["priority_rank"] for e in out["entries"]] == [1, 2]
     assert all(e["source"] == "kev" and e["families"] == [] for e in out["entries"])
     assert "http://" not in json.dumps(out)
+
+
+def _kev_row(cve, added, ransomware="Unknown"):
+    meta = {"vendor": "V", "product": "P", "date_added": added, "ransomware_use": ransomware}
+    return {"source_id": cve, "title": cve, "text": "", "metadata": meta}
+
+
+def _link(cve, via, review, counts):
+    return {"cve": cve, "via": via, "review": review, "counts_for_priority": counts}
+
+
+def test_build_kev_sorts_threat_then_ransomware_then_newest():
+    rows = [
+        _kev_row("CVE-2020-0001", "2026-01-01"),  # newest, nothing else
+        _kev_row("CVE-2020-0002", "2022-01-01", "Known"),  # ransomware
+        _kev_row("CVE-2020-0003", "2021-01-01"),  # threat-linked, oldest
+        _kev_row("CVE-2020-0004", "2025-01-01"),  # a rejected link and a correct one elsewhere
+        _kev_row("CVE-2020-0005", "2025-01-01"),  # same date as 0004: CVE ID breaks the tie
+        _kev_row("CVE-2020-10006", "2025-01-01"),  # 5-digit ID sorts after 0005, not before
+    ]
+    families = [
+        {
+            "family": "Mirai",
+            "links": [
+                _link("CVE-2020-0003", "mention:reference_page", "correct", True),
+                _link("CVE-2020-0004", "mention:reference_page", "rejected", False),
+            ],
+        },
+        {"family": "Akira", "links": [_link("CVE-2020-0003", "attack:software", "correct", True)]},
+    ]
+    out = export.build_kev(rows, families)
+    schema.KevCatalog.model_validate(out)
+    order = [e["cve"] for e in out["entries"]]
+    assert order == [
+        "CVE-2020-0003",
+        "CVE-2020-0002",
+        "CVE-2020-0001",
+        "CVE-2020-0004",
+        "CVE-2020-0005",
+        "CVE-2020-10006",
+    ]
+    assert [e["priority_rank"] for e in out["entries"]] == [1, 2, 3, 4, 5, 6]
+    first, ransom, _, rejected, *_ = out["entries"]
+    assert first["families"] == ["Akira", "Mirai"]
+    assert first["why"] == (
+        "Threats: Akira (cited in its ATT&CK entry), Mirai (named on a reference page); "
+        "listed by CISA 2021-01-01"
+    )
+    assert ransom["why"] == "CISA: known ransomware use; listed by CISA 2022-01-01"
+    assert rejected["families"] == [] and rejected["why"] == "listed by CISA 2025-01-01"
+
+
+def test_kev_why_credits_a_family_to_its_first_listed_source():
+    card = {"ransomware_use": "Unknown", "date_added": "2024-01-01"}
+    links = [("X", "mention:reference_page"), ("X", "threatfox_tag")]
+    assert export.kev_why(card, links) == "Threat: X (ThreatFox tag); listed by CISA 2024-01-01"
+
+
+def test_a_link_that_does_not_count_neither_lists_nor_ranks():
+    link = _link("CVE-2020-0001", "mention:reference_page", "unreviewed", False)
+    families = [{"family": "F", "links": [link]}]
+    (entry,) = export.build_kev([_kev_row("CVE-2020-0001", "2024-01-01")], families)["entries"]
+    assert entry["families"] == [] and entry["why"] == "listed by CISA 2024-01-01"

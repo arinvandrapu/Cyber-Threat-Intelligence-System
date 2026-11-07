@@ -372,6 +372,32 @@ def _threats_doc(tiers: dict[str, str], kev_cve: str) -> dict:
     }
 
 
+def _extra_kev_rows() -> list[dict]:
+    """More synthetic KEV entries so the Known exploited view shows its sort: one with
+    known ransomware use, two without (newest first). IDs are outside the risk population."""
+    rows = [
+        ("CVE-2099-90001", "2026-03-10", "Known"),
+        ("CVE-2099-90002", "2026-05-20", "Unknown"),
+        ("CVE-2099-90003", "2025-11-02", "Unknown"),
+    ]
+    return [
+        {
+            "source_id": cve,
+            "title": f"Example Vendor Product {i} Vulnerability",
+            "text": "Synthetic fixture: an example flaw.",
+            "metadata": {
+                "vendor": "Example Vendor",
+                "product": f"Product {i}",
+                "date_added": added,
+                "due_date": None,
+                "ransomware_use": ransomware,
+                "cwes": [],
+            },
+        }
+        for i, (cve, added, ransomware) in enumerate(rows, 1)
+    ]
+
+
 def build() -> dict[str, dict]:
     recs = records()
     results = _evals()
@@ -476,7 +502,7 @@ def build() -> dict[str, dict]:
             "graphs.json": graphs,
             "eval.json": evals,
             "threats.json": threats,
-            "kev.json": export.build_kev([kev_row]),
+            "kev.json": export.build_kev([kev_row, *_extra_kev_rows()], threats["families"]),
         }
     )
 

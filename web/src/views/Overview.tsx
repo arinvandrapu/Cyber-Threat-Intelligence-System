@@ -21,15 +21,56 @@ export function Overview({ data }: { data: Data }) {
   const epssHits = evals.risk.methods.epss?.pooled["hits@100"];
   const positives = evals.risk.methods.logistic?.pooled.positives;
   const top = risk.rows.slice(0, 5);
+  const kev = data.kev.entries;
+  const kevLinked = kev.filter((e) => e.families.length > 0).length;
+  const kevRansomware = kev.filter((e) => e.ransomware_use === "Known").length;
+  const kevFirst = kev[0];
+  // queued CVEs a threat is tied to by a link that counts (same rule as the KEV order)
+  const queued = new Set(risk.rows.map((r) => r.cve));
+  const earlyWarnings = new Set(
+    threats.families.flatMap((f) => f.links.filter((l) => l.counts_for_priority && queued.has(l.cve)).map((l) => l.cve)),
+  ).size;
 
   return (
     <>
       <PageHead
         title="Which threats deserve attention first, and why?"
-        lede={<>Two ranked lists from public feeds as of {meta.snapshot_date}: vulnerabilities to fix, and threats to watch.</>}
+        lede={<>Public feeds as of {meta.snapshot_date}: exploited CVEs to patch now, CVEs likeliest to be exploited next, and the threats behind them.</>}
       />
 
       <section className="panel brief" aria-label="How this dashboard works">
+        <div className="brief-col">
+          <div className="brief-head">
+            <h2>Which exploited CVEs to patch first</h2>
+            <p>
+              Every CVE in CISA KEV: someone has exploited it. {threats.available ? "Threat-linked first, then ransomware use" : "Ransomware use first"}, then newest.
+            </p>
+          </div>
+          <dl className="stats">
+            <div className="stat">
+              <dt>CVEs in CISA KEV</dt>
+              <dd>{int(kev.length)}</dd>
+            </div>
+            {threats.available && (
+              <div className="stat">
+                <dt>linked to a threat</dt>
+                <dd>{int(kevLinked)}</dd>
+              </div>
+            )}
+            <div className="stat">
+              <dt>known ransomware use</dt>
+              <dd>{int(kevRansomware)}</dd>
+            </div>
+          </dl>
+          {kevFirst && (
+            <p className="brief-note">
+              First: <a href={`#/kev/${kevFirst.cve}`} className="mono">{kevFirst.cve}</a>
+              {kevFirst.vendor || kevFirst.product ? ` (${[kevFirst.vendor, kevFirst.product].filter(Boolean).join(" ")})` : ""}. {kevFirst.why}.
+            </p>
+          )}
+          <a href="#/kev" className="pill brief-cta">Open known exploited</a>
+        </div>
+
         <div className="brief-col">
           <div className="brief-head">
             <h2>Which CVEs to fix next</h2>
@@ -78,8 +119,18 @@ export function Overview({ data }: { data: Data }) {
         </div>
 
         <p className="brief-foot">
-          <strong>How they connect: threats explain CVEs.</strong> A CVE linked to an active threat deserves a closer look.
-          CVEs already in CISA KEV: patch first.
+          {threats.available ? (
+            <>
+              <strong>How they connect: threats explain exploited CVEs.</strong> {int(kevLinked)} of the {int(kev.length)} KEV
+              CVEs are tied to a threat family, and they lead the patch-first list. A threat tied to a queued CVE is rarer
+              ({int(earlyWarnings)} today): an early warning, flagged in the risk queue, that never changes its rank.
+            </>
+          ) : (
+            <>
+              <strong>Patch exploited CVEs first, then work down the risk queue.</strong> Threat links weren't built for
+              this snapshot.
+            </>
+          )}
         </p>
       </section>
 
@@ -191,7 +242,15 @@ function guide(data: Data): { view: string; title: string; what: string; why: st
   const epssAp = evals.risk.methods.epss?.pooled.mean_average_precision;
   const logisticAp = evals.risk.methods.logistic?.pooled.mean_average_precision;
   const apNote = epssAp !== undefined && logisticAp !== undefined && epssAp > logisticAp ? ", though EPSS has the higher mean average precision" : "";
+  const kevLinked = data.kev.entries.filter((e) => e.families.length > 0).length;
   return [
+    {
+      view: "kev",
+      title: "Known exploited",
+      what: "Every CVE in CISA KEV, in the order to patch them, each with its reasons.",
+      why: "Someone has already exploited these, so they come before anything predicted.",
+      how: `A fixed rule agreed before it was run, not a model: CVEs a threat family is tied to come first (${kevLinked} today), then CISA's known ransomware use, then the newest CISA listing. A threat link counts only if it was reviewed correct, or is an unreviewed ThreatFox tag or ATT&CK citation. KEV says someone exploited the CVE, not necessarily the linked family.`,
+    },
     {
       view: "queue",
       title: "Risk queue",

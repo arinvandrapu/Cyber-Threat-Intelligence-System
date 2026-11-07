@@ -388,6 +388,54 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           (cmd_threats 142 lines, cmd_attack_eval2 105, build_parser 156); embed.py pooling
           test with a fake model
 
+- [ ] **12. Connect threats to what to patch** *(from the 2026-11-06 problem-statement
+      review; finding: `vault/threat-queue-overlap.md`)* — 47 of 53 threat links point at
+      KEV CVEs, which the queue excludes, so "threats explain CVEs" holds for KEV and
+      almost never for the queue (1 queued CVE: CVE-2026-109618, rank 3). Fix within the
+      one ingest: no new data. One branch (`feat/connect-threats-kev`), one commit per
+      step, one PR after an implementation audit.
+  - [x] **12.1 KEV triage view** — rank all 1,756 KEV CVEs ("patch first") by a fixed,
+        pre-declared sort, not a model (there are no labels to evaluate it against):
+    - [x] Owner signed off 2026-11-06, before any output (and chose a new tab before
+          Risk queue over a mode inside it). Sort keys, in order:
+          (1) linked to a threat family by a link that counts for priority
+          (26 KEV CVEs; 4 more have only rejected links); (2) CISA known ransomware use (361 Known);
+          (3) newest `date_added` first; tie → CVE ID
+    - [x] `cti export`: add `priority_rank` + one-line `why` (names its source, as the
+          Threats "why" does) to each `kev.json` entry; families from accepted links only;
+          schema (`dashboard/schema.py`) + `web/src/types.ts` + contract test; unit tests
+          for the sort and the why text; regenerate `web/fixtures`
+    - [x] New view "Known exploited" (before Risk queue): sortable table (rank, CVE, name,
+          vendor/product, ransomware, linked threats, date added, due date), filters
+          (linked to a threat / ransomware), search; row opens the existing KEV card;
+          caption: a sort order, not a prediction; KEV = exploited by someone, not
+          necessarily the linked family
+    - [x] `smoke.py` VIEWS gets the new view
+    - Done 2026-11-06 after a plan audit: one rule for "linked" (a card lists a family
+      only for a link that counts for priority; that list is the sort's first key), so
+      26 linked, not 30; neutral source wording (`KEV_LINK_SOURCES`: "cited in its ATT&CK
+      entry", "named on a reference page"); due date labelled as a US federal deadline;
+      row opens its card inline (the `#/queue/<CVE>` route prefers the threats card)
+  - [x] **12.2 "Linked to a threat" in the risk queue** — badge on queued CVEs with a
+        link not reviewed as wrong, plus a filter next to "public exploit only"; the
+        detail already lists linked threats. Today this flags 1 CVE; the caption says so
+        and calls it an early warning (exploitation evidence before CISA lists it), and
+        that threats never feed the rank
+    - Done 2026-11-06: badge + filter use the KEV view's rule (a link that counts for
+      priority), so both views agree; the detail still lists every non-rejected link with
+      its review state. Badge is neutral grey: KEV orange would read as "in KEV"
+  - [x] **12.3 Overview + docs say what the data shows** — "How they connect": threats
+        explain KEV CVEs (patch first, ranked on the new view); a threat link on a queued
+        CVE is an early warning. Overview briefing gains the KEV list; tab guide entry for
+        the new view (numbers from the export). README (views table, view count,
+        Overview row), `vault/dashboard.md`, `vault/dashboard-web.md`,
+        `vault/threat-queue-overlap.md` ("proposed" → built), handoff
+    - Done 2026-11-06: three-column briefing (one column under 1100px); footer and tab
+      guide numbers computed from the export; README "Where links land" bullet
+  - [ ] Verify each step: `pytest`, `ruff`, `npm run build`, `npm run check`, `smoke.py`
+        on fixture + real export, screenshots; plan audit before 12.1, implementation
+        audit before the PR
+
 - [ ] **9. Security deliverables + polish** — STRIDE threat model of the pipeline,
       STIX 2.1 export, a sample analyst-style intel report, SBOM, dashboard screenshots,
       limitations section, final README.

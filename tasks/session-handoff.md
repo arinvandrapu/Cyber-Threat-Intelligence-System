@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-11-04 (Phase 11a credibility fixes). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-11-06 (Overview redesign; Phase 12: connect threats to what to patch). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -30,7 +30,9 @@
 | Alias-bug fix + CWE seed | ✅ merged | #36 |
 | ATT&CK software links + CVE cards (re-land of #37) | ✅ merged | #38 |
 | Plain-language pass + every CVE opens a detail | ✅ merged | #39 |
-| 11a. Credibility fixes | in review; re-stamp after merge | see below |
+| 11a. Credibility fixes | ✅ merged, re-stamped (export at `b8b2e17`, clean) | #40, #41 |
+| Overview redesign + queue card scroll | ✅ merged | #42, #43 |
+| **12. Connect threats to what to patch** (Known exploited view, queue threat badge, Overview) | in review | `feat/connect-threats-kev` |
 | **11b–d. Review fixes** (docs, dashboard, robustness) | **⏭ next** | — |
 | 9. Security deliverables + polish | after 11 | — |
 

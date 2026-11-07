@@ -32,7 +32,7 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - **Prioritizes** vulnerabilities with a risk score evaluated forward in time against CISA
   KEV additions, with rank-based tiers whose hit rates fall monotonically.
-- **Presents** the results in a local, read-only analyst dashboard (eight views, three
+- **Presents** the results in a local, read-only analyst dashboard (nine views, three
   relationship graphs) served on 127.0.0.1 under a strict Content-Security-Policy.
   STIX 2.1 output is *planned*.
 
@@ -258,6 +258,11 @@ behalf (not fully blind):
   capability rather than observed use. Each family's reason names the source. Example: Cobalt
   Strike ranks first on 4 KEV CVEs, 3 of them 2011–2013 Java bugs from an ATT&CK "can exploit"
   statement.
+- **Where links land.** 47 of the 53 links point at CVEs already in CISA KEV, which the risk
+  queue excludes by design: a source tying malware to a CVE is itself exploitation evidence,
+  so such CVEs are usually in KEV already. Only one queued CVE has an accepted link. So threats
+  order the Known exploited view (26 KEV CVEs linked first) and only flag queued CVEs as early
+  warnings; they never feed the risk score.
 
 ### SecureBERT 2.0 NER (sanity check)
 
@@ -271,12 +276,13 @@ See [`vault/nlp-design.md`](vault/nlp-design.md).
 ## Analyst dashboard
 
 `cti export` turns the pipeline's outputs into schema-validated JSON, and `cti serve`
-serves a Vite + React dashboard over it on 127.0.0.1 only. Eight views:
+serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
 
 | View | What an analyst gets |
 |---|---|
-| Overview | The question, the two linked lists that answer it (vulnerabilities to fix, threats to watch), headline numbers, risk tiers, top of the queue, and one line per tab |
-| Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families |
+| Overview | The question and the three lists that answer it (exploited CVEs to patch first, CVEs likeliest to be exploited next, threats to watch), how they connect, risk tiers, top of the queue, and one line per tab |
+| Known exploited | Every CISA KEV CVE in a fixed patch-first order agreed before it was run (linked to a threat family, then CISA known ransomware use, then newest listing), each with a one-line reason naming its sources |
+| Risk queue | The critical, high and elevated tiers: sortable, filterable, with each CVE's per-feature contribution to its rank and any linked malware families; a CVE a threat is tied to is flagged as an early warning (never a rank input) |
 | Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, tiered CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
@@ -414,7 +420,7 @@ src/cti/
                      pinned SecureBERT 2.0 models (NER, bi-encoder embeddings)
   dashboard/         `cti export` (schema-validated dashboard JSON) and `cti serve`
                      (allowlist static server on 127.0.0.1, strict security headers)
-web/                 Vite + React + TypeScript dashboard (7 views, hand-rolled SVG charts),
+web/                 Vite + React + TypeScript dashboard (9 views, hand-rolled SVG charts),
                      synthetic fixture, static and headless-browser checks
   defang.py          make IOCs non-clickable (hxxp, fxp, [.]) and undo common defang forms
   references/        reference-link classifier, page selection, polite SSRF-safe scraper

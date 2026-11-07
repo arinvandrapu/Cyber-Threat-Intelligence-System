@@ -25,11 +25,13 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 - [[risk-eval]] — Phase 7b `cti risk-eval`: rolling-origin folds, pre-registered features,
   models, metrics and tiers (`nlp/risk_config.py`)
 - [[dashboard]] — Phase 8: Vite + React over `cti export` JSON, `cti serve` on
-  127.0.0.1 with strict CSP, eight views (incl. Threats) and three relationship graphs
+  127.0.0.1 with strict CSP, nine views (incl. Threats, Known exploited) and three relationship graphs
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
 - [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts
 - [[threat-links]] — CVE link sources (ThreatFox tags, reference pages, ATT&CK software), review results, owner decisions
+- [[known-exploited-view]] — Phase 12.1 KEV triage tab: fixed sort (threat link → ransomware → newest), one "linked" rule, wording
+- [[threat-queue-overlap]] — why threats barely link to the risk queue (47/53 links are KEV; 1 queued CVE) and proposed fixes
 - [[threat-layer]] — Phase 10a: family categories (MISP galaxies, STIX
   malware types), CVE links, priority heuristic; abuse.ch §7.3 no-AI-training rule
 - [[attack-mapping-v2-results]] — 10b run: combiner passes marginally (+0.035 hit@5, below majority at hit@10), gain from the CVSS rule at T1189

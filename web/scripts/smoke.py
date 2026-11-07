@@ -22,6 +22,7 @@ from pathlib import Path
 # view -> its page heading (the nav labels appear on every page, so they prove nothing)
 VIEWS = {
     "overview": "<h1>Which threats deserve",
+    "kev": "<h1>Known exploited",
     "queue": "<h1>Risk queue",
     "threats": "<h1>Threats",
     "landscape": "<h1>Risk landscape",
