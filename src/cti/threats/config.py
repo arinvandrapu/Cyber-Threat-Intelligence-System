@@ -149,4 +149,13 @@ WHY_LINK_SOURCES = {
     "threatfox_tag": "tagged on ThreatFox",
     "mention:reference_page": "cited in reference pages",
 }
+
+# How the Known exploited view and `cti report` name each threat link's source. Neutral on
+# purpose: an ATT&CK entry citing a CVE can describe capability ("can exploit"), and a
+# reference page naming a family says it appears on a page about the CVE, not that it used it.
+KEV_LINK_SOURCES = {
+    "attack:software": "cited in its ATT&CK entry",
+    "threatfox_tag": "ThreatFox tag",
+    "mention:reference_page": "named on a reference page",
+}
 GROWTH_DAYS = 30

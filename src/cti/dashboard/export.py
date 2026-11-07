@@ -39,7 +39,7 @@ from cti.enrich.cves import cve_sort_key, features_at, known_in_kev
 from cti.nlp import risk_config as cfg
 from cti.nlp import risk_eval
 from cti.nlp.iocs import extract
-from cti.threats.config import PRIORITY_REVIEW_TOP_N, WHY_LINK_SOURCES
+from cti.threats.config import KEV_LINK_SOURCES, PRIORITY_REVIEW_TOP_N, WHY_LINK_SOURCES
 
 DESCRIPTION_CHARS = 320
 TOP_FAMILIES = 25
@@ -909,16 +909,6 @@ def kev_card(row: dict, families: list[str]) -> dict:
         "cwes": sorted(m.get("cwes") or []),
         "families": families,
     }
-
-
-# How the Known exploited view names each threat link's source. Neutral on purpose: an
-# ATT&CK entry citing a CVE can describe capability ("can exploit"), and a reference page
-# naming a family says it appears on a page about the CVE, not that it used it.
-KEV_LINK_SOURCES = {
-    "attack:software": "cited in its ATT&CK entry",
-    "threatfox_tag": "ThreatFox tag",
-    "mention:reference_page": "named on a reference page",
-}
 
 
 def kev_sort_key(card: dict) -> tuple:

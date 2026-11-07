@@ -1,6 +1,6 @@
 # Session Handoff
 
-**Last session:** 2026-11-07 (11d PR (a) merged #50; Guide tab #51–#53; Guide fact-check fix). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
+**Last session:** 2026-11-07 (11d done: #50, #55; Guide tab #51–#54; export re-stamped at `13b4fc5`, schema 3; 9.1 started). **Read this first, then `tasks/todo.md` and `tasks/lessons.md`.**
 
 ## Where we are
 
@@ -36,11 +36,12 @@
 | 11c. Dashboard (UI fixes; scored vs queue terms, NVD cards, vendor search; Evaluation grid) | ✅ merged, re-stamped (export at `51d932c`, clean, schema 2) | #45, #46, #47 |
 | 11b. Docs catch-up | ✅ merged, export re-stamped at `1382819` (clean) | #48 |
 | 11d (a). MIT licence, hashed locks, CI hardening, scraper + S3 manifest | ✅ merged (no export change) | #50 |
-| Dashboard Guide tab + sidebar fix + Top button | ✅ merged; fact-check fixes in follow-up PR | #51, #52, #53 |
-| **11d (b). Export/threats recovery, KEV version check, refactors** | **⏭ next** | — |
-| 9. Security deliverables + polish | after 11 | — |
+| Dashboard Guide tab + sidebar fix + Top button; Guide fact-check fixes | ✅ merged | #51–#54 |
+| 11d (b). Export/threats recovery (schema 3), KEV version check, `--archive-date`, refactors (b7 deferred) | ✅ merged, export re-stamped at `13b4fc5` (clean, schema 3) | #55 |
+| **9.1 Sample intel brief (`cti report` → `docs/sample-intel-brief.md`)** | **⏭ in progress** | — |
+| 9.2–9.5 Security deliverables + polish | after 9.1 | — |
 
-`main` is green (562 offline tests; CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
+`main` is green (580 offline tests; CI on Python 3.12 + 3.14; `nlp` lock audited in CI, not
 installed). **The one ingest has run** (snapshot `2026-10-26`).
 
 **Next session, in order:**
@@ -48,15 +49,15 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 2. After any merge that changes export code: `cti export --date 2026-10-26` from clean `main`
    and check `meta.json` shows `dirty: false` (restart `cti serve`; it builds its file
    allowlist at startup).
-3. **Next: 11d (b)** (`tasks/todo.md` → 11d → PR (b), items b1–b8, already plan-audited):
-   branch `chore/11d-correctness` from `main`; b1 export writes everything, marks threats
-   stale and exits non-zero; b2 KEV version check; b3 `--archive-date`; b4 cwe-eval
-   provenance; b5–b8 refactors. Re-stamp the export and smoke both exports after merge.
-   Local venvs predating #50 need the hashed reinstall (README Setup) to get setuptools.
-4. **Then Phase 9**, one PR per item, in order (`tasks/todo.md` → 9): 9.1 sample intel
-   report (first: it shows the problem statement answered), 9.2 STRIDE threat model, 9.3
-   STIX 2.1 export, 9.4 SBOM + screenshots, 9.5 limitations + final README.
-5. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
+3. **Phase 9**, one PR per item, in order (`tasks/todo.md` → 9): 9.1 sample intel brief
+   (owner: Markdown in `docs/`; plan B1–B5 in todo), 9.2 STRIDE threat model, 9.3 STIX 2.1
+   export, 9.4 SBOM + screenshots, 9.5 limitations + final README.
+4. **The export and `docs/sample-intel-brief.md` are coupled** (9.1): the brief states the
+   export's SHA-256. Re-stamping the export means regenerating the sample in the same PR
+   (`vault/intel-brief.md` → Gotcha); check with `cti report --check docs/sample-intel-brief.md`.
+5. Local venvs predating #50 need the hashed reinstall (README Setup) to get setuptools.
+   If `cti export` exits 1 with "threats … older risk.json": rerun `cti threats`, then export.
+6. Owner context: may present this at a MITRE final-round interview. Interview-prep notes
    are at the end of Phase 11 in `tasks/todo.md`.
 
 ## Phase 3 result (2026-10-26)

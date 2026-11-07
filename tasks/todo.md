@@ -595,6 +595,48 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         (patch-now KEV CVEs in the Known exploited order, queue CVEs likeliest next, early
         warnings, top threats, each with its "why" and the honest limits). The clearest
         demonstration of the problem statement; numbers read from the export, not typed
+    - Owner 2026-11-07: Markdown in `docs/` (no dashboard tab, no PDF). Due diligence done
+      (external: CISA/ICD 203/TLP 2.0 conventions; internal: field map + current values)
+    - [x] B1 `src/cti/report/brief.py`: `render(export_dir) -> str`, pure and deterministic
+          (no clock: dates from `meta.json`, commit from `meta.git`); inputs validated with
+          `schema.FILES`; `cti report [--date D | --export-dir P] [--out F]` (default
+          `data/export/<date>/brief.md`; atomic write)
+    - [x] B2 Sections (~1–2 pages): `TLP:CLEAR` first and last line; title, data cut-off,
+          versions (KEV catalog, EPSS model, commit), "portfolio sample from public data,
+          not an operational product"; **BLUF** 3–4 bullets, facts only (counts and the
+          forward-test result), no likelihood words on model output; **1 Patch now**: top
+          10 `kev.json` entries in `priority_rank` order with their `why` (no due dates:
+          1,751/1,756 past due); **2 Watch list**: top 10 queue rows (rank, tier, EPSS +
+          percentile, top 3 drivers via a Python copy of `FEATURE_LABEL`, tested against
+          `web/src/format.ts`), framed as a sort order, plus tier back-test hit rates with
+          Wilson CIs; **3 Early warnings**: queued CVEs with a link that counts (Overview
+          rule), "never changes the rank; not evaluated as a predictor"; **4 Threat context**:
+          top 5 families, "co-mentioned / tagged", never "exploits"; rejected links skipped;
+          link-review precision + "labelled by Claude for the owner"; **5 Recommended
+          actions** (patch, mitigate/monitor, hunt) generic to the data, no invented product
+          advice; **6 Confidence & method**: top-100 hits model vs EPSS + CI from
+          `eval.json`, "not a probability"; **7 Limitations**: `meta.disclosures` verbatim;
+          **8 Sources**: each feed with its snapshot/version and a one-line reliability note
+    - [x] B3 No indicators, no descriptions (defang/licence: abuse.ch only as family names,
+          counts and tag-page citations; no "threatfox" source-string literal in the module)
+    - [x] B4 Tests on `web/fixtures`: deterministic; TLP first/last; every CVE and number in
+          the brief appears in the export; no URL/IP/domain patterns; FEATURE_LABEL sync;
+          CLI writes the file. Generate `docs/sample-intel-brief.md` from the clean real
+          export (`13b4fc5`) and commit it
+    - [x] B5 Docs: README (link the brief near the top; skills row: intelligence reporting,
+          TLP, ICD 203-style confidence), `docs/architecture.md` component row, new
+          `vault/intel-brief.md` + index, handoff (also the stale "next" lines), hub note
+    - Plan audit (2026-11-07) changed the plan: module is `dashboard/brief.py` (not a
+      `report/` package); default output `data/reports/<date>/brief.md` (not the export
+      dir, which `cti export` doesn't clean); `facts()`/`render()` split; golden fixture
+      test + `--check` (export SHA-256) instead of "every number in the export"; forward
+      test stated as the pre-registered verdict + counter-evidence; "Known exploited:
+      threat-linked first" not "Patch now"; ransomware field and due-date scope explained;
+      newness + EPSS version gap in the watch-list header; two labelled ICD 203 judgements
+      in the BLUF; per-source link wording (`KEV_LINK_SOURCES`, moved to
+      `threats/config.py`); unavailable/stale threats paths tested. Details:
+      `vault/intel-brief.md`
+    - [x] Verify: pytest (592), ruff; brief read end to end; implementation audit applied (8 required + most optional); CI on the PR
   - [ ] 9.2 STRIDE threat model of the pipeline (ingest/scraper, storage/S3, export,
         `cti serve`, browser) with the controls already built and the gaps
   - [ ] 9.3 STIX 2.1 export (bundle of vulnerabilities, malware, relationships; validated)
