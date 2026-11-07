@@ -41,5 +41,7 @@ Finding 2026-11-06 (snapshot 2026-10-26). Sources: [[threat-links]], [[threat-ca
 
 1. Built (12.1): KEV triage view, [[known-exploited-view]]. 26 KEV CVEs are linked by a
    link that counts (not 30: 4 have only rejected links).
-2. Next (12.2): "Linked to a threat" badge + filter in the queue (11c optional item).
+2. Built (12.2): "threat" badge + "Linked to a threat" filter in the risk queue, same
+   rule as the KEV view (`counts_for_priority`); flags 1 CVE today; neutral grey badge
+   (KEV orange would read as "in KEV"); early-warning caption when filtered.
 3. Then (12.3): rewrite Overview "How they connect" to match the counts above.

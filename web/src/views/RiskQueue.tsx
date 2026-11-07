@@ -28,6 +28,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   const [tier, setTier] = useState<Tier | "all">("all");
   const [query, setQuery] = useState("");
   const [evidenceOnly, setEvidenceOnly] = useState(false);
+  const [threatOnly, setThreatOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("rank");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<string | null>(focus ?? risk.rows[0]?.cve ?? null);
@@ -42,6 +43,18 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     return m;
   }, [data.threats.families]);
 
+  // CVE -> families linked by a link that counts for priority: the same rule as the Known
+  // exploited view. On a queued CVE this is an early warning, never a ranking input.
+  const linkedFamilies = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const f of data.threats.families)
+      for (const l of f.links)
+        if (l.counts_for_priority && !(m.get(l.cve) ?? []).includes(f.family))
+          m.set(l.cve, [...(m.get(l.cve) ?? []), f.family]);
+    return m;
+  }, [data.threats.families]);
+  const threatLinked = useMemo(() => risk.rows.filter((r) => linkedFamilies.has(r.cve)).length, [risk.rows, linkedFamilies]);
+
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: risk.rows.length };
     for (const r of risk.rows) c[r.tier] = (c[r.tier] ?? 0) + 1;
@@ -53,6 +66,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     return risk.rows
       .filter((r) => tier === "all" || r.tier === tier)
       .filter((r) => !evidenceOnly || r.exploit_sources.length > 0)
+      .filter((r) => !threatOnly || linkedFamilies.has(r.cve))
       .filter(
         (r) =>
           !q ||
@@ -61,7 +75,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
           (r.context.assigner ?? "").toLowerCase().includes(q),
       )
       .sort(SORTS[sort]);
-  }, [risk.rows, tier, query, evidenceOnly, sort]);
+  }, [risk.rows, tier, query, evidenceOnly, threatOnly, linkedFamilies, sort]);
 
   // a CVE opened from another view: jump to its page
   useEffect(() => {
@@ -70,6 +84,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
     setTier("all");
     setQuery("");
     setEvidenceOnly(false);
+    setThreatOnly(false);
     setSort("rank");
     const i = risk.rows.findIndex((r) => r.cve === focus);
     setPage(i >= 0 ? Math.floor(i / PAGE) : 0);
@@ -133,8 +148,21 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
           <button type="button" className="pill" aria-pressed={evidenceOnly} onClick={() => { setEvidenceOnly(!evidenceOnly); reset(); }}>
             Exploit evidence only
           </button>
+          {data.threats.available && (
+            <button type="button" className="pill" aria-pressed={threatOnly} onClick={() => { setThreatOnly(!threatOnly); reset(); }}>
+              Linked to a threat <span className="mono muted" style={{ fontSize: 12 }}>{int(threatLinked)}</span>
+            </button>
+          )}
         </div>
       </section>
+
+      {threatOnly && (
+        <p className="caption" style={{ margin: 0, maxWidth: 900 }}>
+          Early warning: a source ties a threat family to {threatLinked === 1 ? "this CVE" : "these CVEs"} before CISA
+          has listed {threatLinked === 1 ? "it" : "them"} as exploited. Threat links never change the rank; most threat
+          links point at CVEs already in KEV (see Known exploited).
+        </p>
+      )}
 
       <section className="row">
         <div className="panel grow" style={{ padding: 0, overflow: "hidden" }}>
@@ -161,6 +189,11 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
                       <button type="button" className="linkish" onClick={() => setSelected(r.cve)} aria-pressed={r.cve === selected}>
                         {r.cve}
                       </button>
+                      {linkedFamilies.has(r.cve) && (
+                        <span className="ev threat-badge" title={`Linked threat: ${linkedFamilies.get(r.cve)!.join(", ")}. An early warning; it never changes the rank.`}>
+                          threat
+                        </span>
+                      )}
                     </td>
                     <td><TierName tier={r.tier} /></td>
                     <td className="mono">{epss(r.epss, r.epss_percentile)}</td>

@@ -416,11 +416,14 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
       26 linked, not 30; neutral source wording (`KEV_LINK_SOURCES`: "cited in its ATT&CK
       entry", "named on a reference page"); due date labelled as a US federal deadline;
       row opens its card inline (the `#/queue/<CVE>` route prefers the threats card)
-  - [ ] **12.2 "Linked to a threat" in the risk queue** — badge on queued CVEs with a
+  - [x] **12.2 "Linked to a threat" in the risk queue** — badge on queued CVEs with a
         link not reviewed as wrong, plus a filter next to "public exploit only"; the
         detail already lists linked threats. Today this flags 1 CVE; the caption says so
         and calls it an early warning (exploitation evidence before CISA lists it), and
         that threats never feed the rank
+    - Done 2026-11-06: badge + filter use the KEV view's rule (a link that counts for
+      priority), so both views agree; the detail still lists every non-rejected link with
+      its review state. Badge is neutral grey: KEV orange would read as "in KEV"
   - [ ] **12.3 Overview + docs say what the data shows** — "How they connect": threats
         explain KEV CVEs (patch first, ranked on the new view); a threat link on a queued
         CVE is an early warning. Overview briefing gains the KEV list; tab guide entry for
