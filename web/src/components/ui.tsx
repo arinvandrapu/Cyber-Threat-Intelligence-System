@@ -117,16 +117,18 @@ export function IntervalBar({
   ci,
   color,
   scale,
+  width = 220,
 }: {
   value: number;
   ci: [number, number];
   color: string;
   scale: (v: number) => number; // -> 0..1
+  width?: number;
 }) {
-  const x = (v: number) => 4 + Math.max(0, Math.min(1, scale(v))) * 212;
+  const x = (v: number) => 4 + Math.max(0, Math.min(1, scale(v))) * (width - 8);
   return (
-    <svg width="220" height="16" viewBox="0 0 220 16" aria-hidden="true">
-      <rect x="0" y="6" width="220" height="4" rx="2" fill="var(--active)" />
+    <svg width={width} height="16" viewBox={`0 0 ${width} 16`} aria-hidden="true">
+      <rect x="0" y="6" width={width} height="4" rx="2" fill="var(--active)" />
       <rect x={x(ci[0])} y="6" width={Math.max(x(ci[1]) - x(ci[0]), 2)} height="4" rx="2" fill={color} opacity="0.4" />
       <circle cx={x(value)} cy="8" r="5.5" fill={color} stroke="var(--panel)" strokeWidth="2" />
     </svg>

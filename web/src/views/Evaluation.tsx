@@ -67,8 +67,8 @@ export function Evaluation({ data }: { data: Data }) {
         </section>
       )}
 
-      <section className="row">
-        <figure className="panel grow" style={{ margin: 0, flexBasis: 600 }}>
+      <section className="eval-grid">
+        <figure className="panel">
           <div className="panel-head">
             <h2>KEV additions caught (of {positives}), pooled over {folds.length} folds</h2>
             <Seg label="Budget" options={[["100", "Top 100 per fold"], ["1%", "Top 1% per fold"]] as const} value={budget} onChange={setBudget} />
@@ -101,7 +101,7 @@ export function Evaluation({ data }: { data: Data }) {
           </figcaption>
         </figure>
 
-        <div className="panel side" style={{ flexBasis: 440 }}>
+        <div className="panel">
           <div className="panel-head"><h2>Per fold · hits in the top 100</h2></div>
           <div className="table-wrap">
             <table className="data compact">
@@ -132,30 +132,31 @@ export function Evaluation({ data }: { data: Data }) {
           </div>
           <p className="caption">EPSS wins on average precision; the model's gain is concentrated at the very top of the list.</p>
         </div>
-      </section>
-
-      <section className="row">
-        <div className="panel grow" style={{ flexBasis: 520 }}>
+        <div className="panel">
           <div className="panel-head">
             <h2>Tier hit rates (evaluation folds)</h2>
             <span className="muted" style={{ fontSize: 12.5 }}>{r.tiers.monotonic ? "Monotonic, as pre-registered" : "Not monotonic"} · log scale</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="tier-list">
             {TIERS.map((t) => {
               const h = r.tiers.tiers[t];
               if (!h) return null;
               return (
-                <div key={t} style={{ display: "grid", gridTemplateColumns: "100px minmax(120px, 200px) auto", gap: 10, alignItems: "center", fontSize: 13 }}>
+                <div key={t} className="tier-block">
                   <TierName tier={t} />
-                  <IntervalBar value={h.kev_positives / h.cves} ci={wilson(h.kev_positives, h.cves)} color={`var(--${t})`} scale={logScale} />
-                  <span className="mono" style={{ whiteSpace: "nowrap" }}>{pct(h.kev_positives / h.cves)} · {h.kev_positives}/{int(h.cves)} · CI {interval(wilson(h.kev_positives, h.cves))}</span>
+                  <IntervalBar value={h.kev_positives / h.cves} ci={wilson(h.kev_positives, h.cves)} color={`var(--${t})`} scale={logScale} width={340} />
+                  <dl className="tier-metrics">
+                    <div><dt>Hit rate</dt><dd>{pct(h.kev_positives / h.cves)}</dd></div>
+                    <div><dt>KEV additions</dt><dd>{h.kev_positives} of {int(h.cves)}</dd></div>
+                    <div><dt>95% CI</dt><dd>{interval(wilson(h.kev_positives, h.cves))}</dd></div>
+                  </dl>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <div className="panel grow" style={{ flexBasis: 520 }}>
+        <div className="panel">
           <div className="panel-head"><h2>Other pipeline evaluations</h2></div>
           <Other
             name="ATT&CK technique mapping"
