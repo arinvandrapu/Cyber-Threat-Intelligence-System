@@ -1,0 +1,54 @@
+---
+tags: [dashboard, web, risk-model, decision, phase-11c]
+---
+
+# Dashboard display decisions (11c UI, PR #45)
+
+2026-11-06. Display only: no stored number, model weight or pre-registered output
+changed. Context: [[dashboard]], [[dashboard-web]], [[risk-eval]],
+[[risk-scoring-design]].
+
+## Signs and small values (plan audit overturned the first plan)
+
+- **No sign flip for age.** Planned: rename to "Newness" and negate `log_age_days`.
+  Rejected: the export disclosure would print "+0.57" next to "log-age weight" while
+  the model's weight is −0.5725 (and `test_dashboard_export.py` checks "-0.57").
+  Instead the label is "Age (older ranks lower)", true for the −0.57 weight and for
+  a new CVE's positive contribution (+1.59 at rank 1).
+- **No "≈ 0" for small weights.** Planned: show |w| < 0.02 as "≈ 0". Rejected:
+  contribution = weight × standardized value, and rare signals have large standardized
+  values, so ExploitDB's −0.010 weight still contributes −0.19 on 90 queue rows; bars
+  add up, so hiding one misstates the rest; and 0.02 was picked after seeing weights.
+  Instead a queue note appears when ExploitDB or "SSVC: PoC / exploited" pulls down.
+- **"SSVC: PoC / exploited", not "SSVC: exploited".** The feature is ordinal
+  (none 0, poc 1, active 2; `risk_config.py`); the snapshot has no `active`
+  (none 6,432, poc 1,538, null 422), so every negative row is a PoC. Caught by the
+  implementation audit.
+- **Landscape caption:** bar = refit on all windows (262,612 rows, 88 additions),
+  bracket = last tested fold; weights move between fits "likely because correlated
+  signals share credit" (an explanation, not a finding).
+
+## Plain words and layout
+
+- SSVC column: values none→no, poc→PoC, active→yes, total→full control; header
+  "SSVC" with a small legend line (the long header pushed columns off at 1280px).
+- Queue hides SSVC and context columns under 900px (`.queue-table`).
+- Header: one line from 1280px (tighter tabs, one chip "<date> · read-only" with the
+  full text in `title`); wraps below.
+- Threats category chart: div bars (the SVG stretched to ~80px); caption says it counts
+  all families; categories no shown family has are greyed (inline colour: the
+  `.bar-row > span:first-child` rule beats `.faint`).
+- Weakness graph: CWE names to 30 chars, full name in `<title>`.
+- Evaluation: tier CI on one line; second panel "Data versions & disclosures".
+
+## Links
+
+- Family names link to `#/threats/<name>` (`threatHref`; routing in [[dashboard-web]]).
+- KEV CVE under `#/queue/` → `#/kev/` via `location.replace` ([[known-exploited-view]]).
+- Known nit: selecting a family inside Threats doesn't update the URL.
+
+## Left for PR 2 (data/export)
+
+NVD cards for 155 dead CVE links (status from the scored set, not "below the queue"),
+"scored" vs "in the queue" terms, vendor/product filter, CNA ID labels, Threats rows
+without links. Plan in `tasks/todo.md` 11c.

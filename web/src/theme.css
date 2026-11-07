@@ -46,11 +46,13 @@ button { font: inherit; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---- shell ---- */
-.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding: 14px 32px;
+.top { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px 20px; padding: 14px 32px;
   border-bottom: 1px solid var(--border); background: var(--bar); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px; letter-spacing: .02em; }
-.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
-.tab { color: var(--muted); text-decoration: none; font-size: 13.5px; padding: 8px 12px; border-radius: 6px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; }
+.tab { color: var(--muted); text-decoration: none; font-size: 13.5px; padding: 8px 7px; border-radius: 6px; white-space: nowrap; }
+.brand { white-space: nowrap; }
+@media (max-width: 1279px) { .top { flex-wrap: wrap; } }
 .tab:hover { color: var(--text); background: var(--raised); }
 .tab[aria-current="page"] { color: var(--text); background: var(--active); box-shadow: inset 0 -2px 0 var(--accent); }
 .chips { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
@@ -155,6 +157,10 @@ svg { display: block; }
   border-radius: 6px; padding: 8px 10px; font-size: 12.5px; color: var(--text); max-width: 320px; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
 .bar-row { display: grid; grid-template-columns: 150px 1fr 64px; gap: 10px; align-items: center; font-size: 13px; }
 .bar-row > span:first-child { color: var(--text-2); }
+.th-sub { display: block; font-size: 10.5px; letter-spacing: 0; text-transform: none; color: var(--faint); font-weight: 400; }
+.bar-track { display: block; height: 8px; background: var(--grid); border-radius: 2px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: var(--accent); }
+@media (max-width: 900px) { table.queue-table .ctx, table.queue-table .ssvc { display: none; } }
 .heat { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 13px; }
 .heat td { padding: 9px 8px; text-align: center; font-family: var(--mono); border-radius: 4px; }
 .heat th { font-weight: 500; padding: 8px; text-align: center; }

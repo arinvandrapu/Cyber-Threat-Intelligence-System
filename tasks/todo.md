@@ -368,8 +368,70 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           "Limitations" panels; family names in a CVE's detail link to Threats; queue
           overflow on narrow screens; chart vs filter category lists on Threats; MimiKatz
           category "unknown"; rows 17–20 show only "ransomware" as the reason
-    - [ ] Optional (owner liked the idea): "Used by malware" badge + "Linked to a threat"
-          filter in the queue (CVE-2026-109618)
+    - [x] Optional (owner liked the idea): "Used by malware" badge + "Linked to a threat"
+          filter in the queue (CVE-2026-109618) — done as Phase 12.2 (#44)
+    - **Plan (2026-11-06, after due diligence on `main`)** — branch
+      plus gap 3 from the problem-statement review (vendor/product filter). Two PRs, in
+      order, each from `main` (owner, 2026-11-06; no stacking): **PR 1 UI**
+      (`feat/11c-ui`) = the UI items below; **PR 2 data/export** (`feat/11c-data`,
+      after PR 1 merges) = the data/export items. UI items, all confirmed open:
+      - [x] Indicator bars (`Threats.tsx:152`): plain div bars, fixed 8px height
+      - [x] Signs read consistently. Changed after the plan audit: no sign flip (it would
+            print "+0.57" for a −0.57 weight) and no "≈ 0" (a −0.01 weight still
+            contributes −0.19 on 90 rows; hiding it would misstate bars that add up).
+            Instead: age label "Age (older ranks lower)", which reads right for both the
+            weight and a contribution; a queue note when ExploitDB or "SSVC: PoC / exploited"
+            pulls down; Landscape caption: bar = refit today, bracket = tested fold, why
+            weights move; README/vault "recency" → "age"
+      - [x] SSVC in plain words: header "Exploited? · Automatable? · Impact"; none→no,
+            poc→PoC, active→yes, total→full control, partial→partial (`RiskQueue.tsx`,
+            `format.ts` labels)
+      - [x] Weakness graph: full CWE name in `<title>`, wider label column
+      - [x] Evaluation: CI on one line; one "Limitations" panel (second renamed "Data
+            versions & disclosures", duplicate EPSS point removed)
+      - [x] Family names link to Threats: `#/threats/<family>` focus route; route arg
+            decoded and validated per view (CVE ID for queue/kev, membership in
+            `threats.families` for threats); used in CveCard, queue detail, KEV table
+      - [x] Queue on narrow screens: hide context columns + SSVC below ~900px
+      - [x] Threats categories: caption that the chart covers all ThreatFox families and
+            the filter the 20 shown; bars without a filter greyed
+      - [x] Header on one line at ≥1280px with 9 tabs (tighter tab padding, one chip)
+      - [x] KEV CVEs opened as `#/queue/<CVE>` redirect to `#/kev/<CVE>` in `App` with
+            `location.replace` (Back doesn't bounce; `cveHref` stays pure)
+      - [x] Smoke adds `#/threats/Agent%20Tesla` and a malformed `%E0%A4` route
+      Data/export items (all open on `main`; no new data needed except as noted):
+      - [ ] Every clickable CVE opens a detail: 155 have none today (154 from indicators,
+            CVE-2025-66478 from a threat link). NVD cards for every CVE the export
+            references (~85 KB) in a top-level list that doesn't depend on threats
+            (schema, types, loadAll, fixture, smoke). Plan audit: a card's status comes
+            from membership in the scored set ("scored, below the queue" vs "outside the
+            scored window", e.g. 31 are 2023 IDs); CVE-2025-66478 gets a "no record in
+            our NVD snapshot" card; `focusCard` looks them up.
+            Indicators: "+N more" expands, CVEs in normal link colour; indicators past the
+            10-CVE export cap say "+N not exported"
+      - [ ] Terms: "scored" = the 167,844 CVEs given a tier, "in the queue" = the 8,392
+            critical/high/elevated, "below the queue" = baseline. Fix every use
+            (Overview, RiskQueue, Indicators, Evaluation, RiskLandscape, export
+            disclosures, README); missing EPSS/SSVC reads "no EPSS/SSVC data", not "not
+            scored"
+      - [ ] Vendor/product (gap 3): export `context.vendor`/`product` for queue rows
+            (`_real()`, NVD affected, 89% coverage); queue search covers name + vendor +
+            product; vendor type-ahead (`<datalist>`) on Risk queue and Known exploited
+            (1,985 / 291 vendors: too many for a dropdown); match case-insensitively;
+            plan audit: check how much the derived name already covers first; defang
+            vendor/product consistently (`_linked_cves` doesn't today); first affected
+            entry only, say so; `vault/dashboard.md:43` "ranked" → "scored"
+      - [ ] Assigners: no CNA-name source on disk (93.8% of queue rows are emails, 6.2%
+            UUIDs). Owner 2026-11-06: emails as is, UUIDs as "CNA (ID 416baaa9…)"; no
+            outside name map (keeps the one ingest)
+      - [ ] Threats rows with no linked CVE: reason reads "ransomware family (no linked
+            CVEs)" (`threats/catalog.py:184`) and the table shows the second reason
+            line; plan audit: say "no linked CVEs in our data" and build the line in the
+            export/UI rather than rerun `cti threats` (which may pick a newer reference
+            snapshot, 11d)
+      - [ ] MimiKatz category: owner 2026-11-06: keep the "unknown" label (no post-hoc
+            relabel); Threats view explains it: "a tool, not malware: outside the
+            category list" (from the owner's note in the labels CSV)
   - [ ] **11d. Robustness + hygiene**
     - [ ] export/threats recovery loop: if tiers change, `cti export` refuses before
           writing risk.json and `cti threats` re-reads the old one; write risk.json first

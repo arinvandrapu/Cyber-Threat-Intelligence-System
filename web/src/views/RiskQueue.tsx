@@ -3,6 +3,7 @@ import type { Data, RiskRow, ThreatLink, Tier } from "../types";
 import { DivergingBar, PageHead, Pager, TierDot, TierName } from "../components/ui";
 import { FEATURE_LABEL, TIER_LABEL, epss, int, signed } from "../format";
 import { CveCard, LinkRow } from "./Threats";
+import { threatHref } from "../App";
 
 const PAGE = 100;
 const EVIDENCE: Record<string, string> = { exploitdb: "EDB", metasploit: "MSF", nuclei: "Nuclei" };
@@ -18,9 +19,12 @@ function cvss(r: RiskRow): number {
   return r.context.cvss_nvd ?? r.context.cvss_cna ?? -1;
 }
 
+// CISA's SSVC values in plain words: exploited? / automatable? / technical impact
+const SSVC_WORDS: Record<string, string> = { none: "no", poc: "PoC", active: "yes", yes: "yes", no: "no", total: "full control", partial: "partial" };
+
 function ssvc(r: RiskRow): string {
-  if (!r.ssvc_exploitation && !r.ssvc_automatable && !r.ssvc_technical_impact) return "not scored";
-  return [r.ssvc_exploitation, r.ssvc_automatable, r.ssvc_technical_impact].map((v) => v ?? "?").join("/");
+  if (!r.ssvc_exploitation && !r.ssvc_automatable && !r.ssvc_technical_impact) return "no SSVC data";
+  return [r.ssvc_exploitation, r.ssvc_automatable, r.ssvc_technical_impact].map((v) => (v ? SSVC_WORDS[v] ?? v : "?")).join(" · ");
 }
 
 export function RiskQueue({ data, focus }: { data: Data; focus: string | null }) {
@@ -169,14 +173,16 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
       <section className="row">
         <div className="panel grow" style={{ padding: 0, overflow: "hidden" }}>
           <div className="table-wrap">
-            <table className="data compact">
+            <table className="data compact queue-table">
               <thead>
                 <tr className="label">
                   {header("rank", "Rank")}
                   <th>CVE</th>
                   <th>Tier</th>
                   {header("epss", "EPSS")}
-                  <th title="CISA's SSVC assessment: exploitation status / automatable / technical impact">SSVC E / A / I</th>
+                  <th className="ssvc" title="CISA's SSVC assessment: exploited (no / PoC / yes) · automatable · technical impact (partial / full control)">
+                    SSVC<span className="th-sub">exploited · automatable · impact</span>
+                  </th>
                   <th>Exploit evidence</th>
                   {header("age", "Age")}
                   {header("cvss", "CVSS (NVD, else CNA)", "ctx")}
@@ -199,7 +205,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
                     </td>
                     <td><TierName tier={r.tier} /></td>
                     <td className="mono">{epss(r.epss, r.epss_percentile)}</td>
-                    <td className="mono muted">{ssvc(r)}</td>
+                    <td className="muted ssvc">{ssvc(r)}</td>
                     <td>{r.exploit_sources.map((s) => <span key={s} className="ev">{EVIDENCE[s] ?? s}</span>)}</td>
                     <td className="mono muted">{r.age_days} d</td>
                     <td className="mono ctx">{cvss(r) >= 0 ? cvss(r).toFixed(1) : "—"}</td>
@@ -268,6 +274,13 @@ function Detail({
         >
           Blue pushes it up, grey pushes it down. † value missing, a typical one was used.
         </span>
+        {contrib.some(([f, v]) => (f === "exploitdb" || f === "ssvc_exploitation") && v < 0) && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            A small minus on ExploitDB or "SSVC: PoC / exploited" doesn't mean exploit evidence lowers risk: once Metasploit,
+            Nuclei and EPSS are counted these signals add almost nothing (weights near zero), and because they are rare, a
+            near-zero weight can still show as a visible bar.
+          </span>
+        )}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
         <span className="label">About this CVE</span>
@@ -288,7 +301,7 @@ function Detail({
           <span className="muted" style={{ fontSize: 13 }}>No malware family is linked to this CVE.</span>
         )}
         {threats.map(({ family, link }) => (
-          <LinkRow key={`${family}-${link.via}`} link={link} label={family} />
+          <LinkRow key={`${family}-${link.via}`} link={link} label={family} href={threatHref(family)} />
         ))}
       </div>
       <div className="mono muted" style={{ fontSize: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>

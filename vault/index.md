@@ -30,6 +30,7 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   headless-Chrome CSP checks, CI job
 - [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts
 - [[threat-links]] — CVE link sources (ThreatFox tags, reference pages, ATT&CK software), review results, owner decisions
+- [[dashboard-display-decisions]] — 11c UI (PR #45): age label and "≈ 0" decisions from the plan audit, SSVC PoC relabel, plain words, layout, family links
 - [[known-exploited-view]] — Phase 12.1 KEV triage tab: fixed sort (threat link → ransomware → newest), one "linked" rule, wording
 - [[threat-queue-overlap]] — why threats barely link to the risk queue (47/53 links are KEV; 1 queued CVE) and proposed fixes
 - [[threat-layer]] — Phase 10a: family categories (MISP galaxies, STIX

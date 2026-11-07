@@ -226,8 +226,8 @@ before any test score (`src/cti/nlp/risk_config.py`, commit `c528d07`). From
 - **Exploratory, read after scoring (no CIs):**
   - EPSS ranked the latest fold poorly (ROC-AUC 0.41). Its 17 additions had a median
     EPSS percentile of 0.16 (16 scored, 1 unscored).
-  - The largest standardized weights (last fold only) are recency (−0.70), SSVC "total"
-    technical impact (0.64) and EPSS (0.63).
+  - The largest standardized weights (last fold only) are age (−0.70: newer CVEs rank
+    higher), SSVC "total" technical impact (0.64) and EPSS (0.63).
   - Without EPSS the model catches 9 in the top 100; its mean AP of 0.033 comes mostly
     from the latest fold (0.072). Without SSVC: 6 in the top 100, 18 in the top 1%.
   - SecureBERT description text adds nothing at 100 and catches 20 vs 16 at 500, the

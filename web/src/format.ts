@@ -17,14 +17,14 @@ export const TIER_BAND: Record<Tier, string> = {
 export const FEATURE_LABEL: Record<string, string> = {
   epss_logit: "EPSS percentile",
   epss_missing: "No EPSS score",
-  ssvc_exploitation: "SSVC exploitation",
-  ssvc_automatable: "SSVC automatable",
-  ssvc_total_impact: "SSVC total impact",
+  ssvc_exploitation: "SSVC: PoC / exploited",
+  ssvc_automatable: "SSVC: automatable",
+  ssvc_total_impact: "SSVC: full-control impact",
   ssvc_missing: "No SSVC assessment",
   exploitdb: "ExploitDB entry",
   metasploit: "Metasploit module",
   nuclei: "Nuclei template",
-  log_age_days: "Age (newer = higher)",
+  log_age_days: "Age (older ranks lower)",
 };
 
 const intl = new Intl.NumberFormat("en-US");
