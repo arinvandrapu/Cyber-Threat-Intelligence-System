@@ -688,3 +688,9 @@ def test_cve_cards_status_comes_from_the_scored_set():
     assert by["CVE-2025-0005"]["status"] == "no_record" and by["CVE-2025-0005"]["description"] == ""
     assert by["CVE-2024-0003"]["vendor"] == "evil[.]example[.]com"  # defanged like the name
     assert by["CVE-2024-0003"]["product"] == ""  # placeholder dropped
+
+
+def test_vendor_product_uses_the_first_entry_drops_placeholders_and_defangs():
+    affected = [{"vendor": "n/a", "product": "evil.example.com"}, {"vendor": "Other"}]
+    assert export._vendor_product(affected) == {"vendor": "", "product": "evil[.]example[.]com"}
+    assert export._vendor_product([]) == {"vendor": "", "product": ""}

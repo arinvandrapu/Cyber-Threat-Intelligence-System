@@ -123,13 +123,17 @@ export function Threats({ data, focus }: { data: Data; focus: string | null }) {
                     </td>
                     <td>
                       {f.categories.map((c) => (
-                        <span key={c} className="ev" style={f.category_source === "owner" ? undefined : { borderStyle: "dashed" }}>
+                        <span key={c} className="ev" style={f.category_source === "owner" ? undefined : { borderStyle: "dashed" }}
+                          title={c === "unknown" && f.category_source === "owner" ? "Reviewed: none of the categories fits this family" : undefined}>
                           {c}
                         </span>
                       ))}
                       {f.categories.length === 0 && <span className="muted">—</span>}
                     </td>
-                    <td style={{ fontSize: 13, whiteSpace: "normal", minWidth: 220 }}>{f.why[0]}</td>
+                    <td style={{ fontSize: 13, whiteSpace: "normal", minWidth: 220 }}>
+                      {f.why[0]}
+                      {f.links.length === 0 && <span className="muted"> (no linked CVEs in our data)</span>}
+                    </td>
                     <td className="mono">{f.linked_kev_cves || <span className="muted">0</span>}</td>
                     <td className="mono muted">
                       {int(f.ioc_rows)} ({signed(f.ioc_growth, 0)})
@@ -211,7 +215,10 @@ function FamilyDetail({ family: f, cards }: { family: ThreatFamily; cards: Map<s
         {/* family names come from ThreatFox: rendered as text; links to them are in-app only */}
         <span style={{ fontSize: 20, fontWeight: 600, overflowWrap: "anywhere" }}>{f.family}</span>
         <span className="muted" style={{ fontSize: 13 }}>
-          {f.categories.join(", ") || "no category"} · {SOURCE_LABEL[f.category_source]}
+          {f.category_source === "owner" && f.categories.length === 1 && f.categories[0] === "unknown"
+            ? "unknown: none of the categories fits"
+            : f.categories.join(", ") || "no category"}{" "}
+          · {SOURCE_LABEL[f.category_source]}
         </span>
       </div>
 
@@ -250,7 +257,7 @@ function FamilyDetail({ family: f, cards }: { family: ThreatFamily; cards: Map<s
         {f.links.length === 0 && <span className="muted" style={{ fontSize: 13 }}>None found.</span>}
         {f.links.map((l) => <LinkRow key={`${l.cve}-${l.via}`} link={l} card={cards.get(l.cve)} />)}
         {f.links.some((l) => !l.tier) && (
-          <span className="muted" style={{ fontSize: 12 }}>Blue CVEs open in the risk queue; ▸ shows details.</span>
+          <span className="muted" style={{ fontSize: 12 }}>Blue CVEs open their detail; ▸ shows the link’s evidence.</span>
         )}
       </div>
     </div>

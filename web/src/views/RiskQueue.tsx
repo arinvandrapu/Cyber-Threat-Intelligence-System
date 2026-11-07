@@ -78,7 +78,9 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
           !q ||
           r.cve.toLowerCase().includes(q) ||
           r.context.cwes.some((c) => c.toLowerCase().includes(q)) ||
-          (r.context.assigner ?? "").toLowerCase().includes(q),
+          [r.context.assigner ?? "", r.context.vendor, r.context.product, r.context.name ?? ""].some((v) =>
+            v.toLowerCase().includes(q),
+          ),
       )
       .sort(SORTS[sort]);
   }, [risk.rows, tier, query, evidenceOnly, threatOnly, linkedFamilies, sort]);
@@ -150,8 +152,9 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" aria-hidden="true">
               <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
             </svg>
-            <span className="sr-only">Search CVE, CWE or assigner</span>
-            <input type="search" placeholder="CVE, CWE or assigner" value={query} onChange={(e) => { setQuery(e.target.value); reset(); }} />
+            <span className="sr-only">Search CVE, CWE, vendor, product or assigner</span>
+            <input type="search" placeholder="CVE, CWE, vendor, product…" list="queue-vendors" value={query} onChange={(e) => { setQuery(e.target.value); reset(); }} />
+            <VendorList id="queue-vendors" vendors={risk.rows.map((r) => r.context.vendor)} />
           </label>
           <button type="button" className="pill" aria-pressed={evidenceOnly} onClick={() => { setEvidenceOnly(!evidenceOnly); reset(); }}>
             Exploit evidence only
@@ -294,7 +297,7 @@ function Detail({
           CVSS {row.context.cvss_nvd ?? "—"} (NVD) · {row.context.cvss_cna ?? "—"} (CNA) ·{" "}
           {row.context.cwes.join(", ") || "no CWE"}
         </span>
-        <span className="mono muted" style={{ fontSize: 12, overflowWrap: "anywhere" }}>assigner {row.context.assigner ?? "unknown"}</span>
+        <span className="mono muted" style={{ fontSize: 12, overflowWrap: "anywhere" }} title={row.context.assigner ?? undefined}>assigner {assignerLabel(row.context.assigner)}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
         <span className="label">Linked threats</span>
@@ -342,5 +345,27 @@ function RecordCard({ card: c }: { card: CveCardData }) {
         </div>
       )}
     </div>
+  );
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** NVD names most assigners by email; some CNAs only by a UUID we can't resolve offline. */
+function assignerLabel(a: string | null): string {
+  if (!a) return "unknown";
+  return UUID.test(a) ? `CNA (ID ${a.slice(0, 8)}…)` : a;
+}
+
+/** Type-ahead for the search box: vendors by how many rows have them (most first). */
+export function VendorList({ id, vendors }: { id: string; vendors: string[] }) {
+  const options = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const v of vendors) if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([v]) => v);
+  }, [vendors]);
+  return (
+    <datalist id={id}>
+      {options.map((v) => <option key={v} value={v} />)}
+    </datalist>
   );
 }

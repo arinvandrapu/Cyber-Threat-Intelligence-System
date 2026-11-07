@@ -273,6 +273,7 @@ def build_risk(
                     "cvss_cna": (ctx_snap.get("cvss_cna") or {}).get("base_score"),
                     "cwes": [c["id"] for c in ctx_snap.get("cwes", [])],
                     "assigner": nvd.get("assigner"),
+                    **_vendor_product(nvd.get("affected", [])),
                     "name": defang_text(
                         derived_name(
                             nvd.get("affected", []),
@@ -341,6 +342,16 @@ def nvd_context(nvd_rows: Iterable[dict], cves: set[str]) -> dict[str, dict]:
 
 
 _PLACEHOLDER = frozenset({"", "n/a", "na", "unknown", "unspecified", "-"})
+
+
+def _vendor_product(affected: list[dict]) -> dict[str, str]:
+    """Vendor and product from the CVE record's first affected entry (only the first: a CVE
+    can list several), placeholders dropped and defanged like the derived name."""
+    first = affected[0] if affected else {}
+    return {
+        "vendor": defang_text(_real(first.get("vendor", ""))),
+        "product": defang_text(_real(first.get("product", ""))),
+    }
 
 
 def derived_name(
@@ -1050,15 +1061,13 @@ def build_cve_cards(
             continue
         m = row["metadata"]
         affected = m.get("affected") or []
-        first = affected[0] if affected else {}
         cwes = [{"id": c, "name": cwe_names.get(c)} for c in m.get("cwes", [])]
         cards[cve] = {
             "cve": cve,
             "status": "below_queue" if cve in tiers else "not_scored",
             "name": defang_text(derived_name(affected, cwes, m.get("cwe_assignments", [])) or "")
             or None,
-            "vendor": defang_text(_real(first.get("vendor", ""))),
-            "product": defang_text(_real(first.get("product", ""))),
+            **_vendor_product(affected),
             "description": truncate(defang_text(row.get("text") or "")),
             "published": (row.get("published") or "")[:10] or None,
             "cwes": sorted(m.get("cwes", [])),
