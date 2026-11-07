@@ -86,3 +86,4 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   height; the top-5 list sits in `.queue-viewport` (relative, min-height 260px) with an
   absolutely positioned `.queue-scroll`, so the list never sets the row height and scrolls
   instead. Focusable region for keyboard scrolling.
+- 11c UI fixes and why (signs, SSVC wording, layout): [[dashboard-display-decisions]].

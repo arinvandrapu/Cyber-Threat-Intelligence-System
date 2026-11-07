@@ -86,3 +86,4 @@ thresholds that were never validated.
 - KEV is US-government-focused and lags real exploitation.
 
 Requires point-in-time data from [[ingest-once-snapshot]]; sources in [[data-sources]].
+- How weights and signs are displayed (no age flip, no "≈ 0", PoC label): [[dashboard-display-decisions]].

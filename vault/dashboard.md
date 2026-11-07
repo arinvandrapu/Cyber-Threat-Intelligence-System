@@ -78,3 +78,4 @@ Colour: neutral black surfaces; tiers on one ordinal pink → cherry-red ramp (m
 - No predicted ATT&CK techniques per CVE (owner, 2026-10-29): the 10b combiner passed
   only marginally ([[attack-mapping-v2-results]]). The 10b result is in the README and vault,
   not the dashboard; the Evaluation page shows only the Phase 5b mapping.
+- 11c display decisions (PR #45): [[dashboard-display-decisions]].
