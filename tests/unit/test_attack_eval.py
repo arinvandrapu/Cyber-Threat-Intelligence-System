@@ -141,7 +141,7 @@ def test_rank_parents_uses_max_over_subtechniques_and_breaks_ties_by_id():
 
 
 def test_per_cve_metrics():
-    m = ae._per_cve(["T1", "T2", "T3"], {"T2", "T9"})
+    m = ae.per_cve(["T1", "T2", "T3"], {"T2", "T9"})
     assert m["hit@1"] == 0.0 and m["hit@3"] == 1.0
     assert m["recall@3"] == 0.5 and m["mrr"] == 0.5
 

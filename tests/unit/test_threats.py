@@ -455,3 +455,23 @@ def test_evidence_url_per_link_source():
     assert review.evidence_url(tag, urls) == "https://threatfox.abuse.ch/browse/tag/CVE-1/"
     assert review.evidence_url(attack, urls) == "https://attack.mitre.org/software/S0331/"
     assert review.evidence_url(page, urls) == "https://a.example/1 | https://b.example/2"
+
+
+def test_nvd_archive_is_chosen_explicitly_or_newest_and_must_hold_nvd(tmp_path):
+    from cti.cli import _nvd_archive
+    from cti.config import ConfigError, Settings
+    from cti.snapshot import Snapshot
+    from cti.storage import LocalStorage
+
+    settings = Settings(_env_file=None, contact="t@example.com", data_dir=tmp_path)
+    store = LocalStorage(tmp_path / "reference-snapshots")
+    assert _nvd_archive(settings, None) is None  # none fetched: no archive, no error
+    Snapshot.create(store, "2026-10-01").write_raw("nvd", "nvdcve-2002.json.gz", b"x")
+    Snapshot.create(store, "2026-10-29").write_raw("nvd", "nvdcve-2002.json.gz", b"y")
+    assert _nvd_archive(settings, None) == "2026-10-29"
+    assert _nvd_archive(settings, "2026-10-01") == "2026-10-01"
+    with pytest.raises(ConfigError, match="no reference snapshot 2026-09-09"):
+        _nvd_archive(settings, "2026-09-09")
+    Snapshot.create(store, "2026-11-01").write_raw("kev", "kev.json", b"{}")
+    with pytest.raises(ConfigError, match="has no nvd feed"):
+        _nvd_archive(settings, None)

@@ -19,6 +19,19 @@ MAX_TOKENS = 1024  # the bi-encoder's training length
 BATCH = 32
 
 
+def mean_pool(hidden: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Attention-masked mean over tokens, then L2-normalize each row.
+
+    ``hidden``: (batch, tokens, dim); ``mask``: (batch, tokens), 1 for real tokens. Padding
+    never contributes; an all-padding row stays zero instead of dividing by zero. NumPy, so
+    it is tested without torch.
+    """
+    m = mask[..., None].astype(hidden.dtype)
+    pooled = (hidden * m).sum(axis=1) / np.maximum(m.sum(axis=1), 1)
+    norm = np.linalg.norm(pooled, axis=-1, keepdims=True)
+    return pooled / np.maximum(norm, 1e-12)  # same epsilon as torch's F.normalize
+
+
 class Encoder:
     def __init__(self, spec: models.ModelSpec = models.BIENCODER, max_tokens: int = MAX_TOKENS):
         self.torch, self.tokenizer, self.model = models.load_encoder(spec)
@@ -39,11 +52,8 @@ class Encoder:
                     max_length=self.max_tokens,
                     return_tensors="pt",
                 )
-                hidden = self.model(**enc).last_hidden_state
-                mask = enc["attention_mask"].unsqueeze(-1).to(hidden.dtype)
-                pooled = (hidden * mask).sum(1) / mask.sum(1).clamp(min=1)
-                pooled = torch.nn.functional.normalize(pooled, dim=-1)
-                out[idx] = pooled.numpy()
+                hidden = self.model(**enc).last_hidden_state.float().numpy()
+                out[idx] = mean_pool(hidden, enc["attention_mask"].numpy())
                 if progress:
                     progress(min(start + batch, len(order)), len(order))
         return out

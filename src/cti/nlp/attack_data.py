@@ -29,7 +29,7 @@ from cti.snapshot import Snapshot
 from cti.sources.base import gunzip_stream
 from cti.sources.cwe import NS as CWE_NS
 from cti.sources.cwe import CWESource
-from cti.sources.nvd import NO_CWE, NVD_SOURCE, _affected
+from cti.sources.nvd import NO_CWE, NVD_SOURCE, affected
 
 CAPEC_NS = "{http://capec.mitre.org/capec-3}"
 _V3_KEYS = ("cvssMetricV31", "cvssMetricV30")
@@ -87,7 +87,7 @@ def _record(cve: dict) -> NvdRecord | None:
         tuple(cwes),
         _cvss(cve.get("metrics", {}), cve.get("sourceIdentifier")),
         (cve.get("published") or "")[:10] or None,
-        tuple(_affected(cve.get("affected", []))),
+        tuple(affected(cve.get("affected", []))),
     )
 
 

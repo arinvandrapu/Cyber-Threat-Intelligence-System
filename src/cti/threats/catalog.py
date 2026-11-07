@@ -367,7 +367,7 @@ def agreement(owner: Mapping[str, tuple[str, ...]], auto: Mapping[str, tuple[str
 def link_precision(labels: Mapping[tuple[str, str, str], bool]) -> dict:
     """Share of reviewed links marked correct, with Wilson 95%: overall, per ``via``, and
     "judged" (without the sources accepted unjudged)."""
-    from cti.nlp.evaluate import wilson
+    from cti.stats import wilson
 
     groups: dict[str, list[bool]] = defaultdict(list)
     for (_, _, via), ok in labels.items():

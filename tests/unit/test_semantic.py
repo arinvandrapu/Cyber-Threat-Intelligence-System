@@ -231,3 +231,22 @@ def test_cli_explains_missing_nlp_extra(monkeypatch, capsys, tmp_path):
     assert main(["ner", "--date", "2026-10-26"]) == 2
     assert main(["attack-eval", "--date", "2026-10-26", "--methods", "biencoder"]) == 2
     assert "nlp extra" in capsys.readouterr().err
+
+
+def test_mean_pool_ignores_padding_and_normalizes():
+    from cti.nlp.embed import mean_pool
+
+    hidden = np.array(
+        [
+            [[1.0, 0.0], [3.0, 0.0], [99.0, 99.0]],  # last token is padding
+            [[0.0, 2.0], [0.0, 2.0], [0.0, 2.0]],
+            [[5.0, 5.0], [5.0, 5.0], [5.0, 5.0]],  # all padding
+        ],
+        dtype=np.float32,
+    )
+    mask = np.array([[1, 1, 0], [1, 1, 1], [0, 0, 0]])
+    out = mean_pool(hidden, mask)
+    assert np.allclose(out[0], [1.0, 0.0])  # mean (2, 0) -> unit length, padding ignored
+    assert np.allclose(out[1], [0.0, 1.0])
+    assert np.allclose(out[2], [0.0, 0.0]) and not np.isnan(out).any()
+    assert out.dtype == np.float32

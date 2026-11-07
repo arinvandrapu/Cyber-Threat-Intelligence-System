@@ -25,6 +25,9 @@ import numpy as np
 
 from cti.enrich.cves import cve_sort_key, features_at
 from cti.nlp import risk_config as cfg
+from cti.stats import wilson
+
+Z95 = 1.959964  # pre-registered; keeps risk-eval output byte-identical
 
 FEATURES = list(cfg.FEATURES)
 EPSS_FEATURES = ("epss_logit", "epss_missing")
@@ -217,15 +220,6 @@ def hits_at_k(scores: np.ndarray, y: np.ndarray, k: int) -> float:
     return float(y[above].sum() + (k - above.sum()) * y[tied].sum() / tied.sum())
 
 
-def wilson(hits: float, n: int, z: float = 1.959964) -> tuple[float, float]:
-    if n == 0:
-        return (0.0, 0.0)
-    p = hits / n
-    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
-    return round(max(0.0, centre - half), 4), round(min(1.0, centre + half), 4)
-
-
 def ranks(scores: np.ndarray) -> np.ndarray:
     """1-based rank, best first; ties get their average rank."""
     from scipy.stats import rankdata
@@ -259,7 +253,7 @@ def pooled(per_fold: dict[str, dict]) -> dict:
         recall = name.replace("hits", "recall")
         out[name] = round(hits, 3)
         out[recall] = round(hits / pos, 4) if pos else 0.0
-        out[f"{recall}_wilson95"] = wilson(hits, pos)
+        out[f"{recall}_wilson95"] = wilson(hits, pos, z=Z95)
     out["mean_average_precision"] = round(
         float(np.mean([f["average_precision"] for f in per_fold.values()])), 4
     )
@@ -311,7 +305,7 @@ def tiers(scores: dict[str, np.ndarray], y: dict[str, np.ndarray]) -> dict:
             "cves": n,
             "kev_positives": pos,
             "hit_rate": round(pos / n, 5) if n else 0.0,
-            "wilson95": wilson(pos, n),
+            "wilson95": wilson(pos, n, z=Z95),
         }
         for name, (n, pos) in counts.items()
     }
