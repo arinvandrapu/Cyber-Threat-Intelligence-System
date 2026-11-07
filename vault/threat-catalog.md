@@ -33,8 +33,9 @@ Decisions and licence: [[threat-layer]].
 
 ## First run (2026-10-26 snapshot)
 
-- 467 named families (now: 56 reviewed by Claude for the owner, 75 MISP, 336 none). 36 CVE links on 18
-  families (26 reference-page mentions, 10 ThreatFox tags); 32 are KEV CVEs, which the
+- 467 named families (now: 56 reviewed by Claude for the owner, 75 MISP, 336 none). First
+  run: 36 CVE links on 18 families (26 reference-page mentions, 10 ThreatFox tags; now 53
+  with ATT&CK software citations, 42 on the 20 shown families, [[threat-links]]); 32 are KEV CVEs, which the
   queue excludes by design, so owner added `linked_kev_cves` as the first priority key
   (own commit, before any label). KEV ransomware-use CVEs: 361 (category link only).
 

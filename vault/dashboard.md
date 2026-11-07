@@ -38,27 +38,9 @@ Status 2026-10-28: PR 1 (`cti export`, `cti serve`, #27) merged; PR 2 (`web/`) b
 - IOCs defanged in Python, shown as text only ([[ioc-extraction]]); abuse.ch feeds
   as aggregates only ([[data-sources]]).
 
-## Export facts (2026-10-26 snapshot)
+## Export facts
 
-- ≈9 s. 167,844 scored (`ranked_cves`); tiers 167 / 1,512 / 6,713 / 159,452 (ties). `risk.json` 8.4 MB (11c: +vendor/product)
-  (8,392 rows, compact JSON), `iocs.json` 0.5 MB (3,592 indicators), `graphs.json`
-  0.5 MB. Two runs are byte-identical.
-- Recency dominates the newest month: 550 of 1,512 high-tier CVEs were published in
-  2026-10 (log-age weight; the cap is 365 d). Every critical CVE has a Nuclei template.
-- Shared-host graph drops non-global IP literals (127.0.0.1 linked 24 CVEs); top 30
-  hosts, 30 CVEs each (`truncated: true`).
-- Python 3.12+ `http.server` collapses a leading `//` in the path before lookup.
-- Audit (2026-10-28): requests rejected while parsing (414/505/bad request line) used to
-  get no reply (`log_message` hit an unset `self.path`) or an HTTP/0.9 bare body; fixed
-  with class defaults and `default_request_version = "HTTP/1.0"`. Dot-directories
-  (`.vite/`) excluded; duplicate Host → 400; route collisions refused.
-- Defang check: domains/IPs must equal the canonical defanged form of their refanged
-  value (IPs must parse); full-width dots refused. Descriptions defang only what the
-  extractor recognises (+ emails): render as plain text, never linkify.
-- 25 exported values also appear in ThreatFox: all from 6 CVEs' reference pages
-  (independent sightings, not copied feed data).
-- PR 2 risk: `require-trusted-types-for 'script'` and `style-src 'self'` break libraries
-  that set `innerHTML` or inject `<style>`; check the built app in Chrome for violations.
+Counts and sizes for the 2026-10-26 snapshot: [[dashboard-export-facts]].
 
 ## Views (dark theme)
 

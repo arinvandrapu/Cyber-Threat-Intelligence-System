@@ -31,7 +31,13 @@ vulnerabilities are never exploited. This project answers a practical analyst qu
 - **Understands text** with SecureBERT 2.0, a cybersecurity language model: extracts
   malware, products, and organizations, and maps CVEs to ATT&CK techniques.
 - **Prioritizes** vulnerabilities with a risk score evaluated forward in time against CISA
-  KEV additions, with rank-based tiers whose hit rates fall monotonically.
+  KEV additions, with rank-based tiers whose hit rates fall monotonically. Of 167,844 CVEs
+  scored at the snapshot, 8,392 form the queue (critical, high and elevated tiers).
+- **Tracks threats**: 467 malware and tool families from ThreatFox, the top 20 ranked by a
+  pre-declared rule (linked KEV CVEs, linked queue CVEs, ransomware, indicator growth),
+  with reviewed categories, ATT&CK techniques and CVE links. Threats order the Known
+  exploited list (every CISA KEV CVE, patch-first) and flag queued CVEs as early
+  warnings; they never feed the risk score.
 - **Presents** the results in a local, read-only analyst dashboard (nine views, three
   relationship graphs) served on 127.0.0.1 under a strict Content-Security-Policy.
   STIX 2.1 output is *planned*.
@@ -47,14 +53,17 @@ flowchart LR
     D --> X[Extract<br/>regex IOCs · aliases]
     X --> E[NLP: SecureBERT 2.0<br/>NER · ATT&CK mapping]
     E --> F[Risk scoring]
+    X --> T[Threat catalog<br/>families · CVE links]
+    F --> T
     F --> G[Exports<br/>JSON · STIX 2.1 planned]
+    T --> G
     G --> H[Localhost dashboard]
 ```
 
 Ingest, snapshot, parse, S3 upload, enrichment (per-CVE join, reference-page cleaning),
-IOC/alias extraction, SecureBERT 2.0 NER and embeddings, graded ATT&CK mapping, and a
-pre-registered CWE classification and risk-scoring evaluations, and the local dashboard
-are built; STIX 2.1 output is *planned*.
+IOC/alias extraction, SecureBERT 2.0 NER and embeddings, graded ATT&CK mapping,
+pre-registered CWE classification and risk-scoring evaluations, the threat catalog, and
+the local dashboard are built; STIX 2.1 output is *planned*.
 
 - [Architecture](docs/architecture.md): stages, storage layout, point-in-time data,
   security boundaries.
@@ -283,7 +292,7 @@ serves a Vite + React dashboard over it on 127.0.0.1 only. Nine views:
 | Overview | The question and the three lists that answer it (exploited CVEs to patch first, CVEs likeliest to be exploited next, threats to watch), how they connect, risk tiers, top of the queue, and one line per tab |
 | Known exploited | Every CISA KEV CVE in a fixed patch-first order agreed before it was run (linked to a threat family, then CISA known ransomware use, then newest listing), each with a one-line reason naming its sources |
 | Risk queue | The critical, high and elevated tiers: sortable, filterable, searchable by vendor or product, with each CVE's per-feature contribution to its rank and any linked malware families; a CVE a threat is tied to is flagged as an early warning (never a rank input) |
-| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
+| Threats | Malware and tool families ranked by a pre-declared heuristic (linked KEV CVEs, linked queue CVEs, ransomware, indicator growth), each with its reason, category, ATT&CK techniques and linked CVEs with review state; linked KEV CVEs open their CISA entry |
 | Risk landscape | Model rank vs EPSS percentile, model weights (refit vs evaluated), signal coverage by tier, queue CVEs by month |
 | Weakness graph | CWE pillar → CWE → critical/high CVE, click to trace |
 | ATT&CK graph | KEV CVE → technique → tactic from MITRE CTID's expert mappings, by mapping type |
@@ -335,8 +344,10 @@ Secure by construction:
 
 **Attribution.** MITRE ATT&CK®, CWE™ and CAPEC™ content: © The MITRE Corporation. This work
 is reproduced and distributed with the permission of The MITRE Corporation. CTID mappings:
-Apache-2.0 (`data/reference/ctid/`). MISP galaxy: CC0/BSD. abuse.ch data appears only as
-aggregates, under its terms of use.
+Apache-2.0 (`data/reference/ctid/`). MISP galaxy: CC0/BSD. abuse.ch data appears as
+aggregates (counts per family and category), family names, and the ThreatFox tag pages
+cited as evidence for 10 CVE links; no raw indicator values are redistributed, under its
+terms of use.
 
 ## Setup
 
@@ -363,36 +374,43 @@ python3 -m venv .venv-nlp
 ## Usage
 
 ```bash
+# 1. One-time ingest and archive (network; the other downloads are fetch-nvd-archive and models fetch)
 cti probe                       # cheap check that every source is reachable / keys work
-cti ingest --date 2026-10-25    # the one-time fetch into data/snapshots/<date>/
-cti ingest --date 2026-10-25 --resume                       # continue after a failure
-cti ingest --date 2026-10-25 --refetch kev --reason "..."   # logged, keeps old copy
-cti ingest --date 2026-10-25 --refetch epss --new-dates-only --reason "..."  # add cutoffs
-cti status --date 2026-10-25    # manifest: files, sizes, pinned versions, refetches
-cti fetch-nvd-archive          # NVD 2002-2022 for Phase 10b -> data/reference-snapshots/ (never uploaded)
-cti threats-sheet --date 2026-10-26  # blank blind-review sheet of the top ThreatFox families
+cti ingest --date 2026-10-26    # the one-time fetch into data/snapshots/<date>/
+cti ingest --date 2026-10-26 --resume                       # continue after a failure
+cti ingest --date 2026-10-26 --refetch kev --reason "..."   # logged, keeps old copy
+cti ingest --date 2026-10-26 --refetch epss --new-dates-only --reason "..."  # add cutoffs
+cti status --date 2026-10-26    # manifest: files, sizes, pinned versions, refetches
+cti upload --date 2026-10-26 --gold  # write-once copy to S3 (checksums verified)
+cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
+
+# 2. Offline processing
+cti parse   --date 2026-10-26   # raw snapshot -> data/processed/<date>/*.jsonl.gz
+cti enrich  --date 2026-10-26   # per-CVE join + cleaned reference pages -> data/enriched/<date>/
+cti extract --date 2026-10-26   # regex IOCs + alias mentions -> data/extracted/<date>/
+cti extract-eval --date 2026-10-26 --labels data/reference/ioc-review-2026-10-26.csv  # precision
+
+# 3. NLP and evaluations (SecureBERT steps run in .venv-nlp)
+cti models verify                   # weights match their pinned SHA-256
+cti attack-eval --date 2026-10-26   # grade CVE -> ATT&CK ranking on MITRE CTID's KEV mappings
+cti ner      --date 2026-10-26      # SecureBERT NER over the reference pages (~10 min CPU)
+cti ner-eval --date 2026-10-26      # NER sanity check on the gold set
+cti embed    --date 2026-10-26      # bi-encoder embeddings of NVD descriptions (~50 min CPU)
+cti embed    --date 2026-10-26 --cwe-id-masked   # re-embed with literal CWE IDs masked
+cti cwe-eval  --date 2026-10-26     # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
+cti risk-eval --date 2026-10-26     # forward-looking KEV prediction, rolling-origin folds (~30 s)
+cti fetch-nvd-archive               # NVD 2002-2022 reference data -> data/reference-snapshots/ (never uploaded)
+.venv-nlp/bin/cti attack-eval2 --date 2026-10-26 --archive-date 2026-10-29  # pre-registered re-test (10b)
+
+# 4. Threat catalog and dashboard (threats need the export's risk tiers)
+cti export --date 2026-10-26        # dashboard JSON into data/export/<date>/ (~10 s)
+cti threats-sheet --date 2026-10-26             # blank review sheet of the top ThreatFox families
 cti threats-sheet --date 2026-10-26 --priority  # add unlabelled families from the priority top 20
-cti threats --date 2026-10-26  # threat catalog: categories, ATT&CK techniques, CVE links, priority
-cti parse  --date 2026-10-25    # offline: raw snapshot -> data/processed/<date>/*.jsonl.gz
-cti enrich --date 2026-10-25    # offline: per-CVE join + cleaned reference pages -> data/enriched/<date>/
-cti extract --date 2026-10-25   # offline: regex IOCs + alias mentions -> data/extracted/<date>/
-cti extract-eval --date 2026-10-25 --labels data/reference/ioc-review-2026-10-26.csv  # precision
-cti models verify                   # weights match their pinned SHA-256 (nlp env)
-cti attack-eval --date 2026-10-25   # grade CVE -> ATT&CK ranking on MITRE CTID's KEV mappings
-.venv-nlp/bin/cti attack-eval2 --date 2026-10-26 --archive-date 2026-10-29  # pre-registered re-evaluation (10b)
-cti ner --date 2026-10-25           # SecureBERT NER over the reference pages (~10 min CPU)
-cti ner-eval --date 2026-10-25      # NER sanity check on the gold set
-cti embed --date 2026-10-25         # bi-encoder embeddings of NVD descriptions (~50 min CPU)
-cti embed --date 2026-10-25 --cwe-id-masked   # re-embed descriptions with literal CWE IDs masked
-cti cwe-eval --date 2026-10-25      # CWE classification: TF-IDF vs SecureBERT vs baselines (~8 min)
-cti risk-eval --date 2026-10-25     # forward-looking KEV prediction, rolling-origin folds (~30 s)
-cti export --date 2026-10-25        # dashboard JSON into data/export/<date>/ (~10 s)
-# threats need the export's risk tiers: cti export -> cti threats -> cti export
+cti threats --date 2026-10-26       # categories, ATT&CK techniques, CVE links, priority
+cti export --date 2026-10-26        # again, now with threats and the Known exploited order
 (cd web && npm ci && npm run build) # build the dashboard once (pinned, no install scripts)
 cti serve                           # dashboard at http://127.0.0.1:8000/ (local only)
 cti serve --export-dir web/fixtures # the same dashboard on synthetic data (no pipeline run)
-cti upload --date 2026-10-25 --gold  # write-once copy to S3 (checksums verified)
-cti gold-import --gold ... --entities ... --corpus ...  # one-time: freeze the gold set
 ```
 
 One-time AWS setup (budget alert, hardened bucket, least-privilege `cti` user):
@@ -415,16 +433,21 @@ src/cti/
   upload.py          write-once, checksum-verified copy of a snapshot to S3
   enrich/            per-CVE join with leakage-safe point-in-time features; CWE lookup;
                      reference-page cleaning (boilerplate removal, JS-shell detection)
+  defang.py          make IOCs non-clickable (hxxp, fxp, [.]) and undo common defang forms
+  references/        reference-link classifier, page selection, polite SSRF-safe scraper
+  gold.py            frozen, checksummed evaluation gold set
   nlp/               regex IOC extraction, alias normalizer, extraction evaluation,
-                     ATT&CK technique ranking graded on MITRE CTID mappings,
-                     pinned SecureBERT 2.0 models (NER, bi-encoder embeddings)
+                     ATT&CK technique ranking and its pre-registered re-test, CWE and
+                     risk evaluations (configs committed before scoring), pinned
+                     SecureBERT 2.0 models (NER, bi-encoder embeddings)
+  threats/           threat catalog: family categories, CVE links, review sheets,
+                     the pre-declared priority rule
   dashboard/         `cti export` (schema-validated dashboard JSON) and `cti serve`
                      (allowlist static server on 127.0.0.1, strict security headers)
 web/                 Vite + React + TypeScript dashboard (9 views, hand-rolled SVG charts),
                      synthetic fixture, static and headless-browser checks
-  defang.py          make IOCs non-clickable (hxxp, fxp, [.]) and undo common defang forms
-  references/        reference-link classifier, page selection, polite SSRF-safe scraper
-  gold.py            frozen, checksummed evaluation gold set
+data/reference/      pinned third-party reference data (CTID, CAPEC, MISP galaxy) and the
+                     committed review labels
 tests/unit/          offline unit tests
 docs/                architecture, design decisions, data sources
 infra/               AWS policy templates + one-time setup steps

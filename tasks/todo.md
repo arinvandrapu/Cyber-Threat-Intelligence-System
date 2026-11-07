@@ -351,6 +351,45 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           ingest-once-snapshot.md (82)
     - [ ] `cli.py` module docstring (lists 7 commands); future-extensions.md status;
           this file's Review section
+    - **Plan (2026-11-06, after due diligence on `main` 51d932c)** — branch
+      `docs/11b-catch-up`, one PR, docs only (no code paths change except the `cli.py`
+      docstring). Already fixed by Phase 12/11c: view counts. Every number is checked
+      against `data/export/2026-10-26/` before it is written.
+      - [x] README: 18× `--date 2026-10-25` → 2026-10-26; Usage in true pipeline order
+            (probe → ingest/status → parse → enrich → extract → extract-eval → models →
+            attack-eval → ner/ner-eval/embed → cwe-eval → risk-eval → fetch-nvd-archive →
+            attack-eval2 → export → threats-sheet/label → threats → export → build →
+            serve → upload); a threat-layer bullet in "What it does" and a threat node in
+            the diagram; layout tree (`web/` and `threats/` placed right); abuse.ch
+            wording: aggregates, family names and 10 cited ThreatFox tag links, no raw
+            IOCs; Threats row names all priority keys; one sentence "167,844 scored,
+            8,392 in the queue"
+      - [x] docs/architecture.md: status (Phases 0–12, 11a/c done); stage rows for
+            fetch-nvd-archive, attack-eval2, threats-sheet, threats; Export row lists
+            every file (incl. kev.json order/why, threats.json, cves.json, schema v2);
+            "ingest is the only download" → exceptions (`fetch-nvd-archive`, `models
+            fetch`, never uploaded); storage table (reference-snapshots, misp-galaxy,
+            capec, threat CSVs); code map (`threats/`, `nlp/`, `dashboard/`, cli)
+      - [x] docs/data-sources.md: "Reference data (pinned, outside the snapshot)": MISP
+            galaxy, CAPEC, CTID attack_to_cve, NVD 2002–2022 archive, with licences;
+            "captured twice" → four cutoffs + snapshot
+      - [x] docs/decisions.md: new entries, each with its cost: threat priority is a
+            declared heuristic, kept out of the risk score; Claude as labeller for the
+            owner (not fully blind, disclosed); KEV triage order (fixed rule signed off
+            before output); display honesty (no age sign flip, no "≈ 0", "scored" vs
+            "in the queue"); index updated
+      - [x] Vault: threat-links.md (56 labelled; 4 link rows on 3 queued CVEs, 1
+            accepted; 30 KEV + 2 NVD cards), threat-catalog.md:36 count, threat-layer.md:21
+            (Claude for the owner, not fully blind), dashboard.md "Recency" → "Age",
+            index.md (attack-mapping-v2 not "planned"; threat-queue-overlap built),
+            code-layout.md cli list; split the 4 notes over 80 lines
+            (risk-scoring-design, dashboard-web, ingest-once-snapshot, dashboard)
+      - [x] `cli.py` docstring lists all 22 commands by stage; future-extensions.md (E1
+            done in 10b #33, marginal; E2 steps 1–2 done #32/#34); todo.md: Phase 12
+            boxes, Review section filled (phases, PRs, outcomes); session-handoff.md
+            (12 merged #44, 11c #45–#47, 11b in review, next steps, 562 tests)
+      - [ ] Verify: every README/docs number re-checked against the export; `pytest`,
+            `ruff`; markdown links resolve; mermaid renders (GitHub preview)
   - [x] **11c. Dashboard**
     - [ ] Every referenced CVE opens a detail: 154 Indicators-table CVEs are neither
           queued nor KEV (export a small NVD card for every CVE the export references);
@@ -458,7 +497,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
           (cmd_threats 142 lines, cmd_attack_eval2 105, build_parser 156); embed.py pooling
           test with a fake model
 
-- [ ] **12. Connect threats to what to patch** *(from the 2026-11-06 problem-statement
+- [x] **12. Connect threats to what to patch** *(merged #44)* *(from the 2026-11-06 problem-statement
       review; finding: `vault/threat-queue-overlap.md`)* — 47 of 53 threat links point at
       KEV CVEs, which the queue excludes, so "threats explain CVEs" holds for KEV and
       almost never for the queue (1 queued CVE: CVE-2026-109618, rank 3). Fix within the
@@ -502,7 +541,7 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         `vault/threat-queue-overlap.md` ("proposed" → built), handoff
     - Done 2026-11-06: three-column briefing (one column under 1100px); footer and tab
       guide numbers computed from the export; README "Where links land" bullet
-  - [ ] Verify each step: `pytest`, `ruff`, `npm run build`, `npm run check`, `smoke.py`
+  - [x] Verify each step: `pytest`, `ruff`, `npm run build`, `npm run check`, `smoke.py`
         on fixture + real export, screenshots; plan audit before 12.1, implementation
         audit before the PR
 
@@ -518,4 +557,24 @@ After Phase 10, before Phase 9 screenshots: dashboard clarity (E3: CVE name, Ove
 
 ## Review
 
-_(filled in as phases complete)_
+As of 2026-11-06 (`main` 51d932c; export re-stamped clean, schema 2; 562 tests).
+
+| Phase | PRs | Outcome |
+|---|---|---|
+| 0–2 Docs, foundation, sources | #1–#7 | Typed config, SSRF-safe fetcher, write-once storage, 12 source parsers, frozen gold set |
+| 3 Ingest | #9, #11 | One ingest (2026-10-26), all 12 sources; raw + gold in S3 (≈335 MB), `cti` key inactive |
+| 4 Enrichment | #14, #15 | 168,393 CVE rows with point-in-time features; 1,280 cleaned reference pages |
+| 5a IOCs | #17 | Precision 98.5% pages / 89.1% NVD (AI-labelled sample; mostly CVE IDs) |
+| 5b ATT&CK, SecureBERT | #18, #19 | Prior + bi-encoder hit@5 0.57 vs majority 0.41 (hybrid designed after test, disclosed) |
+| 6 CWE classification | #21, #22 | TF-IDF macro-F1 0.394 beats frozen SecureBERT 0.265 (pre-registered) |
+| 7 Risk scoring | #24–#26 | Beats EPSS at top 100: +4 (CI +1 to +8) over 68 KEV additions; not at 1%; EPSS higher mean AP; tiers monotonic |
+| 8 Dashboard | #27, #28 | `cti export` + `cti serve` (loopback, strict CSP), React UI, CI smoke |
+| 10 Threat layer, ATT&CK re-test | #30–#34, #36, #38 | 467 families, top 20 by a declared rule; links 25/43 judged correct; 10b combiner passes marginally |
+| Clarity (E3) | #35, #39 | CVE names, tab guide, plain language, every CVE opens a detail |
+| 11a Credibility | #40, #41 | Overclaims corrected (KEV wording, link precision, tier lift) |
+| Overview redesign | #42, #43 | One briefing panel; queue card matches tiers card |
+| 12 Threats → what to patch | #44 | Known exploited view (fixed order, 26 threat-linked first); queue early-warning badge; Overview counts |
+| 11c Dashboard | #45–#47 | One sign convention without changing numbers; scored vs in the queue; NVD cards for all 10,304 clickable CVEs; vendor search; equal Evaluation panels |
+
+Lessons from these phases are in `tasks/lessons.md` (stranded pushes, stacked PRs,
+pre-registration before results, checking third-party data before committing).

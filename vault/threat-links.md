@@ -27,7 +27,7 @@ owner decisions that followed. Catalog overview: [[threat-catalog]].
 - MISP name collisions hit categories too: Havoc (C2 framework) got `ransomware` from an
   unrelated MISP entry. Owner decision (`PRIORITY_REVIEW_TOP_N` = 20, own commit): every
   family in the priority top 20 is labelled by hand (`cti threats-sheet --priority`,
-  repeated until no new family enters: 15 + 2 added). 51 families labelled; top 20 all
+  repeated until no new family enters: 15 + 2 added). 56 families labelled; top 20 all
   manual. On 24 families both sides label, MISP's extra `ransomware` hit 3 (Havoc,
   Hermes, …); otherwise differences are MISP being single-label.
 - Labels change the ranking (ransomware is a key), so the top 20 must be re-checked
@@ -58,7 +58,8 @@ owner decisions that followed. Catalog overview: [[threat-catalog]].
   `review.links.unreviewed` counts them. Quoted MITRE text carries MITRE's attribution.
 - Every linked CVE outside the queue opens a card (`threats.linked_cves`): CISA's KEV
   entry, else its NVD record (main snapshot + 2002–2022 archive, looked up by `cti
-  threats`); rejected links too. 2026-10-26: 42 links, 4 queued, 26 KEV + 2 NVD cards.
+  threats`); rejected links too. 2026-10-26: 42 links on the 20 shown families; 4 link rows
+  on 3 queued CVEs (1 accepted: CVE-2026-109618); 30 KEV + 2 NVD cards.
   The KEV card from #34 had been lost (pushed after the merge) and was restored here.
 
 Related: [[threat-catalog]], [[threat-layer]], [[attack-mapping]].

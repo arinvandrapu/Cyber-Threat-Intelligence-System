@@ -8,9 +8,10 @@ captured once: [decisions.md §1](decisions.md#1-ingest-once-into-an-immutable-r
 
 All data comes from a **single ingest run** on **2026-10-26** (snapshot `2026-10-26`).
 The **cutoff date** is the snapshot minus 180 days, **2026-04-29**. Sources that change
-over time are captured **twice**, pinned to their state at the cutoff and at the
-snapshot, so the risk model can be scored with cutoff-only data and checked against
-what happened afterwards ([decisions.md §4](decisions.md#4-forward-looking-risk-evaluation-with-point-in-time-data)).
+over time are captured at **five dates**: four cutoffs 180 days apart (2024-11-05,
+2025-05-04, 2025-10-31, 2026-04-29) and the snapshot. The risk model is scored with
+cutoff-only data and checked against what happened afterwards, one rolling-origin fold
+per later cutoff ([decisions.md §4](decisions.md#4-forward-looking-risk-evaluation-with-point-in-time-data)).
 
 | | |
 |---|---|
@@ -18,7 +19,7 @@ what happened afterwards ([decisions.md §4](decisions.md#4-forward-looking-risk
 | Raw snapshot | ≈ 235 MB gzip'd (297 MB including the kept first references attempt) |
 | Parsed records | ≈ 70 MB gzip'd JSONL |
 | Documents | **≈ 455,900** |
-| Point-in-time signal rows | **≈ 1,138,000** |
+| Point-in-time signal rows (latest cutoff + snapshot) | **≈ 1,138,000** |
 
 ## Sources
 
@@ -26,11 +27,11 @@ what happened afterwards ([decisions.md §4](decisions.md#4-forward-looking-risk
 |---|---|---|---|---|
 | NVD CVE 2.0 | NIST | Yearly feeds 2023–2026; CVEs published ≥ 2024-01-01 kept | `.meta` SHA-256 + `lastModifiedDate` | 111.9 MB |
 | CISA KEV | CISA | Full catalog with `dateAdded` | `catalogVersion` 2026.10.23 | 0.2 MB |
-| EPSS | FIRST | Daily scores at cutoff and snapshot | file date + model (v2025.03.14, v2026.06.15) | 5.0 MB |
-| CISA Vulnrichment | CISA | SSVC decisions at cutoff and snapshot | git first-parent commit | 4.5 MB |
-| ExploitDB | OffSec | `files_exploits.csv` at cutoff and snapshot | GitLab first-parent commit | 4.8 MB |
-| Metasploit | Rapid7 | Module metadata at cutoff and snapshot | git first-parent commit | 2.7 MB |
-| Nuclei templates | ProjectDiscovery | `cves.json` at cutoff and snapshot | git first-parent commit | 0.9 MB |
+| EPSS | FIRST | Daily scores at each cutoff and the snapshot | file date + model (v2023.03.01, v2025.03.14, v2026.06.15) | 5.0 MB |
+| CISA Vulnrichment | CISA | SSVC decisions at each cutoff and the snapshot | git first-parent commit | 4.5 MB |
+| ExploitDB | OffSec | `files_exploits.csv` at each cutoff and the snapshot | GitLab first-parent commit | 4.8 MB |
+| Metasploit | Rapid7 | Module metadata at each cutoff and the snapshot | git first-parent commit | 2.7 MB |
+| Nuclei templates | ProjectDiscovery | `cves.json` at each cutoff and the snapshot | git first-parent commit | 0.9 MB |
 | MITRE ATT&CK | MITRE | Enterprise STIX 2.1 bundle | release v20.0 | 9.3 MB |
 | MITRE CWE | MITRE | Full catalog XML | release v4.20 | 2.0 MB |
 | ThreatFox | abuse.ch | IOCs, last 6 months | fetch time | 4.3 MB |
@@ -55,7 +56,7 @@ what happened afterwards ([decisions.md §4](decisions.md#4-forward-looking-risk
   the risk model should have ranked highly.
 - **EPSS**: FIRST's predicted probability of exploitation in the next 30 days. A strong
   input feature and the main **baseline** the risk model must beat. The model version
-  changed between cutoff and snapshot, so the two score sets are never compared directly.
+  changes between dates, so scores from different dates are never compared directly.
 
 ### Prioritization signals: how urgent
 
@@ -64,7 +65,7 @@ what happened afterwards ([decisions.md §4](decisions.md#4-forward-looking-risk
   per-record timestamps are overwritten on rescoring.
 - **ExploitDB, Metasploit, Nuclei**: public exploit code, ready-made attack modules,
   and scanner templates. Each lowers the bar for attackers, so their availability *at
-  the cutoff* is a risk feature. Captured at both dates to measure what appeared later.
+  the cutoff* is a risk feature. Captured at every date to measure what appeared later.
 
 ### Adversary behavior: how attacks work
 
@@ -106,9 +107,9 @@ Counts from `cti parse` on the 2026-10-26 snapshot.
 | CWE | 944 | weakness definitions |
 | **Total** | **≈ 455,900** | |
 
-**Point-in-time signals** (risk features, not documents):
+**Point-in-time signals** (risk features, not documents; latest cutoff and snapshot only):
 
-| Source | Rows (cutoff / snapshot) |
+| Source | Rows (2026-04-29 / snapshot) |
 |---|---|
 | EPSS | 329,633 / 395,492 |
 | Vulnrichment (SSVC) | 145,031 / 202,941 |
@@ -163,15 +164,42 @@ PDFs, which are not extracted. Boilerplate removal cuts the median HTML page fro
 
 See [decisions.md §9](decisions.md#9-drop-sources-that-are-stale-closed-or-ethically-problematic).
 
+## Reference data (pinned, outside the snapshot)
+
+Fixed reference files used by the ATT&CK evaluations and the threat layer. They are not
+part of the 2026-10-26 snapshot and are not uploaded to S3. Files under `data/reference/`
+are committed, each with a `NOTICE.md` (source, commit, licence), and every read checks
+the SHA-256 pinned in code (`cti.reference.PINNED`; `attack_eval.CTID_SHA256` for the KEV
+mappings), so an edited or updated copy cannot change a result.
+
+| Data | Provider | Used for | Pinned by | Licence |
+|---|---|---|---|---|
+| KEV → ATT&CK mappings (Mappings Explorer, ATT&CK 16.1) | MITRE CTID | Ground truth for `cti attack-eval`; training labels for `cti attack-eval2` | commit `e51d7f5` + SHA-256 | Apache-2.0 |
+| `attack_to_cve` | MITRE CTID | Held-out test set for `cti attack-eval2` (CVEs not in the KEV mappings) | commit `191e870` + SHA-256 | Apache-2.0 |
+| CAPEC 3.9 | MITRE | CWE → CAPEC → ATT&CK chain in `cti attack-eval2` | release zip SHA-256 | MITRE CAPEC terms of use (copyright notice kept) |
+| MISP galaxy, 9 clusters (ransomware, stealer, rat, botnet, banker, backdoor, tool, exploit-kit, cryptominers) | MISP project | Family → category labels in `cti threats` for families without a manual label | commit `24877de` + SHA-256 of the trimmed files | CC0 1.0 or BSD-2-Clause |
+| NVD yearly feeds 2002–2022 | NIST | CVE text for the `cti attack-eval2` test CVEs (2008–2020) and NVD cards for older linked CVEs | `.meta` SHA-256 + `lastModifiedDate` | As the main NVD feeds |
+
+- **MISP clusters are trimmed, not byte copies.** `cti.reference.trim_misp_cluster()` keeps
+  names, synonyms, descriptions and links and drops ransom notes, leak-site links, prices,
+  payment methods, suspected victims and Tor (.onion) links. The upstream SHA-256s are in
+  the notice. Malpedia's cluster is not used: CC BY-NC-SA, and it has no category field.
+- **The NVD archive** is fetched once by `cti fetch-nvd-archive` into
+  `data/reference-snapshots/2026-10-29/`: 21 feeds, ≈ 131 MB gzip'd, 203,721 non-rejected
+  CVEs. It is local only (NVD data stays out of the repository like the main snapshot) and
+  is not a risk source.
+
 ## Handling and licensing
 
 - **Raw data never enters this repository.** Several sources restrict redistribution
   (ExploitDB is GPL-2.0; abuse.ch data is under its own terms; scraped pages belong to
   their publishers). Raw data lives on local disk and in a private, write-once S3
   archive. Only code, aggregates, and small defanged samples are published.
-- **Attribution**: NVD (NIST), KEV and Vulnrichment (CISA, CC0), EPSS (FIRST), ATT&CK
-  and CWE (MITRE), Metasploit (Rapid7, BSD-3), Nuclei templates (ProjectDiscovery, MIT),
-  ThreatFox and URLhaus (abuse.ch).
+- **Attribution**: NVD (NIST), KEV and Vulnrichment (CISA, CC0), EPSS (FIRST), ATT&CK,
+  CWE and CAPEC (MITRE), CTID Mappings Explorer and `attack_to_cve` (MITRE Center for
+  Threat-Informed Defense, Apache-2.0), MISP galaxy (MISP project, CC0 / BSD-2-Clause),
+  Metasploit (Rapid7, BSD-3), Nuclei templates (ProjectDiscovery, MIT), ThreatFox and
+  URLhaus (abuse.ch).
 - **Live IOCs are defanged** (`hxxp://`, `[.]`) at rest and in display.
 - **abuse.ch keys** travel in the URL path, so recorded URLs and error messages are
   redacted.

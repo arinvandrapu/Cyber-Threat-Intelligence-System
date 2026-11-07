@@ -11,9 +11,11 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
 ## Design decisions
 
 - [[ingest-once-snapshot]] — single ingest, raw snapshot, offline parsing, refetch rules
+- [[ingest-runs]] — what the 2026-10-26 ingest and the 10-28 extra-cutoff refetch did
 - [[data-sources]] — feeds, access method, keys, licensing constraints
 - [[risk-scoring-design]] — why tiers must discriminate; forward-looking KEV evaluation;
   Phase 4 per-CVE join (`features_at` only, label-biased `context_snapshot`)
+- [[risk-leakage-rules]] — split from risk-scoring-design: features only via `features_at`, label-biased context kept out
 - [[gold-set-provenance]] — the classification gold set is rule-generated; how results are reported
 - [[point-in-time-pinning]] — how cutoff-date data is pinned without leakage
 - [[nlp-design]] — where NLP applies; SecureBERT 2.0 vs scikit-learn roles; evaluation;
@@ -26,17 +28,19 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   models, metrics and tiers (`nlp/risk_config.py`)
 - [[dashboard]] — Phase 8: Vite + React over `cti export` JSON, `cti serve` on
   127.0.0.1 with strict CSP, nine views (incl. Threats, Known exploited) and three relationship graphs
+- [[dashboard-export-facts]] — export counts and sizes on the 2026-10-26 snapshot
 - [[dashboard-web]] — the `web/` UI: types contract, synthetic fixture, static and
   headless-Chrome CSP checks, CI job
+- [[dashboard-web-history]] — dated audit outcomes (10-28) and owner clarity passes (10-29)
 - [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts
 - [[threat-links]] — CVE link sources (ThreatFox tags, reference pages, ATT&CK software), review results, owner decisions
 - [[dashboard-display-decisions]] — 11c UI (PR #45): age label and "≈ 0" decisions from the plan audit, SSVC PoC relabel, plain words, layout, family links
 - [[known-exploited-view]] — Phase 12.1 KEV triage tab: fixed sort (threat link → ransomware → newest), one "linked" rule, wording
-- [[threat-queue-overlap]] — why threats barely link to the risk queue (47/53 links are KEV; 1 queued CVE) and proposed fixes
+- [[threat-queue-overlap]] — why threats barely link to the risk queue (47/53 links are KEV; 1 queued CVE) and fixes built in Phase 12
 - [[threat-layer]] — Phase 10a: family categories (MISP galaxies, STIX
   malware types), CVE links, priority heuristic; abuse.ch §7.3 no-AI-training rule
 - [[attack-mapping-v2-results]] — 10b run: combiner passes marginally (+0.035 hit@5, below majority at hit@10), gain from the CVSS rule at T1189
-- [[attack-mapping-v2]] — Phase 10b (planned): fresh CTID `attack_to_cve` test,
+- [[attack-mapping-v2]] — Phase 10b design (run: see results above): fresh CTID `attack_to_cve` test,
   population-shift framing, shared-logistic combiner, CAPEC and CVSS data gaps
 - [[cwe-classification]] — Phase 6 main eval: CWE label provenance (nvd/cna/adp), mapping
   Usage, label-source shift and name leakage that shape the evaluation; 6b `cti cwe-eval`

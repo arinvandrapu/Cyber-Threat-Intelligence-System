@@ -1,11 +1,10 @@
 # Future Extensions (after Phase 8 ships)
 
-> E1 and E2 are now **Phase 10** in [todo.md](todo.md) (approved 2026-10-28), which
-> supersedes the details below. E2 step 3 is dropped: abuse.ch terms §7.3 forbid
-> training AI models on ThreatFox data. E3 follows Phase 10, before Phase 9.
-
-Not started. Pick up only once the dashboard is merged and the current state is stable.
-Each extension gets its own pre-registration commit before any test score, like 6b and 7b.
+> **Status (2026-11-06).** E1 done as Phase 10b (#33): the pre-registered combiner passed
+> marginally (+0.035 hit@5) and is not shown on the dashboard. E2 steps 1–2 done as Phase
+> 10a/10c (#32, #34); step 3 dropped (abuse.ch terms §7.3 forbid training AI models on
+> ThreatFox data). E3 done (#35, #39). E4 deferred by the owner. The details below are the
+> original plans, kept for the record; Phase 10 in [todo.md](todo.md) superseded them.
 
 ## E1. Better CVE → ATT&CK mapping
 
