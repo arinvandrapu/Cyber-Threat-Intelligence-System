@@ -67,8 +67,8 @@ export function Evaluation({ data }: { data: Data }) {
         </section>
       )}
 
-      <section className="row">
-        <figure className="panel grow" style={{ margin: 0, flexBasis: 600 }}>
+      <section className="eval-grid">
+        <figure className="panel">
           <div className="panel-head">
             <h2>KEV additions caught (of {positives}), pooled over {folds.length} folds</h2>
             <Seg label="Budget" options={[["100", "Top 100 per fold"], ["1%", "Top 1% per fold"]] as const} value={budget} onChange={setBudget} />
@@ -101,7 +101,7 @@ export function Evaluation({ data }: { data: Data }) {
           </figcaption>
         </figure>
 
-        <div className="panel side" style={{ flexBasis: 440 }}>
+        <div className="panel">
           <div className="panel-head"><h2>Per fold · hits in the top 100</h2></div>
           <div className="table-wrap">
             <table className="data compact">
@@ -132,10 +132,7 @@ export function Evaluation({ data }: { data: Data }) {
           </div>
           <p className="caption">EPSS wins on average precision; the model's gain is concentrated at the very top of the list.</p>
         </div>
-      </section>
-
-      <section className="row">
-        <div className="panel grow" style={{ flexBasis: 520 }}>
+        <div className="panel">
           <div className="panel-head">
             <h2>Tier hit rates (evaluation folds)</h2>
             <span className="muted" style={{ fontSize: 12.5 }}>{r.tiers.monotonic ? "Monotonic, as pre-registered" : "Not monotonic"} · log scale</span>
@@ -155,7 +152,7 @@ export function Evaluation({ data }: { data: Data }) {
           </div>
         </div>
 
-        <div className="panel grow" style={{ flexBasis: 520 }}>
+        <div className="panel">
           <div className="panel-head"><h2>Other pipeline evaluations</h2></div>
           <Other
             name="ATT&CK technique mapping"

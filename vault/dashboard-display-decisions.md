@@ -40,6 +40,9 @@ changed. Context: [[dashboard]], [[dashboard-web]], [[risk-eval]],
   `.bar-row > span:first-child` rule beats `.faint`).
 - Weakness graph: CWE names to 30 chars, full name in `<title>`.
 - Evaluation: tier CI on one line; second panel "Data versions & disclosures".
+- Evaluation (owner, 2026-11-06): the four middle panels sit in a 2×2 `.eval-grid`
+  of equal 400px cells; content that doesn't fit scrolls inside its panel. One column
+  under 1000px.
 
 ## Links
 
