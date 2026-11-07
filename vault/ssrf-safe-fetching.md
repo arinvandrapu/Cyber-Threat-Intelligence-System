@@ -19,7 +19,8 @@ Without checks, a crafted reference URL (or a redirect) can point at
   is false (covers private, loopback, link-local, IPv6 ULA, IPv4-mapped IPv6).
 - Connect to the **validated IP** (pin it), sending the original Host header and SNI,
   to defeat DNS rebinding.
-- Follow redirects manually, re-validating every hop; cap at 3 hops.
+- Follow redirects manually, re-validating every hop; cap at 3 hops. Refuse an
+  https→http redirect (downgrade) since 11d.
 - Strip auth headers on cross-origin redirects. Cap response size and time.
 - Honest single User-Agent with contact info; respect robots.txt.
 
@@ -56,8 +57,15 @@ decimal/octal IP encodings (`http://2130706433/`), `file://` and other schemes.
   `blocked`, not `robots`.
 - robots.txt per RFC 9309 via `protego` (stdlib `urllib.robotparser` ignores `*`/`$`
   wildcards and uses first-match, so `Disallow: /*.php` read as *allowed*). 4xx means no
-  rules; 5xx or any fetch error means disallow all. Agent token `cti-pipeline`. A redirect
-  to another host is checked against that host's robots.txt.
+  rules; 5xx or any fetch error means disallow all. Agent token `cti-pipeline`. Since 11d
+  (2026-11-07) every redirect hop is checked against its own host's robots.txt, and spaced
+  by the host throttle, **before** it is requested (`fetch(before_redirect=...)`).
+- A robots.txt on https that redirects to http hits the downgrade refusal, so that host
+  is treated as disallow-all (conservative, per the 5xx/error rule).
+- **Disclosure:** the one ingest (2026-10-26) ran the older rules: robots checked on the
+  first and final URL only, downgrades allowed. Of the 2,000 pages in each fetch attempt
+  (attempts 1 and 2; checked 2026-11-07), 0 start https and end http; intermediate hops were not recorded, so a mid-chain http hop or
+  intermediate-hop robots rule can't be ruled out. Ingest runs once, so no data changed.
 - `scrape_one` never raises. Malformed hostnames (label > 63 chars, `a..b`, bad IDNA)
   raise `UnicodeError` from parsing or DNS; they're converted to `BlockedURLError`.
   Before this fix, one bad reference URL aborted the whole scrape on every resume.

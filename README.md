@@ -313,7 +313,9 @@ Secure by construction:
 - **Indicator display:** indicators are defanged in Python and rendered as text, never as
   links.
 - **Supply chain:** npm packages are pinned exactly and at least 14 days old, installed
-  without install scripts, and signature-verified in CI.
+  without install scripts, and signature-verified in CI. Python dependencies install only
+  from hash-pinned locks (`--require-hashes`); CI checkouts keep no Git credentials, and
+  every GitHub Action is pinned by commit SHA.
 - **CI:** builds against a synthetic fixture and loads every view in headless Chrome,
   failing on any CSP violation or console error.
 
@@ -323,8 +325,8 @@ Secure by construction:
 |---|---|---|
 | Threat intelligence | CVE/KEV/EPSS analysis, IOC extraction and defanging, threat-actor alias normalization, MITRE ATT&CK mapping | NVD, CISA KEV, FIRST EPSS, MITRE ATT&CK/CWE, abuse.ch, tldextract (Public Suffix List) |
 | Vulnerability management | Risk-based prioritization, forward-looking evaluation | Python, pandas, scikit-learn |
-| Secure engineering | SSRF defense, secrets management, least-privilege IAM | httpx, pydantic, GitHub Actions, pip-audit, secret scanning |
-| Cloud security | Private, encrypted, TLS-only storage; cost guardrails | AWS S3, IAM, AWS Budgets |
+| Secure engineering | SSRF defense (incl. no https→http redirect downgrade), secrets management, least-privilege IAM, hash-pinned dependencies | httpx, pydantic, GitHub Actions, pip-audit, uv (hashed locks), secret scanning |
+| Cloud security | Private, encrypted, TLS-only storage; write-once objects and compare-and-swap manifest updates (S3 conditional writes); cost guardrails | AWS S3, IAM, AWS Budgets |
 | NLP / ML | Security-domain NER and embeddings, supervised-prior + embedding ranking, baselines, paired bootstrap evaluation, leakage control, boilerplate removal on untrusted HTML | SecureBERT 2.0 (ModernBERT), PyTorch, Hugging Face Transformers, scikit-learn, NumPy, trafilatura, lxml |
 | ML supply chain | Model pinning by commit and weight hash, safetensors only, no remote code, offline inference | Hugging Face Hub, safetensors |
 | Visualization | Analyst dashboard, relationship graphs, honest uncertainty display | Vite, React, TypeScript, hand-rolled SVG |
@@ -342,9 +344,15 @@ Secure by construction:
 - **Responsible data use.** Raw feed data is never redistributed; feed terms of use are
   respected.
 
+**Licence.** The code is MIT-licensed ([LICENSE](LICENSE)). The MIT licence covers this
+project's own code only: third-party data under `data/reference/` keeps its own terms (each
+folder has its licence or notice file), and the feeds and models below keep theirs.
+
 **Attribution.** MITRE ATT&CK®, CWE™ and CAPEC™ content: © The MITRE Corporation. This work
 is reproduced and distributed with the permission of The MITRE Corporation. CTID mappings:
-Apache-2.0 (`data/reference/ctid/`). MISP galaxy: CC0/BSD. abuse.ch data appears as
+Apache-2.0 (`data/reference/ctid/`). MISP galaxy: CC0/BSD. SecureBERT 2.0 models
+(`cisco-ai/SecureBERT2.0-NER`, `-biencoder`): Apache-2.0, downloaded at pinned revisions,
+not redistributed. abuse.ch data appears as
 aggregates (counts per family and category), family names, and the ThreatFox tag pages
 cited as evidence for 10 CVE links; no raw indicator values are redistributed, under its
 terms of use.
@@ -356,7 +364,9 @@ free abuse.ch Auth-Key.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -c requirements.lock -e '.[dev,enrich,ml]'
+pip install --require-hashes -r requirements-pip.lock     # a patched, hash-pinned pip
+pip install --require-hashes -r requirements.lock         # every dependency hash-checked
+pip install --no-deps --no-build-isolation -e .           # the project itself
 cp .env.example .env   # fill in values; .env is gitignored
 pytest                 # offline: no network or AWS access needed
 ruff check .
@@ -367,7 +377,8 @@ enters the main lock:
 
 ```bash
 python3 -m venv .venv-nlp
-.venv-nlp/bin/pip install -c requirements-nlp.lock -e '.[dev,enrich,ml,nlp]'
+.venv-nlp/bin/pip install --require-hashes -r requirements-nlp.lock   # macOS arm64 lock
+.venv-nlp/bin/pip install --no-deps --no-build-isolation -e .
 .venv-nlp/bin/cti models fetch   # one-time download at pinned revisions; then offline
 ```
 

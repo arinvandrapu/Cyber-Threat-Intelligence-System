@@ -479,30 +479,65 @@ Run order: `cti probe` → `cti ingest` (references runs last; it needs NVD, KEV
         isn't exported (rerunning `cti threats` was ruled out), so the view says "none of
         the categories fits", not "a tool, not malware"
 
-  - [ ] **11d. Robustness + hygiene**
-    - [ ] export/threats recovery loop: if tiers change, `cti export` refuses before
-          writing risk.json and `cti threats` re-reads the old one; write risk.json first
-          (or ship threats `available:false` with a warning)
-    - [ ] Check `KEV_CATALOG_VERSION` against the snapshot's parsed KEV version (refuse on
-          mismatch); `cti threats --archive-date` (today: newest reference snapshot);
-          cwe-eval output records `config_sha256` + git state
-    - [ ] Add a LICENSE (MIT or Apache-2.0 for own code; `data/reference/*` keep theirs);
-          SecureBERT model licence line in README attribution
-    - [ ] CI: hashed Python locks (`--generate-hashes`, `--require-hashes`), pin pip,
-          `persist-credentials: false` on checkout, exact version comments
-    - [ ] Scraper: refuse https→http redirect downgrades; robots on every hop; S3 manifest
-          overwrite with `IfMatch`; http/client.py docstring (key in URL path)
-    - [ ] Quality: one Wilson implementation (z, and (0,1)/None for n=0); public names
-          for `nvd._affected`, `attack_eval._per_cve`; move orchestration out of `cli.py`
-          (cmd_threats 142 lines, cmd_attack_eval2 105, build_parser 156); embed.py pooling
-          test with a fake model
+  - [ ] **11d. Robustness + hygiene** — due diligence 2026-11-07 on `main` (`b9b462c`):
+        every item below is still open. Owner picked **MIT** (2026-11-07). Two PRs, not
+        stacked: (a) first, (b) branched from `main` after (a) merges.
     - [x] Docs: `tasks/session-handoff.md` row "11b in review" → merged #48 (#49)
-    - **How to run it (next session)**: branch `chore/11d-robustness` from `main`; due
-      diligence first (re-check each item on `main`, several were written 2026-10-29);
-      plan audit; owner picks the LICENSE (MIT vs Apache-2.0) before it is added. Split
-      into two PRs if large: (a) LICENSE + CI locks + scraper hardening, (b) export/threats
-      recovery, KEV version check, quality refactors. Any change to `cti export` or the
-      scraper: rerun tests, re-stamp the export from clean `main`, smoke both exports.
+    - **PR (a) `chore/11d-robustness`: licence, CI supply chain, scraper**
+      - [x] a1 `LICENSE` (MIT, "Copyright (c) 2026 Arin Vandrapu"); `pyproject.toml`
+            `license = "MIT"`, `license-files = ["LICENSE"]`, build `setuptools>=77`;
+            README attribution: MIT covers the code only, `data/reference/*` keep their
+            terms (CTID Apache-2.0, MISP CC0/BSD-2, CAPEC MITRE terms), SecureBERT 2.0
+            models Apache-2.0 (HF cards, checked 2026-11-07)
+      - [x] a2 Hashed locks: regenerate both with `uv pip compile --universal
+            --generate-hashes`, constrained to today's pins (`-c` old lock) so no version
+            changes; `setuptools` in the `dev` extra (hashed build backend); pip in its own
+            hashed `requirements-pip.lock`, installed first (impl. audit: bundled pip 25.3
+            has advisories; plan audit: not inside the main lock); nlp lock macOS arm64 + 3.14 only (no CUDA wheels); command
+            in each lock's header; drop the unhashed `--upgrade pip`; `pip check`. Install everywhere as `pip install --require-hashes -r <lock>`
+            then `pip install --no-deps --no-build-isolation -e .` (CI, README, handoff)
+      - [x] a3 CI: `persist-credentials: false` on all three checkouts (gitleaks keeps
+            `fetch-depth: 0`, passes the token via env); exact tag comments on the same
+            SHAs (checkout v4.4.0, setup-python v5.6.0, gitleaks-action v2.3.9); pip-audit
+            of the hashed nlp lock still parses
+      - [x] a4 `safe_fetch.fetch`: refuse an https→http redirect (`BlockedURLError`);
+            per-hop hook so `scraper.scrape_one` checks robots (and throttles) on every
+            hop, not just first + final; fix the `scraper.py` docstring claim
+      - [x] a5 S3 manifest overwrite: compare-and-swap `Storage.replace(key, data,
+            expected=)`; S3 re-reads, compares bytes, writes with `IfMatch` on that ETag;
+            412/409/404 → `StaleWriteError` → `RemoteConflictError`; moto test that fails
+            without `IfMatch` (checked)
+      - [x] a6 `http/client.py` docstring: abuse.ch v2 puts the key in the URL path;
+            say what protects it (`FetchContext.redact`, httpx loggers at WARNING)
+      - [x] Docs: README (setup, supply chain, skills table), `docs/architecture.md`,
+            vault `ssrf-safe-fetching` (+ disclosure: 0/2,000 https→http finals per
+            attempt), `aws-cost-and-security`, `code-layout`; handoff rebuild commands
+      - [ ] Verify: pytest, ruff, CI green on 3.12 + 3.14, fresh local venv from the
+            hashed lock (done: 569 passed on 3.12 and 3.14, `pip check` clean, pip-audit
+            clean); no export change (no re-stamp needed); implementation audit
+    - **PR (b) `chore/11d-correctness`: recovery, version checks, refactors**
+      - [ ] b1 export/threats loop: when tiers changed, write the whole export with
+            threats `available:false, stale:true`, then **exit non-zero** with the
+            recovery commands (plan audit: KEV order and Overview change without threats;
+            smoke can't tell). Schema + `types.ts` + contract test + a stale message in the
+            view; fixtures if the schema changes. The unlabelled-top-N check stays a hard
+            error (only labelling fixes it). Test the loop end to end
+      - [ ] b2 `cmd_risk_eval` refuses when the snapshot's KEV `source_version` ≠
+            `KEV_CATALOG_VERSION` (both `2026.10.23` today)
+      - [ ] b3 `cti threats --archive-date` (default: newest reference snapshot, as now);
+            refuse an archive without an `nvd` feed
+      - [ ] b4 cwe-eval output gains `provenance` (`config_sha256`, `_git_state()`,
+            library versions), like risk-eval
+      - [ ] b5 one `wilson()` in `nlp/evaluate.py`; `risk_eval` imports it with its own
+            z (outputs unchanged)
+      - [ ] b6 public `nvd.affected`, `attack_eval.per_cve`
+      - [ ] b7 move `cmd_threats` and `cmd_attack_eval2` orchestration into
+            `threats/` and `nlp/attack_eval2.py`; `build_parser` stays (declarative)
+      - [ ] b8 `embed.mean_pool(hidden, mask)` written to work on NumPy arrays too, so
+            its test runs in CI without torch (plan audit)
+      - [ ] Verify: pytest, ruff, rerun risk-eval/threats/export on real data and diff
+            outputs (expect identical except provenance), re-stamp export from clean
+            `main` after merge, smoke both exports; implementation audit
 
 - [x] **12. Connect threats to what to patch** *(merged #44)* *(from the 2026-11-06 problem-statement
       review; finding: `vault/threat-queue-overlap.md`)* — 47 of 53 threat links point at

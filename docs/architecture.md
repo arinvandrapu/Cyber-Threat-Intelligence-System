@@ -141,10 +141,12 @@ flowchart LR
 - **Secrets.** Typed settings from `CTI_*` env vars; keys are `SecretStr`; the abuse.ch
   key (which must go in the URL path) is redacted from manifests and errors.
 - **Cloud.** One private bucket; a dedicated `cti` IAM user that cannot delete and cannot
-  PUT without `If-None-Match` (except the manifest). AWS Budgets alert at $5/month.
+  PUT without `If-None-Match` (except the manifest, which the code replaces only
+  by a compare-and-swap `If-Match` write). AWS Budgets alert at $5/month.
   Setup: [`infra/README.md`](../infra/README.md).
-- **Supply chain.** Pinned dependencies (`requirements.lock`), pip-audit, gitleaks, and
-  GitHub Actions pinned by commit SHA in CI.
+- **Supply chain.** Hash-pinned dependencies (`requirements.lock`, installed with
+  `--require-hashes`), pip-audit, gitleaks, GitHub Actions pinned by commit SHA, and
+  checkouts that keep no Git credentials (`persist-credentials: false`) in CI.
 
 ## Code map
 

@@ -4,7 +4,9 @@ tags: [architecture, code]
 
 # Code Layout
 
-Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with `pip install -c requirements.lock -e '.[dev,enrich,ml]'`.
+Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with `pip install --require-hashes -r requirements.lock`, then
+`pip install --no-deps --no-build-isolation -e .` (pip rejects editable installs and ignores
+hashes in `-c` constraint files, hence two steps).
 
 | Module | Role |
 |---|---|
@@ -36,11 +38,17 @@ Package `cti` under `src/`. Python ≥ 3.12.4 (ipaddress fixes), installed with 
   by commit SHA.
   A newer push to a PR cancels that PR's older run (`concurrency`); runs on `main` always
   finish.
-- Dependencies: ranges in `pyproject.toml`, exact pins in `requirements.lock`.
+- Dependencies: ranges in `pyproject.toml`, exact hashed pins in `requirements.lock`
+  (`uv pip compile --universal --generate-hashes`; command in the lock header; one lock for
+  Linux CI and macOS, 3.12 and 3.14). `setuptools` is in the `dev` extra so the build
+  backend is hashed too; pip has its own one-line hashed lock (`requirements-pip.lock`),
+  installed first: the runner's bundled pip had advisories, and pip replacing itself in the
+  middle of the main install is fragile. CI checkouts use `persist-credentials: false`; action comments name exact tags.
 - gitleaks: a 64-hex hash next to a key containing "token" trips `generic-api-key`. Mark the
   line `# gitleaks:allow` (see `nlp/models.py`); for a commit already pushed, add its
   fingerprint to `.gitleaksignore` with a reason. Never weaken the repo-wide config.
 - `nlp` extra (torch, transformers) lives in `.venv-nlp/` (gitignored), pinned in
   `requirements-nlp.lock` (a superset of `requirements.lock`, same shared pins). CI never
-  installs it; it runs `pip-audit -r requirements-nlp.lock --no-deps` instead. Torch-dependent
+  installs it; it runs `pip-audit -r requirements-nlp.lock --require-hashes --disable-pip`.
+  The nlp lock is resolved for macOS arm64 + 3.14 only (no Linux CUDA wheels). Torch-dependent
   logic is tested torch-free with fake taggers and encoders (`test_semantic.py`).

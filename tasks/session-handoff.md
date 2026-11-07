@@ -173,10 +173,10 @@ installed). **The one ingest has run** (snapshot `2026-10-26`).
 | abuse.ch key, contact, bucket, profile | `.env` | gitignored |
 | Gold fixture | `data/gold/gold.jsonl.gz` | SHA-256 `4a612d2f…ceb5` (in `cti/gold.py`); also in S3 `gold/` |
 | **Snapshot, parsed, enriched data** | `data/snapshots/`, `data/processed/`, `data/enriched/` (all `2026-10-26`) | working copy; raw also in S3; parsed/enriched regenerable via `cti parse` / `cti enrich`. **Don't delete `data/`.** |
-| Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install -c requirements.lock -e '.[dev,enrich,ml]'` to rebuild |
+| Python venv | `.venv/` | `python3 -m venv .venv && .venv/bin/pip install --require-hashes -r requirements.lock && .venv/bin/pip install --no-deps --no-build-isolation -e .` to rebuild |
 | **Extracted + eval outputs** | `data/extracted/2026-10-26/` (iocs, aliases, entities, `nvd-embeddings.npy` ≈259 MB, masked subset), `data/eval/2026-10-26/` (extract-, attack-, ner-, cwe-eval JSON) | regenerable; `cti embed` takes ≈47 min, so keep the `.npy` |
 | Dashboard export + build | `data/export/2026-10-26/` (`risk.json` 7.3 MB), `web/node_modules/`, `web/dist/` | regenerable: `cti export` (~9 s), `cd web && npm ci && npm run build` |
-| SecureBERT env + models | `.venv-nlp/` (`requirements-nlp.lock`); weights in `~/.cache/huggingface/hub/` (pinned; `cti models verify`) | rebuild: `python3 -m venv .venv-nlp && .venv-nlp/bin/pip install -c requirements-nlp.lock -e '.[dev,enrich,ml,nlp]'` |
+| SecureBERT env + models | `.venv-nlp/` (`requirements-nlp.lock`); weights in `~/.cache/huggingface/hub/` (pinned; `cti models verify`) | rebuild: `python3 -m venv .venv-nlp && .venv-nlp/bin/pip install --require-hashes -r requirements-nlp.lock && .venv-nlp/bin/pip install --no-deps --no-build-isolation -e .` |
 | AWS CLI | `default` = owner's admin IAM user, us-east-1; `cti` = pipeline user | `cti` key in `~/.aws/credentials`, **Inactive** |
 
 The prototype repo used for porting was a temporary clone. If it's needed again:
