@@ -39,7 +39,7 @@ from cti.enrich.cves import cve_sort_key, features_at, known_in_kev
 from cti.nlp import risk_config as cfg
 from cti.nlp import risk_eval
 from cti.nlp.iocs import extract
-from cti.threats.config import PRIORITY_REVIEW_TOP_N
+from cti.threats.config import PRIORITY_REVIEW_TOP_N, WHY_LINK_SOURCES
 
 DESCRIPTION_CHARS = 320
 TOP_FAMILIES = 25
@@ -895,11 +895,68 @@ def kev_card(row: dict, families: list[str]) -> dict:
     }
 
 
-def build_kev(kev_rows: Iterable[dict]) -> dict:
+# How the Known exploited view names each threat link's source. Neutral on purpose: an
+# ATT&CK entry citing a CVE can describe capability ("can exploit"), and a reference page
+# naming a family says it appears on a page about the CVE, not that it used it.
+KEV_LINK_SOURCES = {
+    "attack:software": "cited in its ATT&CK entry",
+    "threatfox_tag": "ThreatFox tag",
+    "mention:reference_page": "named on a reference page",
+}
+
+
+def kev_sort_key(card: dict) -> tuple:
+    """The Known exploited view's fixed order (owner sign-off 2026-11-06, before any output
+    was seen): linked to a shown threat family, then CISA known ransomware use, then newest
+    CISA listing (``date_added``), then CVE ID. A sort order, not a model: nothing labels
+    which KEV CVE matters more, so it cannot be evaluated."""
+    return (
+        not card["families"],
+        card["ransomware_use"] != "Known",
+        -date.fromisoformat(card["date_added"]).toordinal(),
+        cve_sort_key(card["cve"]),
+    )
+
+
+def kev_why(card: dict, links: list[tuple[str, str]]) -> str:
+    """One line naming the source of each fact the sort uses. ``links``: (family, via) that
+    count for priority; a family with several sources is credited to the first in
+    ``WHY_LINK_SOURCES`` (as on the Threats view)."""
+    order = list(WHY_LINK_SOURCES)
+    best: dict[str, str] = {}
+    for family, via in links:
+        if family not in best or order.index(via) < order.index(best[family]):
+            best[family] = via
+    named = [f"{f} ({KEV_LINK_SOURCES[v]})" for f, v in sorted(best.items())]
+    parts = [f"Threat{'s' if len(named) > 1 else ''}: {', '.join(named)}"] if named else []
+    if card["ransomware_use"] == "Known":
+        parts.append("CISA: known ransomware use")
+    parts.append(f"listed by CISA {card['date_added']}")
+    return "; ".join(parts)
+
+
+def build_kev(kev_rows: Iterable[dict], families: Iterable[dict] = ()) -> dict:
     """``kev.json``: a card for every KEV CVE, so any KEV CVE shown anywhere (ATT&CK graph,
-    indicators, threats) opens CISA's entry. KEV CVEs are never in the risk queue."""
-    cards = [kev_card(r, []) for r in kev_rows]
-    return {"entries": sorted(cards, key=lambda e: cve_sort_key(e["cve"]))}
+    indicators, threats) opens CISA's entry, in the Known exploited view's order
+    (``kev_sort_key``). KEV CVEs are never in the risk queue. ``families``: the exported
+    threat families. One rule for "linked": a card lists a family only for a link that
+    counts for priority (reviewed correct, or unreviewed from a trusted source), the same
+    links that rank threats; the sort and the why line use exactly that list."""
+    counted: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for f in families:
+        for link in f["links"]:
+            if link["counts_for_priority"]:
+                counted[link["cve"]].append((f["family"], link["via"]))
+    cards = []
+    for r in kev_rows:
+        links = counted.get(r["source_id"], [])
+        card = kev_card(r, sorted({family for family, _ in links}))
+        card["why"] = kev_why(card, links)
+        cards.append(card)
+    cards.sort(key=kev_sort_key)
+    for i, card in enumerate(cards, 1):
+        card["priority_rank"] = i
+    return {"entries": cards}
 
 
 def _linked_cves(
@@ -1067,7 +1124,7 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             "graphs.json": graphs,
             "eval.json": evals,
             "threats.json": threats,
-            "kev.json": build_kev(read_jsonl(paths["kev"])),
+            "kev.json": build_kev(read_jsonl(paths["kev"]), threats["families"]),
         }
     )
 

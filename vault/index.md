@@ -30,6 +30,7 @@ Public, reader-facing docs: `docs/architecture.md`, `docs/decisions.md`.
   headless-Chrome CSP checks, CI job
 - [[threat-catalog]] — `cti threats` implementation: inputs, owner sheets, first-run rules and counts
 - [[threat-links]] — CVE link sources (ThreatFox tags, reference pages, ATT&CK software), review results, owner decisions
+- [[threat-queue-overlap]] — why threats barely link to the risk queue (47/53 links are KEV; 1 queued CVE) and proposed fixes
 - [[threat-layer]] — Phase 10a: family categories (MISP galaxies, STIX
   malware types), CVE links, priority heuristic; abuse.ch §7.3 no-AI-training rule
 - [[attack-mapping-v2-results]] — 10b run: combiner passes marginally (+0.035 hit@5, below majority at hit@10), gain from the CVSS rule at T1189

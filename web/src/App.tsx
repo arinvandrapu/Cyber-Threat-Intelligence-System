@@ -4,6 +4,7 @@ import type { Data } from "./types";
 import { Shell, VIEWS, type View } from "./components/ui";
 import { Overview } from "./views/Overview";
 import { RiskQueue } from "./views/RiskQueue";
+import { KnownExploited } from "./views/KnownExploited";
 import { RiskLandscape } from "./views/RiskLandscape";
 import { WeaknessGraph } from "./views/WeaknessGraph";
 import { AttackGraph } from "./views/AttackGraph";
@@ -69,6 +70,7 @@ export function App() {
 
   const views: Record<View, () => ReactElement> = {
     overview: () => <Overview data={data} />,
+    kev: () => <KnownExploited data={data} focus={route.arg} />,
     queue: () => <RiskQueue data={data} focus={route.arg} />,
     threats: () => <Threats data={data} />,
     landscape: () => <RiskLandscape data={data} />,

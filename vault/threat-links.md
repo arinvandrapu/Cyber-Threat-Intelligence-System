@@ -62,3 +62,5 @@ owner decisions that followed. Catalog overview: [[threat-catalog]].
   The KEV card from #34 had been lost (pushed after the merge) and was restored here.
 
 Related: [[threat-catalog]], [[threat-layer]], [[attack-mapping]].
+
+- Where links land vs the risk queue (47/53 KEV, 1 queued CVE): [[threat-queue-overlap]].

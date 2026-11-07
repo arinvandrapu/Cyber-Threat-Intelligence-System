@@ -265,8 +265,20 @@ class Threats(_Model):
     review: ThreatReview | None
 
 
+class KevEntry(LinkedCve):
+    """A KEV CVE on the Known exploited view, in its fixed sort order (``kev_sort_key``).
+    ``families``: shown families linked by a link that counts for priority (the sort's
+    first key)."""
+
+    source: Literal["kev"]
+    date_added: str
+    ransomware_use: Literal["Known", "Unknown"]
+    priority_rank: int  # 1 = first by the sort; an order, not a probability
+    why: str  # one line naming the source of each fact the sort uses
+
+
 class KevCatalog(_Model):
-    entries: list[LinkedCve]  # every KEV CVE (source "kev"; families empty)
+    entries: list[KevEntry]  # every KEV CVE (source "kev"), in priority_rank order
 
 
 FILES: dict[str, type[_Model]] = {

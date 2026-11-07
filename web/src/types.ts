@@ -310,8 +310,26 @@ export interface Threats {
   review: ThreatReview | null;
 }
 
+/** A KEV CVE on the Known exploited view, in its fixed sort order (export.kev_sort_key). */
+export interface KevEntry {
+  cve: string;
+  source: "kev";
+  name: string | null;
+  vendor: string;
+  product: string;
+  description: string;
+  published: string | null;
+  date_added: string;
+  due_date: string | null;
+  ransomware_use: "Known" | "Unknown";
+  cwes: string[];
+  families: string[];
+  priority_rank: number;
+  why: string;
+}
+
 export interface KevCatalog {
-  entries: LinkedCve[];
+  entries: KevEntry[];
 }
 
 export interface Data {
