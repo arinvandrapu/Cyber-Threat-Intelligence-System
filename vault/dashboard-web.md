@@ -19,6 +19,8 @@ Vite + React + TypeScript over the `cti export` JSON. Decisions: [[dashboard]].
   layouts (`hash01` jitter): weakness = layered pillar → CWE → CVE; ATT&CK = radial, one
   angular sector per tactic sized by its techniques; shared hosts = ring + inner CVEs.
 - Colours are CSS variables in `src/theme.css` (tiers pink → cherry, KEV orange).
+- `Shell` renders a floating "Top" button (`BackToTop`, `ui.tsx`) on every view once the page
+  is scrolled a screen down; it scrolls up (instant under reduced motion) and focuses the `<h1>`.
 
 ## Fixture
 

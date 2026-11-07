@@ -191,6 +191,14 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 .guide:hover { border-color: var(--border-2); background: var(--raised); }
 .guide strong { color: var(--text); font-weight: 600; }
 
+/* ---- back to top ---- */
+.to-top { position: fixed; right: 24px; bottom: 24px; z-index: 20; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-2); background: var(--raised);
+  color: var(--text); font-size: 13px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
+.to-top:hover { border-color: var(--accent); }
+main h1:focus { outline: none; }
+@media (max-width: 640px) { .to-top { right: 16px; bottom: 16px; } }
+
 /* ---- guide ---- */
 .guide-link { display: inline-block; margin-top: 6px; font-size: 12.5px; }
 .gd-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 24px; align-items: start; }
