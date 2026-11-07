@@ -786,14 +786,25 @@ def build_threats(
     """``threats.json`` from a ``cti threats`` document (or ``None``: not yet run).
 
     ``tiers``: this export's tier per ranked CVE (baseline excluded), checked against the
-    tier ``cti threats`` recorded on every link, so a stale threats file fails the export.
+    tier ``cti threats`` recorded on every link. A stale threats file (tiers changed since
+    ``cti threats`` read risk.json) is left out: the result is the not-run document with
+    ``stale: True``, so the export still writes the new risk.json that ``cti threats``
+    needs, and ``cti export`` exits non-zero (rerun ``cti threats``, then ``cti export``).
     ``kev_rows``: parsed KEV records; ``cwe_names``: CWE ID -> name. Every linked CVE
     outside the risk queue gets a card: CISA's entry if it is in KEV, else its NVD record
     (``doc["nvd_cves"]``, written by ``cti threats``), so no link leads nowhere.
     """
-    if doc is None:
+    stale = (
+        sorted(
+            c["cve"] for f in doc["families"] for c in f["cves"] if c["tier"] != tiers.get(c["cve"])
+        )
+        if doc is not None
+        else []
+    )
+    if doc is None or stale:
         return {
             "available": False,
+            "stale": bool(stale),
             "snapshot_date": None,
             "families_total": 0,
             "families": [],
@@ -802,14 +813,6 @@ def build_threats(
             "linked_cves": [],
             "review": None,
         }
-    stale = sorted(
-        c["cve"] for f in doc["families"] for c in f["cves"] if c["tier"] != tiers.get(c["cve"])
-    )
-    if stale:
-        raise ConfigError(
-            f"threats.json tiers differ from this export for {stale[:5]}; "
-            "rerun `cti threats`, then `cti export`"
-        )
     top = [f for f in doc["families"] if f["rank"] <= TOP_THREATS]
     if unchecked := [f["family"] for f in top if f["category_source"] != "owner"]:
         raise ConfigError(
@@ -862,6 +865,7 @@ def build_threats(
     judged = (review["links"].get("precision") or {}).get("judged")
     return {
         "available": True,
+        "stale": False,
         "snapshot_date": doc["snapshot_date"],
         "families_total": len(doc["families"]),
         "families": families,
@@ -1183,7 +1187,12 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
         read_jsonl(paths["kev"]),
         {r["source_id"]: r["title"] for r in read_jsonl(paths["cwe"])},
     )
-    shown = f"{len(threats['families'])} families shown" if threats_doc else "not run"
+    if threats["stale"]:
+        shown = "STALE (tiers changed since `cti threats` ran): left out of this export"
+    elif threats_doc:
+        shown = f"{len(threats['families'])} families shown"
+    else:
+        shown = "not run"
     log(f"  threats: {shown}")
     evals = build_eval(results)
     evals["sources_sha256"] = {n: sha256(paths[f"{n}_eval"]) for n in EVALS}
@@ -1209,7 +1218,7 @@ def run(paths: dict[str, Path], revoked: dict[str, str], git: dict, log=print) -
             len(risk["rows"]),
             next(c["refit"] for c in risk["coefficients"] if c["feature"] == "log_age_days"),
         )
-        + ([THREATS_DISCLOSURE] if threats_doc else []),
+        + ([THREATS_DISCLOSURE] if threats["available"] else []),
     }
     files = {
         "meta.json": meta,
