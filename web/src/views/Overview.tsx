@@ -1,6 +1,6 @@
 import type { Data } from "../types";
 import { cveHref } from "../App";
-import { PageHead, TierDot, TierName, IntervalBar } from "../components/ui";
+import { PageHead, TierDot, TierName, IntervalBar, type View } from "../components/ui";
 import { TIER_BAND, TIERS, epss, int, linkReview, pct, interval, signed, wilson, FEATURE_LABEL } from "../format";
 
 const logScale = (v: number) => (Math.log10(Math.max(v, 1e-4)) + 4) / 3; // 0.01% .. 10%
@@ -34,6 +34,7 @@ export function Overview({ data }: { data: Data }) {
   return (
     <>
       <PageHead
+        guide="overview"
         title="Which threats deserve attention first, and why?"
         lede={<>Public feeds as of {meta.snapshot_date}: exploited CVEs to patch now, CVEs likeliest to be exploited next, and the threats behind them.</>}
       />
@@ -219,6 +220,7 @@ export function Overview({ data }: { data: Data }) {
               <details>
                 <summary className="muted" style={{ cursor: "pointer", fontSize: 12.5 }}>How it works</summary>
                 <p style={{ margin: "6px 0 0" }}>{g.why} {g.how}</p>
+                <a href={`#/guide/${g.view}`} style={{ fontSize: 12.5 }}>Full guide to {g.title} →</a>
               </details>
             </div>
           ))}
@@ -233,7 +235,7 @@ export function Overview({ data }: { data: Data }) {
 }
 
 /** Plain-language description of every tab; numbers come from the export. */
-function guide(data: Data): { view: string; title: string; what: string; why: string; how: string }[] {
+function guide(data: Data): { view: View; title: string; what: string; why: string; how: string }[] {
   const { threats, evals } = data;
   const d = evals.risk.decision["logistic_minus_epss_hits@100"];
   const vsEpss = typeof d === "object" ? `${signed(d.difference_hits, 0)} (95% CI ${signed(d.ci95[0], 0)} to ${signed(d.ci95[1], 0)})` : "?";

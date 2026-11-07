@@ -11,6 +11,7 @@ import { AttackGraph } from "./views/AttackGraph";
 import { Indicators } from "./views/Indicators";
 import { Evaluation } from "./views/Evaluation";
 import { Threats } from "./views/Threats";
+import { Guide } from "./views/Guide";
 
 /** Hash routes: #/<view>[/<CVE or encoded family name>] (no server rewrites needed under
  * `cti serve`). `arg` is set only for a CVE ID; `name` is the decoded raw segment, which a
@@ -50,8 +51,9 @@ export function App() {
 
   useEffect(() => {
     const onHash = () => {
-      setRoute(parseHash());
-      window.scrollTo(0, 0);
+      const next = parseHash();
+      setRoute(next);
+      if (next.view !== "guide") window.scrollTo(0, 0); // the Guide scrolls to its own sections
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -99,6 +101,7 @@ export function App() {
     attack: () => <AttackGraph data={data} />,
     indicators: () => <Indicators data={data} />,
     evaluation: () => <Evaluation data={data} />,
+    guide: () => <Guide data={data} focus={route.name} />,
   };
   return (
     <Shell view={route.view} snapshot={data.meta.snapshot_date} synthetic={data.meta.git.commit === "fixture"}>

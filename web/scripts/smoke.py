@@ -30,12 +30,17 @@ VIEWS = {
     "attack": "<h1>ATT&amp;CK graph",
     "indicators": "<h1>Indicators",
     "evaluation": "<h1>Evaluation",
+    "guide": "<h1>Guide",
 }
 # extra routes: (hash, view whose heading must render); a family focus and a malformed
-# escape must both render the Threats view, never a blank page
+# escape must both render the Threats view, never a blank page; Guide section, part and
+# unknown-section links must render the Guide
 ROUTES = [
     ("threats/Agent%20Tesla", "threats"),
     ("threats/%E0%A4", "threats"),
+    ("guide/queue", "guide"),
+    ("guide/queue-detail", "guide"),
+    ("guide/bogus", "guide"),
 ]
 CHROMES = (
     "google-chrome",

@@ -50,7 +50,7 @@ button { font: inherit; }
   border-bottom: 1px solid var(--border); background: var(--bar); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px; letter-spacing: .02em; }
 .tabs { display: flex; flex-wrap: wrap; gap: 2px; }
-.tab { color: var(--muted); text-decoration: none; font-size: 13.5px; padding: 8px 7px; border-radius: 6px; white-space: nowrap; }
+.tab { color: var(--muted); text-decoration: none; font-size: 13.5px; padding: 8px 6px; border-radius: 6px; white-space: nowrap; }
 .brand { white-space: nowrap; }
 @media (max-width: 1279px) { .top { flex-wrap: wrap; } }
 .tab:hover { color: var(--text); background: var(--raised); }
@@ -190,3 +190,46 @@ ul.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
   text-decoration: none; color: var(--text-2); font-size: 13px; line-height: 1.5; }
 .guide:hover { border-color: var(--border-2); background: var(--raised); }
 .guide strong { color: var(--text); font-weight: 600; }
+
+/* ---- guide ---- */
+.guide-link { display: inline-block; margin-top: 6px; font-size: 12.5px; }
+.gd-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 24px; align-items: start; }
+.gd-toc { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent; font-size: 13px; }
+.gd-toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.gd-toc ul ul { margin: 2px 0 8px 12px; padding-left: 8px; border-left: 1px solid var(--border); }
+.gd-toc a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; line-height: 1.35; }
+.gd-toc a:hover { color: var(--text); background: var(--raised); }
+.gd-toc a[aria-current="location"] { color: var(--text); background: var(--active); box-shadow: inset 2px 0 0 var(--accent); font-weight: 600; }
+.gd-toc ul ul a[aria-current="location"] { background: transparent; box-shadow: none; color: var(--accent-2); font-weight: 500; }
+.gd-select { display: none; }
+.gd-content { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.gd-section { scroll-margin-top: 16px; font-size: 14px; line-height: 1.6; color: var(--text-2); }
+.gd-section p { margin: 0 0 10px; max-width: 860px; }
+.gd-section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.gd-section .gd-section-head h2 { font-size: 20px; }
+.gd-section [tabindex="-1"]:focus { outline: none; }
+.gd-part { scroll-margin-top: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--grid); }
+.gd-part h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: var(--text); }
+.gd-defs { margin: 0 0 10px; display: grid; gap: 8px; max-width: 900px; }
+.gd-defs > div { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr); gap: 14px; }
+.gd-defs dt { color: var(--text); font-weight: 500; }
+.gd-defs dd { margin: 0; }
+.gd-steps { margin: 0 0 10px; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; max-width: 860px; }
+.gd-misreads { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-width: 900px; }
+.gd-misreads li { padding-left: 12px; border-left: 2px solid var(--warn-border); }
+.gd-wrong { color: var(--warn-text); font-style: italic; }
+.gd-example { background: var(--raised); border-radius: 8px; padding: 12px 14px; max-width: 900px; }
+.gd-example p { margin: 4px 0 0; }
+.gd-swatch { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; white-space: nowrap; }
+.gd-chip { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.gd-chip.square { border-radius: 2px; }
+@media (max-width: 900px) {
+  .gd-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .gd-toc { display: none; }
+  .gd-select { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0; }
+  .gd-select select { flex: 1; min-width: 0; min-height: 40px; background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; }
+  .gd-section, .gd-part { scroll-margin-top: 72px; }
+  .gd-defs > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

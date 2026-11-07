@@ -120,6 +120,7 @@ export function RiskQueue({ data, focus }: { data: Data; focus: string | null })
   return (
     <>
       <PageHead
+        guide="queue"
         title="Risk queue"
         lede={`The ${int(risk.rows.length)} CVEs in the queue: of ${int(risk.ranked_cves)} scored, those likeliest to join CISA KEV (critical, high and elevated tiers), best first. Click one to see why.`}
       />

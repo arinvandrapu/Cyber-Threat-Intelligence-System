@@ -12,6 +12,7 @@ export const VIEWS = [
   ["attack", "ATT&CK graph"],
   ["indicators", "Indicators"],
   ["evaluation", "Evaluation"],
+  ["guide", "Guide"],
 ] as const;
 export type View = (typeof VIEWS)[number][0];
 
@@ -53,12 +54,19 @@ export function Shell({
   );
 }
 
-export function PageHead({ title, lede, children }: { title: string; lede?: ReactNode; children?: ReactNode }) {
+/** Page heading. `guide` names this tab's Guide section and adds a "How to read this" link
+ * (required so a new view can't forget it; the Guide itself passes null). */
+export function PageHead({ title, lede, guide, children }: { title: string; lede?: ReactNode; guide: View | null; children?: ReactNode }) {
   return (
     <section className="page-head">
       <div>
         <h1>{title}</h1>
         {lede && <p className="lede">{lede}</p>}
+        {guide && (
+          <a className="guide-link" href={`#/guide/${guide}`}>
+            How to read this tab →
+          </a>
+        )}
       </div>
       {children}
     </section>

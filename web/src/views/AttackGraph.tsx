@@ -86,6 +86,7 @@ export function AttackGraph({ data }: { data: Data }) {
   return (
     <>
       <PageHead
+        guide="attack"
         title="ATT&CK graph"
         lede="How exploited CVEs are used in attacks: CVE → ATT&CK technique → tactic (MITRE expert mappings)."
       >

@@ -79,6 +79,7 @@ export function WeaknessGraph({ data }: { data: Data }) {
   return (
     <>
       <PageHead
+        guide="weakness"
         title="Weakness graph"
         lede="The kinds of bug behind the highest-risk CVEs. Click a node to trace it."
       >

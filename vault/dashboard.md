@@ -46,7 +46,8 @@ Counts and sizes for the 2026-10-26 snapshot: [[dashboard-export-facts]].
 
 Overview · Known exploited ([[known-exploited-view]]) · Risk queue · Threats · Risk
 landscape · Weakness graph ([[cwe-classification]]) · ATT&CK graph (CTID,
-[[attack-mapping]]) · Indicators (shared-host graph) · Evaluation: 9 views.
+[[attack-mapping]]) · Indicators (shared-host graph) · Evaluation: 9 views, plus Guide
+(in-depth "how to read" for each, [[dashboard-guide]]).
 
 Colour: neutral black surfaces; tiers on one ordinal pink → cherry-red ramp (more red = higher risk); model blue, EPSS aqua, KEV CVEs in the ATT&CK graph orange #f59a23 (CVD-validated). Brand: "CTI Console".
 
