@@ -135,6 +135,35 @@ def test_redirect_to_other_public_host_revalidated(fetcher):
 
 
 @respx.mock
+def test_https_to_http_redirect_refused(fetcher):
+    respx.get(f"https://{PUBLIC}/r").mock(
+        return_value=httpx.Response(302, headers={"location": "http://cdn.example.net/page"})
+    )
+    plain = respx.get(f"http://{PUBLIC_2}/page").mock(return_value=httpx.Response(200))
+    with pytest.raises(BlockedURLError, match="downgrades https"):
+        fetcher.fetch("https://example.com/r")
+    assert not plain.called
+
+
+@respx.mock
+def test_before_redirect_sees_each_hop_and_can_stop_it(fetcher):
+    respx.get(f"http://{PUBLIC}/a").mock(
+        return_value=httpx.Response(302, headers={"location": "/b"})
+    )
+    b = respx.get(f"http://{PUBLIC}/b").mock(return_value=httpx.Response(200))
+    seen = []
+    fetcher.fetch("http://example.com/a", before_redirect=lambda u: seen.append(str(u)))
+    assert seen == ["http://example.com/b"]
+
+    def stop(url):
+        raise RuntimeError("stop")
+
+    with pytest.raises(RuntimeError):
+        fetcher.fetch("http://example.com/a", before_redirect=stop)
+    assert b.call_count == 1  # only the first fetch reached /b
+
+
+@respx.mock
 def test_relative_redirect(fetcher):
     respx.get(f"http://{PUBLIC}/a").mock(
         return_value=httpx.Response(302, headers={"location": "/b"})
@@ -191,3 +220,51 @@ def test_idna_host_resolved_in_ascii_form():
 
 def test_client_ignores_env_proxies_and_keepalive(fetcher):
     assert fetcher._client._trust_env is False
+
+
+@respx.mock
+def test_scheme_relative_redirect_resolves_and_is_revalidated(fetcher):
+    respx.get(f"https://{PUBLIC}/r").mock(
+        return_value=httpx.Response(302, headers={"location": "//cdn.example.net/page"})
+    )
+    respx.get(f"https://{PUBLIC_2}/page").mock(return_value=httpx.Response(200))
+    assert fetcher.fetch("https://example.com/r").url == "https://cdn.example.net/page"
+
+
+@respx.mock
+def test_downgrade_refused_on_a_later_hop(fetcher):
+    respx.get(f"http://{PUBLIC}/a").mock(
+        return_value=httpx.Response(302, headers={"location": "https://cdn.example.net/b"})
+    )
+    respx.get(f"https://{PUBLIC_2}/b").mock(
+        return_value=httpx.Response(302, headers={"location": "http://example.com/c"})
+    )
+    with pytest.raises(BlockedURLError, match="downgrades https"):
+        fetcher.fetch("http://example.com/a")
+
+
+@respx.mock
+def test_hook_not_called_for_a_hop_over_the_cap(fetcher):
+    respx.get(f"http://{PUBLIC}/loop").mock(
+        return_value=httpx.Response(302, headers={"location": "/loop"})
+    )
+    seen = []
+    with pytest.raises(BlockedURLError, match="redirects"):
+        fetcher.fetch("http://example.com/loop", before_redirect=seen.append)
+    assert len(seen) == 3  # one per hop actually requested after the first
+
+
+@respx.mock
+def test_hook_time_does_not_count_against_the_deadline(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr("cti.http.safe_fetch.time.monotonic", lambda: clock[0])
+    f = SafeFetcher("ua", resolver=lambda h, p: [PUBLIC], deadline=30.0)
+    respx.get(f"http://{PUBLIC}/a").mock(
+        return_value=httpx.Response(302, headers={"location": "/b"})
+    )
+    respx.get(f"http://{PUBLIC}/b").mock(return_value=httpx.Response(200, text="ok"))
+
+    def slow_hook(url):
+        clock[0] += 60.0  # robots fetch + throttle waits, longer than the whole deadline
+
+    assert f.fetch("http://example.com/a", before_redirect=slow_hook).content == b"ok"

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from cti import gold
 from cti.snapshot import MANIFEST, Manifest, Snapshot
-from cti.storage.base import Storage, put_once
+from cti.storage.base import StaleWriteError, Storage, put_once
 
 GOLD_KEY = "gold.jsonl.gz"
 
@@ -92,8 +92,15 @@ def upload_snapshot(local: Storage, remote: Storage, snapshot_id: str) -> Upload
     if key not in present:
         result.manifest_updated = put_once(remote, key, manifest)
     elif remote.sha256(key) != hashlib.sha256(manifest).hexdigest():
-        _check_manifest_superset(snap.manifest, Manifest.model_validate_json(remote.get_bytes(key)))
-        remote.put_bytes(key, manifest, overwrite=True)
+        current = remote.get_bytes(key)
+        _check_manifest_superset(snap.manifest, Manifest.model_validate_json(current))
+        try:
+            # compare-and-swap: refuse if another upload replaced it after the check above
+            remote.replace(key, manifest, expected=current)
+        except StaleWriteError as exc:
+            raise RemoteConflictError(
+                f"remote manifest for {snapshot_id} changed during the upload; rerun it"
+            ) from exc
         result.manifest_updated = True
 
     stored = set(remote.list_keys(f"{snapshot_id}/"))

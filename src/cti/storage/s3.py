@@ -9,7 +9,7 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-from cti.storage.base import validate_key
+from cti.storage.base import StaleWriteError, validate_key
 
 
 class S3Storage:
@@ -43,6 +43,28 @@ class S3Storage:
             code = exc.response.get("Error", {}).get("Code")
             if code in {"PreconditionFailed", "ConditionalRequestConflict"}:
                 raise FileExistsError(key) from exc
+            raise
+
+    def replace(self, key: str, data: bytes, *, expected: bytes) -> None:
+        # The ETag read here pins the exact object compared below; IfMatch makes S3 refuse
+        # the write if anything replaced it in between (no read-check-write race). Fails
+        # safe: if botocore retries a PUT that already landed, the retry gets 412 and the
+        # caller sees a conflict; rerunning is then a no-op.
+        try:
+            obj = self._s3.get_object(Bucket=self.bucket, Key=self._key(key))
+            if obj["Body"].read() != expected:
+                raise StaleWriteError(key)
+            self._s3.put_object(
+                Bucket=self.bucket,
+                Key=self._key(key),
+                Body=data,
+                ChecksumAlgorithm="SHA256",
+                IfMatch=obj["ETag"],
+            )
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code in {"PreconditionFailed", "ConditionalRequestConflict", "NoSuchKey", "404"}:
+                raise StaleWriteError(key) from exc
             raise
 
     def get_bytes(self, key: str) -> bytes:

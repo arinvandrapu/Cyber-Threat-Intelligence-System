@@ -11,6 +11,10 @@ class StorageKeyError(ValueError):
     """A storage key is malformed or attempts path traversal."""
 
 
+class StaleWriteError(RuntimeError):
+    """A compare-and-swap ``replace`` found different bytes than the caller last read."""
+
+
 def validate_key(key: str) -> str:
     if not key or key.startswith("/") or "\\" in key:
         raise StorageKeyError(f"invalid key: {key!r}")
@@ -36,6 +40,12 @@ def put_once(storage: Storage, key: str, data: bytes) -> bool:
 class Storage(Protocol):
     def put_bytes(self, key: str, data: bytes, *, overwrite: bool = False) -> None:
         """Store ``data``. Raises ``FileExistsError`` if the key exists and not ``overwrite``."""
+
+    def replace(self, key: str, data: bytes, *, expected: bytes) -> None:
+        """Overwrite ``key`` only if it still holds ``expected`` (compare-and-swap).
+
+        Raises ``StaleWriteError`` if the stored bytes changed since the caller read them.
+        """
 
     def get_bytes(self, key: str) -> bytes: ...
 

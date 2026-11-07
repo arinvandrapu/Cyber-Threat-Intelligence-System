@@ -144,10 +144,19 @@ class SafeFetcher:
             raise BlockedURLError(f"{host!r} resolves to non-public address {blocked[0]}")
         return parsed, ips[0]
 
-    def fetch(self, url: str) -> FetchResult:
+    def fetch(
+        self, url: str, *, before_redirect: Callable[[httpx.URL], None] | None = None
+    ) -> FetchResult:
+        """GET ``url``, following up to ``max_redirects`` redirects by hand.
+
+        Every hop is SSRF-validated; an https→http downgrade is refused. ``before_redirect``
+        runs before each redirect hop is requested (the scraper checks robots.txt and
+        spaces requests there); it may raise to stop the fetch. Time spent in it does not
+        count against the overall deadline, which bounds the server, not our own waits.
+        """
         current: str | httpx.URL = url
         give_up_at = time.monotonic() + self._deadline
-        for _ in range(self._max_redirects + 1):
+        for hop in range(self._max_redirects + 1):
             parsed, ip = self.validate(current)
             request = self._client.build_request(
                 "GET",
@@ -165,17 +174,23 @@ class SafeFetcher:
                         current = parsed.join(response.headers["location"])
                     except httpx.InvalidURL as exc:
                         raise BlockedURLError(f"invalid redirect: {exc}") from exc
-                    continue
-                content, truncated = self._read_capped(response, give_up_at)
-                return FetchResult(
-                    url=str(parsed),
-                    status_code=response.status_code,
-                    content_type=response.headers.get("content-type"),
-                    content=content,
-                    truncated=truncated,
-                )
+                    if parsed.scheme == "https" and current.scheme != "https":
+                        raise BlockedURLError(f"redirect downgrades https to {current.scheme}")
+                else:
+                    content, truncated = self._read_capped(response, give_up_at)
+                    return FetchResult(
+                        url=str(parsed),
+                        status_code=response.status_code,
+                        content_type=response.headers.get("content-type"),
+                        content=content,
+                        truncated=truncated,
+                    )
             finally:
-                response.close()
+                response.close()  # before the hook, so no connection idles through its waits
+            if before_redirect is not None and hop < self._max_redirects:  # skip: over the cap
+                started = time.monotonic()
+                before_redirect(current)
+                give_up_at += time.monotonic() - started
         raise BlockedURLError(f"more than {self._max_redirects} redirects")
 
     def _read_capped(self, response: httpx.Response, give_up_at: float) -> tuple[bytes, bool]:

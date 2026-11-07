@@ -7,7 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from cti.storage.base import validate_key
+from cti.storage.base import StaleWriteError, validate_key
 
 
 class LocalStorage:
@@ -37,6 +37,13 @@ class LocalStorage:
                 os.link(tmp, path)  # atomic create; fails if the key already exists
         finally:
             tmp.unlink(missing_ok=True)
+
+    def replace(self, key: str, data: bytes, *, expected: bytes) -> None:
+        # Local disk has one writer (this process), so check-then-replace is enough here;
+        # the write itself is atomic (temp file + os.replace).
+        if self.get_bytes(key) != expected:
+            raise StaleWriteError(key)
+        self.put_bytes(key, data, overwrite=True)
 
     def get_bytes(self, key: str) -> bytes:
         return self._path(key).read_bytes()

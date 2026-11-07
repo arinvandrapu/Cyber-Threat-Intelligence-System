@@ -4,7 +4,13 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from cti.storage import LocalStorage, MirroredStorage, S3Storage, StorageKeyError
+from cti.storage import (
+    LocalStorage,
+    MirroredStorage,
+    S3Storage,
+    StaleWriteError,
+    StorageKeyError,
+)
 
 BUCKET = "test-bucket"
 
@@ -120,3 +126,39 @@ def test_sha256_matches_stored_bytes(storage):
     assert storage.sha256("a/b.bin") == hashlib.sha256(b"payload").hexdigest()
     with pytest.raises(FileNotFoundError):
         storage.sha256("a/missing.bin")
+
+
+def test_replace_is_compare_and_swap(storage):
+    storage.put_bytes("a/b", b"one")
+    storage.replace("a/b", b"two", expected=b"one")
+    assert storage.get_bytes("a/b") == b"two"
+    with pytest.raises(StaleWriteError):
+        storage.replace("a/b", b"three", expected=b"one")
+    assert storage.get_bytes("a/b") == b"two"
+
+
+def test_s3_replace_uses_if_match(s3, monkeypatch):
+    """S3 itself refuses the write if the object changes between the read and the put."""
+    s3.put_bytes("k", b"one")
+    real_get = s3._s3.get_object
+
+    def get_then_race(**kw):
+        obj = real_get(**kw)
+        s3.put_bytes("k", b"other", overwrite=True)  # lands after our read, before our put
+        return obj
+
+    monkeypatch.setattr(s3._s3, "get_object", get_then_race)
+    with pytest.raises(StaleWriteError):
+        s3.replace("k", b"two", expected=b"one")
+    monkeypatch.undo()
+    assert s3.get_bytes("k") == b"other"
+
+
+def test_mirrored_replace_completes_after_a_half_done_attempt(local, s3):
+    mirrored = MirroredStorage(local, s3)
+    mirrored.put_bytes("m", b"v1")
+    local.replace("m", b"v2", expected=b"v1")  # an earlier attempt that stopped halfway
+    mirrored.replace("m", b"v2", expected=b"v1")
+    assert local.get_bytes("m") == s3.get_bytes("m") == b"v2"
+    with pytest.raises(StaleWriteError):
+        mirrored.replace("m", b"v3", expected=b"v1")

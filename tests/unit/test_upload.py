@@ -181,3 +181,31 @@ def test_cli_uploads_gold_and_snapshot(tmp_path, monkeypatch, capsys, client, sn
     out = capsys.readouterr().out
     assert "gold     uploaded" in out and "2 uploaded" in out
     assert S3Storage(BUCKET, "gold", client=client).get_bytes(GOLD_KEY) == b"fixture"
+
+
+class SwapsInBetween:
+    """A remote whose manifest is replaced by someone else right after we read it."""
+
+    def __init__(self, inner, key, other):
+        self.inner, self.key, self.other = inner, key, other
+
+    def get_bytes(self, key):
+        data = self.inner.get_bytes(key)
+        if key == self.key:
+            self.inner.put_bytes(key, self.other, overwrite=True)  # the concurrent writer
+        return data
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+
+def test_manifest_replace_refuses_a_concurrent_change(local, remote, snap):
+    upload_snapshot(local, remote, SID)
+    snap.begin_refetch("kev", "feed was truncated")
+    snap.write_raw("kev", "kev.json", b'{"v": 2}')
+    snap.mark_complete("kev")
+    key = f"{SID}/manifest.json"
+    racing = SwapsInBetween(remote, key, remote.get_bytes(key) + b"\n")
+    with pytest.raises(RemoteConflictError, match="changed during the upload"):
+        upload_snapshot(local, racing, SID)
+    assert remote.get_bytes(key).endswith(b"\n")  # the other writer's manifest survived

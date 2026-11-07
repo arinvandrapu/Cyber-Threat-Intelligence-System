@@ -22,7 +22,10 @@ archive copy, not the working data: [[s3-archive-not-live-store]].
 - Pipeline uses a dedicated `cti` IAM user/profile: Get/Put/List on this bucket only,
   explicit Deny on `DeleteObject`, `DeleteObjectVersion`, `DeleteBucket`, and on
   `PutObject` without `If-None-Match` except `*/manifest.json` (write-once in IAM; verified
-  live 2026-10-26). Templates and
+  live 2026-10-26). The manifest is replaced only by compare-and-swap: `Storage.replace`
+  re-reads it, compares the bytes the superset check saw, and writes with `IfMatch` on that
+  read's ETag (`StaleWriteError` → `RemoteConflictError`). Code-side since 11d (2026-11-07);
+  IAM does not require `If-Match` (would need a policy change, deliberately not made). Templates and
   setup steps: `infra/`. boto3 default credential chain; no keys in code or repo.
 - Bucket setup is a one-time admin step, separate from `cti`, never run as root.
 - Account ID and bucket name are not committed; they come from local config.

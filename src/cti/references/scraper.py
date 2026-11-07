@@ -3,7 +3,8 @@
 - Every request goes through :class:`cti.http.safe_fetch.SafeFetcher`.
 - robots.txt is honoured per RFC 9309 (``protego``: wildcards, longest match): a 4xx
   robots.txt means "no rules", while a 5xx or network error means "disallow everything".
-  A redirect to another host is checked against that host's robots.txt too.
+  Every redirect hop is checked against its own host's robots.txt (and spaced like a
+  first request) before it is requested; an https→http redirect is refused.
 - One honest User-Agent (with contact address), per-host spacing between requests,
   and a small worker pool.
 - Failures are recorded per page and never abort the run.
@@ -20,6 +21,7 @@ from datetime import UTC, datetime
 from itertools import batched
 from urllib.parse import urlsplit
 
+import httpx
 from protego import Protego
 
 from cti.http.safe_fetch import BlockedURLError, SafeFetcher
@@ -96,6 +98,14 @@ class HostThrottle:
             self._sleep(start - now)
 
 
+class _RobotsRedirect(Exception):
+    """A redirect hop that robots.txt disallows; stops the fetch before it is requested."""
+
+    def __init__(self, url: str) -> None:
+        super().__init__(url)
+        self.url = url
+
+
 def scrape_one(
     target: Target, fetcher: SafeFetcher, robots: RobotsCache, throttle: HostThrottle
 ) -> dict:
@@ -112,12 +122,16 @@ def scrape_one(
             record["skipped"] = "robots"
             return record
         throttle.wait(target.url)
-        result = fetcher.fetch(target.url)
-        if _origin(result.url) != _origin(target.url) and not robots.allowed(
-            result.url, before_fetch=throttle.wait
-        ):
-            record.update(skipped="robots (redirect target)", final_url=result.url)
-            return record
+
+        def before_redirect(url: httpx.URL) -> None:
+            if not robots.allowed(str(url), before_fetch=throttle.wait):
+                raise _RobotsRedirect(str(url))
+            throttle.wait(str(url))
+
+        result = fetcher.fetch(target.url, before_redirect=before_redirect)
+    except _RobotsRedirect as exc:
+        record.update(skipped="robots (redirect target)", final_url=exc.url)
+        return record
     except BlockedURLError as exc:
         record["skipped"] = f"blocked: {exc}"
         return record
